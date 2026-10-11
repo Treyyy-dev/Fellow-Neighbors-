@@ -4,7 +4,7 @@ const { WebSocketServer } = require('ws');
 
 const PORT = process.env.PORT || 3000;
 const PUB = path.join(__dirname, 'public');
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.ico': 'image/x-icon', '.json': 'application/json' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.ico': 'image/x-icon', '.json': 'application/json', '.webmanifest': 'application/manifest+json' };
 const MAX_ROOM = 12, MAX_MSG = 8192, MAX_PRESENCE = 6000, MAX_ROOMS = 200;
 
 // Files are small in number, so compress each once and keep it in memory.
@@ -14,7 +14,7 @@ function load(file) {
   const hit = cache.get(file);
   if (hit && hit.mtime === st.mtimeMs) return hit;
   const raw = fs.readFileSync(file), ext = path.extname(file);
-  const entry = { mtime: st.mtimeMs, raw, gz: /\.(html|js|css|json)$/.test(ext) ? zlib.gzipSync(raw) : null, type: TYPES[ext] || 'application/octet-stream' };
+  const entry = { mtime: st.mtimeMs, raw, gz: /\.(html|js|css|json|webmanifest)$/.test(ext) ? zlib.gzipSync(raw) : null, type: TYPES[ext] || 'application/octet-stream' };
   cache.set(file, entry);
   return entry;
 }
@@ -28,7 +28,7 @@ const server = http.createServer((req, res) => {
   let f;
   try { f = load(file); } catch (e) { res.writeHead(404, { 'content-type': 'text/plain' }); return res.end('Not found'); }
   const gz = f.gz && /\bgzip\b/.test(req.headers['accept-encoding'] || '');
-  const head = { 'content-type': f.type, 'cache-control': url === '/index.html' ? 'no-cache' : 'public, max-age=3600', 'vary': 'accept-encoding' };
+  const head = { 'content-type': f.type, 'cache-control': (url === '/index.html' || url === '/sw.js') ? 'no-cache' : 'public, max-age=3600', 'vary': 'accept-encoding' };
   if (gz) head['content-encoding'] = 'gzip';
   res.writeHead(200, head);
   res.end(gz ? f.gz : f.raw);
