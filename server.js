@@ -47,7 +47,8 @@ wss.on('connection', (ws, req) => {
   if (!/^[a-z0-9][a-z0-9_.-]{0,47}$/.test(name)) return ws.close(1008, 'bad room');
   let room = rooms.get(name);
   if (!room) { if (rooms.size >= MAX_ROOMS) return ws.close(1013, 'busy'); room = new Map(); rooms.set(name, room); }
-  if (room.size >= MAX_ROOM) return ws.close(1013, 'room full');
+  // 'fn-lobby' is the notice board where open rooms are listed, so it holds many more people.
+  if (room.size >= (name === 'fn-lobby' ? 300 : MAX_ROOM)) return ws.close(1013, 'room full');
 
   const id = 'p' + (nextId++).toString(36) + Math.random().toString(36).slice(2, 6);
   const me = { ws, presence: {} };

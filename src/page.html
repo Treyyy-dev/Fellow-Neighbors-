@@ -78,6 +78,8 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
 .plist{list-style:none;margin:0;padding:0;width:min(100%,320px);display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--bone)}
 .plist li{border:1px solid var(--dim);border-radius:2px;padding:7px 10px;background:rgba(13,17,27,.6);overflow-wrap:anywhere}
 .btn:disabled{opacity:.45;cursor:default}
+.plist.rooms li{border:0;padding:0;background:none}
+.plist.rooms .mbtn{width:100%;font-size:14px;letter-spacing:.04em;text-transform:none}
 .seg{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
 .seg button{font:inherit;font-size:13px;letter-spacing:.06em;color:var(--bone);background:rgba(13,17,27,.72);border:1px solid var(--dim);padding:8px 12px;border-radius:2px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--pumpkin);border-color:var(--pumpkin);color:var(--night)}
@@ -167,16 +169,36 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
 
   <div class="card" id="online" hidden><div class="col">
     <h2>Online</h2>
-    <p id="netNote">Everyone picks the same mode and types the same room code.</p>
+    <p>Create a room and pick the mode, or find a room someone else has opened. Everyone waits in the lobby until someone presses Start.</p>
     <p class="lab">Your name</p>
     <input class="inp" id="netName" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Player" aria-label="Your name">
-    <p class="lab">Room code</p>
-    <input class="inp" id="netCode" maxlength="10" value="LANE" autocomplete="off" spellcheck="false" aria-label="Room code">
+    <div class="list">
+      <button class="mbtn" id="netCreateBtn" type="button">Create Room</button>
+      <button class="mbtn" id="netFindBtn" type="button">Find Room</button>
+      <button class="mbtn back" data-to="menu" type="button">Back</button>
+    </div>
+  </div></div>
+
+  <div class="card" id="netCreate" hidden><div class="col">
+    <h2>Create Room</h2>
+    <p>Pick a mode. You can still change it in the lobby.</p>
     <div class="list">
       <button class="mbtn" data-net="b" type="button">Co-op Story · Boy &amp; Girl</button>
       <button class="mbtn" data-net="k" type="button">Co-op Story · Killer &amp; Girl</button>
       <button class="mbtn" data-net="s" type="button">Survival · 2 Killers, 5 Survivors</button>
-      <button class="mbtn back" data-to="menu" type="button">Back</button>
+      <button class="mbtn back" data-to="online" type="button">Back</button>
+    </div>
+  </div></div>
+
+  <div class="card" id="netFind" hidden><div class="col">
+    <h2>Find Room</h2>
+    <p id="findInfo">Looking for rooms…</p>
+    <ul class="plist rooms" id="findList"></ul>
+    <p class="lab">Or join with a code</p>
+    <input class="inp" id="netCode" maxlength="10" autocomplete="off" spellcheck="false" placeholder="CODE" aria-label="Room code">
+    <div class="list">
+      <button class="mbtn" id="findJoin" type="button">Join</button>
+      <button class="mbtn back" data-to="online" type="button">Back</button>
     </div>
   </div></div>
 
@@ -184,6 +206,8 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
     <h2 id="lobTitle">Lobby</h2>
     <p id="lobInfo"></p>
     <ul class="plist" id="lobList"></ul>
+    <p class="lab">Mode</p>
+    <div class="seg" id="lobMode"></div>
     <p class="lab">Play as</p>
     <div class="seg" id="lobSeg"></div>
     <div class="list"><button class="btn" id="lobStart" type="button">Start</button><button class="mbtn" id="lobLeave" type="button">Leave</button></div>
