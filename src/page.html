@@ -1,0 +1,244 @@
+<title>Fellow Neighbors</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Special+Elite&display=swap">
+<style>
+/* Layout: one full-screen 3D view; HUD pinned to the corners; title cards centered like a 1970s slasher film card. */
+:root{
+  color-scheme: dark;
+  --night:#06080f;
+  --ink:#0d111b;
+  --pumpkin:#ff7a18;
+  --ember:#c2410c;
+  --bone:#e7e2d2;
+  --dim:#9a968a;
+  --blood:#b3121d;
+  --display:"IM Fell English SC","Iowan Old Style",Georgia,serif;
+  --body:"Special Elite","Courier New",Courier,monospace;
+}
+html,body{height:100%}
+body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:hidden}
+#game{position:relative;height:100%;overflow:hidden;background:var(--night);touch-action:none;user-select:none;-webkit-user-select:none}
+#game canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#grain{position:absolute;inset:-64px;pointer-events:none;opacity:.09;background-size:128px 128px;animation:grain .5s steps(4) infinite}
+@keyframes grain{0%{transform:translate(0,0)}25%{transform:translate(-31px,17px)}50%{transform:translate(23px,-41px)}75%{transform:translate(-11px,-27px)}100%{transform:translate(37px,29px)}}
+@media (prefers-reduced-motion:reduce){#grain{animation:none}}
+#vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 42%,rgba(0,0,0,.78) 100%)}
+#fear{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,transparent 40%,var(--blood) 130%);transition:opacity .25s}
+#flash{position:absolute;inset:0;pointer-events:none;opacity:0;background:var(--blood)}
+#gore{position:absolute;inset:0;pointer-events:none;opacity:0;background-size:100% 100%}
+#jump{position:absolute;inset:0;pointer-events:none;background:#000 center/auto 120% no-repeat}
+@keyframes jump{0%{transform:scale(.7);opacity:1}100%{transform:scale(1.25);opacity:1}}
+#game.shake canvas{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translate(0,0)}15%{transform:translate(-14px,8px)}30%{transform:translate(12px,-10px)}45%{transform:translate(-10px,-6px)}60%{transform:translate(9px,7px)}80%{transform:translate(-5px,3px)}}
+#fade{position:absolute;inset:0;pointer-events:none;opacity:0;background:#000;transition:opacity .4s}
+#inside{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 clamp(20px,6vw,60px) #0c0a08, inset 0 0 90px 40px rgba(0,0,0,.7)}
+#inside::before,#inside::after{content:"";position:absolute;background:#0c0a08}
+#inside::before{left:50%;top:0;bottom:0;width:12px;margin-left:-6px}
+#inside::after{top:50%;left:0;right:0;height:12px;margin-top:-6px}
+#peep{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at center,transparent 31vmin,rgba(0,0,0,.6) 33vmin,#000 36vmin)}
+#safe{top:clamp(60px,9vw,84px);left:0;right:0;text-align:center;color:var(--pumpkin);font-size:14px;text-shadow:0 2px 6px #000}
+#prompt{left:16px;right:16px;bottom:84px;text-align:center;font-size:14px;text-shadow:0 2px 6px #000}
+#prompt b{display:inline-block;font-weight:400;border:1px solid var(--bone);border-radius:3px;padding:2px 8px;margin-right:8px}
+
+.hud{position:absolute;pointer-events:none;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--bone)}
+#fuses{top:16px;left:16px;display:flex;align-items:center;gap:8px}
+#fuses .pip{width:10px;height:20px;border:1.5px solid var(--dim);border-radius:2px}
+#fuses .pip.on{background:var(--pumpkin);border-color:var(--pumpkin);box-shadow:0 0 10px var(--pumpkin)}
+.chip{font:inherit;letter-spacing:.12em;text-transform:uppercase;color:var(--bone);background:rgba(13,17,27,.7);border:1px solid var(--dim);padding:8px 10px;border-radius:3px;cursor:pointer}
+.chip:focus-visible,.btn:focus-visible{outline:2px solid var(--pumpkin);outline-offset:2px}
+#stamina{left:50%;bottom:18px;transform:translateX(-50%);width:min(40vw,220px);height:5px;background:rgba(231,226,210,.15)}
+#stamina i{display:block;height:100%;width:100%;background:var(--bone)}
+#stamina.low i{background:var(--blood)}
+#toast{left:16px;right:16px;bottom:48px;text-align:center;text-transform:none;letter-spacing:.03em;font-size:15px;opacity:0;transition:opacity .5s;text-shadow:0 2px 6px #000}
+
+#stick{position:absolute;width:110px;height:110px;margin:-55px 0 0 -55px;border:1.5px solid rgba(231,226,210,.35);border-radius:50%;pointer-events:none}
+#stick i{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px;border-radius:50%;background:rgba(231,226,210,.35)}
+#pad{position:absolute;right:16px;bottom:44px;display:flex;flex-direction:column;gap:12px}
+#pad button{width:68px;height:68px;border-radius:50%;font:inherit;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone);background:rgba(13,17,27,.55);border:1.5px solid rgba(231,226,210,.45);touch-action:none}
+#pad button.held{background:var(--ember);border-color:var(--pumpkin)}
+
+.card{position:absolute;inset:0;display:flex;padding-block:24px;padding-inline:20px;text-align:center;background:rgba(4,5,10,.66);overflow:auto}
+.col{margin:auto;display:flex;flex-direction:column;align-items:center;gap:16px;width:min(100%,440px);min-width:0}
+.col.wide{width:min(100%,760px)}
+.card h1{margin:0;font-family:var(--display);font-weight:400;color:var(--pumpkin);font-size:clamp(46px,13vw,104px);line-height:.95;letter-spacing:.04em;text-wrap:balance;text-shadow:0 0 28px rgba(255,122,24,.35)}
+.card h2{margin:0;font-family:var(--display);font-weight:400;color:var(--pumpkin);font-size:clamp(30px,8vw,48px);letter-spacing:.05em;text-wrap:balance}
+.card p{margin:0;max-width:46ch;font-size:15px;line-height:1.6;color:var(--bone);text-shadow:0 1px 4px #000}
+.card p.lab{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.card p.tok{color:var(--pumpkin);letter-spacing:.1em;text-transform:uppercase;font-size:13px}
+.list{display:flex;flex-direction:column;gap:10px;width:min(100%,320px);align-items:stretch}
+.btn{font-family:var(--display);font-size:24px;letter-spacing:.12em;color:var(--night);background:var(--pumpkin);border:0;padding:10px 34px;border-radius:2px;cursor:pointer}
+.btn:hover{background:var(--bone)}
+.mbtn{font-family:var(--display);font-size:21px;letter-spacing:.1em;color:var(--bone);background:rgba(13,17,27,.72);border:1px solid var(--dim);padding:10px 16px;border-radius:2px;cursor:pointer}
+.mbtn:hover:not(:disabled){border-color:var(--pumpkin);color:var(--pumpkin)}
+.mbtn:disabled{opacity:.4;cursor:default}
+.mbtn small{display:block;font-family:var(--body);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-top:2px}
+.mbtn.back{font-size:16px;border-color:transparent;background:none;color:var(--dim)}
+.mbtn:focus-visible,.seg button:focus-visible,.skin button:focus-visible{outline:2px solid var(--pumpkin);outline-offset:2px}
+.inp{font:inherit;font-size:16px;letter-spacing:.08em;color:var(--bone);background:rgba(13,17,27,.8);border:1px solid var(--dim);border-radius:2px;padding:9px 12px;width:min(100%,320px);text-align:center}
+.inp:focus-visible{outline:2px solid var(--pumpkin);outline-offset:2px}
+.plist{list-style:none;margin:0;padding:0;width:min(100%,320px);display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--bone)}
+.plist li{border:1px solid var(--dim);border-radius:2px;padding:7px 10px;background:rgba(13,17,27,.6);overflow-wrap:anywhere}
+.btn:disabled{opacity:.45;cursor:default}
+.seg{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.seg button{font:inherit;font-size:13px;letter-spacing:.06em;color:var(--bone);background:rgba(13,17,27,.72);border:1px solid var(--dim);padding:8px 12px;border-radius:2px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--pumpkin);border-color:var(--pumpkin);color:var(--night)}
+#shopGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;width:100%}
+.skin{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 8px;border:1px solid rgba(154,150,138,.5);background:rgba(13,17,27,.72);border-radius:2px;min-width:0}
+.skin.on{border-color:var(--pumpkin)}
+.skin .sw{display:flex;align-items:center}
+.skin .sw i{display:block;width:44px;height:22px;border-radius:3px 0 0 3px}
+.skin .sw b{display:block;width:26px;height:26px;border-radius:50%;margin-left:-4px;border:2px solid var(--ink)}
+.skin span{font-family:var(--display);font-size:19px;letter-spacing:.06em}
+.skin button{font:inherit;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--night);background:var(--pumpkin);border:0;padding:6px 10px;border-radius:2px;cursor:pointer}
+.skin button:disabled{background:none;color:var(--dim);border:1px solid var(--dim);cursor:default}
+#shop{background:linear-gradient(to right,rgba(4,5,10,0) 0,rgba(4,5,10,0) 30%,rgba(4,5,10,.9) 46%)}
+#shop .col{margin:auto 0 auto auto;width:min(100%,54vw)}
+.skin{cursor:pointer}
+.skin.view{box-shadow:0 0 0 2px var(--bone)}
+@media (max-width:760px){#shop{background:linear-gradient(to bottom,rgba(4,5,10,.05) 0,rgba(4,5,10,.92) 46vh)}#shop .col{margin:46vh auto auto;width:100%}}
+#cine{position:absolute;inset:0;cursor:pointer}
+#cine .bar{position:absolute;left:0;right:0;background:#000}
+#cine .bar.t{top:0;height:11vh}
+#cine .bar.b{bottom:0;height:24vh;display:flex;align-items:center;justify-content:center;padding-inline:20px}
+#cineText{margin:0;max-width:62ch;text-align:center;color:var(--bone);font-size:clamp(15px,2.3vw,20px);line-height:1.5;text-wrap:balance}
+#cineSkip{position:absolute;top:calc(11vh + 10px);right:16px}
+#objective{top:14px;left:16px;max-width:min(38vw,300px);text-transform:none;letter-spacing:.02em;font-size:13px;line-height:1.4;text-shadow:0 2px 6px #000}
+#objective b{display:block;color:var(--pumpkin);font-weight:400;letter-spacing:.12em;text-transform:uppercase;font-size:11px}
+#pauseBtn{position:absolute;top:12px;left:50%;transform:translateX(-50%)}
+#dead h1{color:var(--blood);text-shadow:0 0 28px rgba(179,18,29,.5)}
+</style>
+
+<div id="game">
+  <div id="grain"></div>
+  <div id="vignette"></div>
+  <div id="fear"></div>
+  <div id="flash"></div>
+  <div id="gore"></div>
+  <div id="jump" hidden></div>
+  <div id="inside" hidden></div>
+  <div id="peep" hidden></div>
+
+  <div class="hud" id="safe" hidden></div>
+  <div class="hud" id="prompt" hidden></div>
+  <div class="hud" id="fuses" hidden><span id="fuseLabel">Fuses</span></div>
+  <div class="hud" id="objective" hidden></div>
+  <button class="chip" id="pauseBtn" type="button" hidden>Pause</button>
+  <div class="hud" id="stamina" hidden><i></i></div>
+  <div class="hud" id="toast"></div>
+
+  <div id="stick" hidden><i></i></div>
+  <div id="pad" hidden>
+    <button id="btnKnock" type="button" hidden>Knock</button>
+    <button id="btnLight" type="button">Light</button>
+    <button id="btnRun" type="button">Run</button>
+  </div>
+  <div id="fade"></div>
+  <div id="cine" hidden><div class="bar t"></div><div class="bar b"><p id="cineText"></p></div><button class="chip" id="cineSkip" type="button">Skip</button></div>
+
+  <div class="card" id="start"><div class="col">
+    <h1>Fellow Neighbors</h1>
+    <button class="btn" id="play" type="button">Start</button>
+  </div></div>
+
+  <div class="card" id="menu" hidden><div class="col">
+    <h2>Fellow Neighbors</h2>
+    <p class="tok"><span class="tokN">0</span> tokens</p>
+    <div class="list">
+      <button class="mbtn" id="mStory" type="button">Story Mode</button>
+      <button class="mbtn" id="mOnline" type="button">Online</button>
+      <button class="mbtn" id="mSettings" type="button">Settings</button>
+      <button class="mbtn" id="mShop" type="button">Shop</button>
+    </div>
+  </div></div>
+
+  <div class="card" id="story" hidden><div class="col">
+    <h2>Story Mode</h2>
+    <div class="list">
+      <button class="mbtn" id="sVictim" type="button">Victim Mode<small>You are the survivor</small></button>
+      <button class="mbtn" id="sKiller" type="button">Killer Mode<small>You are the killer</small></button>
+      <button class="mbtn back" data-to="menu" type="button">Back</button>
+    </div>
+  </div></div>
+
+  <div class="card" id="parts" hidden><div class="col">
+    <h2 id="partsTitle">Victim Mode</h2>
+    <div class="list" id="partsList"></div>
+    <div class="list"><button class="mbtn back" data-to="story" type="button">Back</button></div>
+  </div></div>
+
+  <div class="card" id="online" hidden><div class="col">
+    <h2>Online</h2>
+    <p id="netNote">Everyone picks the same mode and types the same room code.</p>
+    <p class="lab">Your name</p>
+    <input class="inp" id="netName" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Player" aria-label="Your name">
+    <p class="lab">Room code</p>
+    <input class="inp" id="netCode" maxlength="10" value="LANE" autocomplete="off" spellcheck="false" aria-label="Room code">
+    <div class="list">
+      <button class="mbtn" data-net="b" type="button">Co-op Story · Boy &amp; Girl</button>
+      <button class="mbtn" data-net="k" type="button">Co-op Story · Killer &amp; Girl</button>
+      <button class="mbtn" data-net="s" type="button">Survival · 2 Killers, 5 Survivors</button>
+      <button class="mbtn back" data-to="menu" type="button">Back</button>
+    </div>
+  </div></div>
+
+  <div class="card" id="lobby" hidden><div class="col">
+    <h2 id="lobTitle">Lobby</h2>
+    <p id="lobInfo"></p>
+    <ul class="plist" id="lobList"></ul>
+    <p class="lab">Play as</p>
+    <div class="seg" id="lobSeg"></div>
+    <div class="list"><button class="btn" id="lobStart" type="button">Start</button><button class="mbtn" id="lobLeave" type="button">Leave</button></div>
+  </div></div>
+
+  <div class="card" id="netEnd" hidden><div class="col">
+    <h2 id="neTitle"></h2>
+    <p id="neText"></p>
+    <p class="tok" id="neReward"></p>
+    <div class="list"><button class="btn" id="neLobby" type="button">Back to lobby</button><button class="mbtn" id="neLeave" type="button">Leave</button></div>
+  </div></div>
+
+  <div class="card" id="settings" hidden><div class="col">
+    <h2>Settings</h2>
+    <p class="lab">Frame rate</p>
+    <div class="seg" id="fpsSeg"><button type="button" data-v="30">30</button><button type="button" data-v="60">60</button><button type="button" data-v="120">120</button></div>
+    <p class="lab">Quality</p>
+    <div class="seg" id="qSeg"><button type="button" data-v="0">Very low</button><button type="button" data-v="1">Low</button><button type="button" data-v="2">Medium</button><button type="button" data-v="3">High</button><button type="button" data-v="4">Very high</button></div>
+    <p class="lab">Voices</p>
+    <div class="seg" id="voxSeg"><button type="button" data-v="1">On</button><button type="button" data-v="0">Off</button></div>
+    <p class="lab" id="keysHelp">W A S D move &middot; Mouse look &middot; Shift run &middot; F flashlight &middot; E use &middot; Esc pause</p>
+    <div class="list"><button class="mbtn" id="setDone" type="button">Done</button></div>
+  </div></div>
+
+  <div class="card" id="shop" hidden><div class="col wide">
+    <h2>Shop</h2>
+    <p class="tok"><span class="tokN">0</span> tokens</p>
+    <p class="lab" id="shopTimer"></p>
+    <p class="tok">Viewing: <span id="shopName"></span></p>
+    <div id="shopGrid"></div>
+    <div class="list"><button class="mbtn back" data-to="menu" type="button">Back</button></div>
+  </div></div>
+
+  <div class="card" id="pause" hidden><div class="col">
+    <h2>Paused</h2>
+    <div class="list">
+      <button class="mbtn" id="pResume" type="button">Resume</button>
+      <button class="mbtn" id="pSettings" type="button">Settings</button>
+      <button class="mbtn" id="pLeave" type="button">Leave</button>
+    </div>
+  </div></div>
+
+  <div class="card" id="dead" hidden><div class="col">
+    <h1 id="deadTitle">He found you</h1>
+    <p id="deadText"></p>
+    <div class="list"><button class="btn" id="retry" type="button">Try again</button><button class="mbtn toMenu" type="button">Menu</button></div>
+  </div></div>
+
+  <div class="card" id="win" hidden><div class="col">
+    <h1 id="winTitle">You got out</h1>
+    <p id="winText"></p>
+    <p class="tok" id="winReward"></p>
+    <div class="list"><button class="btn" id="again" type="button">New story</button><button class="mbtn toMenu" type="button">Menu</button></div>
+  </div></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
