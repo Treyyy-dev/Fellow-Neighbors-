@@ -2534,7 +2534,7 @@ function netJoin(code,mode){
   var nm=netName(); code=String(code||'').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,10); if (!code || lobby || net) return;
   if (findTimer){ clearInterval(findTimer); findTimer=0; }
   var go=function(R,note){ NR=R; NP={}; netMe=R.solo?'solo':'me';
-    lobby={mode:mode||'s',code:code,gid:0,want:null,note:note||'',timer:0,mt:mode?Date.now():0,adT:0}; lobby.want=NETMODES[lobby.mode].roles[0];
+    lobby={mode:mode||'s',code:code,gid:0,want:null,note:note||'',timer:0,mt:mode?Date.now():0,adT:0,bots:{k:0,s:0},bt:0}; lobby.want=NETMODES[lobby.mode].roles[0];
     var p={n:nm,sk:SAVE.equipped,w:lobby.want,v:2}; if (mode) p.md={m:mode,t:lobby.mt}; netSend(p);
     lobbyUI(); show('lobby'); lobby.timer=setInterval(lobbyTick,300); lobbyTick(); };
   toast('Connecting…',2500);
@@ -2545,7 +2545,11 @@ function netJoin(code,mode){
   else go(soloRoom(),'Online is not available from here, so you are playing alone.');
 }
 function setLobbyMode(m,t){ lobby.mode=m; lobby.mt=t; if (NETMODES[m].roles.indexOf(lobby.want)<0) lobby.want=NETMODES[m].roles[0]; netSend({md:{m:m,t:t},w:lobby.want}); lobbyUI(); }
+function setBots(k,s,t,quiet){ lobby.bots={k:Math.max(0,Math.min(2,k|0)),s:Math.max(0,Math.min(5,s|0))}; lobby.bt=t; netSend({bt:{k:lobby.bots.k,s:lobby.bots.s,t:t}}); if (!quiet){ lobbyUI(); lobbyTick(); } }
 function lobbyUI(){
+  var bs=$('lobBots'), isS=lobby.mode==='s'; bs.textContent=''; bs.hidden=!isS; $('lobBotLab').hidden=!isS;
+  if (isS) [['+ Killer bot',1,0],['− Killer bot',-1,0],['+ Survivor bot',0,1],['− Survivor bot',0,-1]].forEach(function(d){ var b=document.createElement('button'); b.type='button'; b.textContent=d[0];
+    b.addEventListener('click',function(){ if (lobby) setBots(lobby.bots.k+d[1],lobby.bots.s+d[2],Date.now()); }); bs.appendChild(b); });
   var M=NETMODES[lobby.mode], seg=$('lobSeg'), ms=$('lobMode'); seg.textContent=''; ms.textContent='';
   Object.keys(NETMODES).forEach(function(m){ var b=document.createElement('button'); b.type='button'; b.textContent=NETMODES[m].t; b.setAttribute('aria-pressed',String(lobby.mode===m));
     b.addEventListener('click',function(){ if (lobby && lobby.mode!==m){ setLobbyMode(m,Date.now()); lobbyTick(); } }); ms.appendChild(b); });
@@ -2557,11 +2561,14 @@ function lobbyTick(){
   if (!lobby) return; var ps=netPeers(), ul=$('lobList'), best=null, known=true, nm=null, nt=lobby.mt;
   ps.forEach(function(p){ var d=p.pr.md; if (!p.me && d && typeof d==='object' && NETMODES[d.m] && num(d.t,0)>nt){ nt=d.t; nm=d.m; } });
   if (nm) setLobbyMode(nm,nt);
+  var nb=null, nbt=lobby.bt; ps.forEach(function(p){ var d=p.pr.bt; if (!p.me && d && typeof d==='object' && num(d.t,0)>nbt){ nbt=d.t; nb=d; } });
+  if (nb) setBots(num(nb.k,0),num(nb.s,0),nbt,true);
   var M=NETMODES[lobby.mode]; ul.textContent='';
   ps.forEach(function(p){ var li=document.createElement('li'), w=M.names[p.pr.w]||M.names[M.roles[0]];
     li.textContent=nick(p.pr)+(p.me?' (you)':'')+' · '+w+(p.pr.gi?' · in a game':''); ul.appendChild(li);
     if (p.me && p.known===false && !NR.solo) known=false;
     var g=p.pr.go; if (g && typeof g==='object' && num(g.id,0)>lobby.gid && g.roles && typeof g.roles==='object' && (!best || g.id>best.id)) best=g; });
+  if (lobby.mode==='s'){ var bi; for (bi=0;bi<lobby.bots.k;bi++){ var lk=document.createElement('li'); lk.textContent='Bot · Killer'; ul.appendChild(lk); } for (bi=0;bi<lobby.bots.s;bi++){ var ls=document.createElement('li'); ls.textContent='Bot · Survivor'; ul.appendChild(ls); } }
   $('lobInfo').textContent=(lobby.note?lobby.note+' ':'')+M.t+' · '+ps.length+' in the lobby'+(lobby.mode==='s'?' · up to 2 killers and 5 survivors':' · made for 2 players')+'. Friends can find this room under Find Room, or join with the code '+lobby.code.toUpperCase()+'.';
   $('lobStart').disabled=!known;
   lobby.adT-=0.3; if (lobby.adT<=0 && !NR.solo){ lobby.adT=1.5; dirOpen(); dirSend({rm:{c:lobby.code,m:lobby.mode,n:ps.length,h:nick(ps[0].pr),g:0}}); }
@@ -2578,15 +2585,18 @@ function findTick(){
     b.addEventListener('click',function(){ netJoin(r.c,null); }); li.appendChild(b); ul.appendChild(li); });
 }
 function lobbyStart(){
-  if (!lobby) return; var ps=netPeers().filter(function(p){ return !p.pr.gi; }), M=NETMODES[lobby.mode], roles={}, i;
-  if (lobby.mode==='s'){ var nk=ps.length>=5?2:(ps.length>=2?1:0), want=ps.filter(function(p){ return p.pr.w==='k'; }), rest=ps.filter(function(p){ return p.pr.w!=='k'; });
+  if (!lobby) return; var ps=netPeers().filter(function(p){ return !p.pr.gi; }), M=NETMODES[lobby.mode], roles={}, i, bots={k:0,s:0};
+  if (lobby.mode==='s' && lobby.bots.k+lobby.bots.s>0){ var hk=0, hs=0;
+    ps.forEach(function(p){ if (p.pr.w==='k' && hk<2){ roles[p.id]='k'; hk++; } else if (hs<5){ roles[p.id]='s'; hs++; } else { roles[p.id]='k'; hk++; } });
+    bots.k=Math.max(0,Math.min(lobby.bots.k,2-hk)); bots.s=Math.max(0,Math.min(lobby.bots.s,5-hs)); }
+  else if (lobby.mode==='s'){ var nk=ps.length>=5?2:(ps.length>=2?1:0), want=ps.filter(function(p){ return p.pr.w==='k'; }), rest=ps.filter(function(p){ return p.pr.w!=='k'; });
     want.sort(function(){ return Math.random()-0.5; }); rest.sort(function(){ return Math.random()-0.5; });
     var order=want.concat(rest), ns=0; for (i=0;i<order.length;i++){ if (i<nk) roles[order[i].id]='k'; else if (ns<5){ roles[order[i].id]='s'; ns++; } else roles[order[i].id]='k'; }
   } else { var a=M.roles[0], b=M.roles[1], used={};
     ps.forEach(function(p){ var w=p.pr.w===b?b:a; if (!used[w]){ used[w]=1; roles[p.id]=w; } });
     ps.forEach(function(p){ if (!roles[p.id]){ var r=!used[a]?a:b; used[r]=1; roles[p.id]=r; } });
     if (ps.length===1 && lobby.mode==='k') roles[ps[0].id]='killer'; }
-  netSend({go:{id:Date.now(),mode:lobby.mode,roles:roles}}); lobbyTick();
+  netSend({go:{id:Date.now(),mode:lobby.mode,roles:roles,bots:bots}}); lobbyTick();
 }
 function netLeave(){
   if (lobby && lobby.timer) clearInterval(lobby.timer); lobby=null; dirSend({rm:null});
@@ -2601,7 +2611,7 @@ function netToLobby(){
   FX.hemi=scene.environment?0.36:0.42; scene.fog.color.copy(lin(FOG)); resident.g.visible=false; resident.dead=false; beacon.visible=false; net=null; game.net=null;
   game.role='victim'; reset(); stalkerOff(14); game.mode='menu'; setHud(false); backdrop();
   netSend({gi:null,go:null,a:null,st:null,f:null,hp:null,o:null,k:null,ek:null,e:null,pv:null,p:null,el:null,r:null});
-  lobby={mode:mode,code:code,gid:gid,want:NP.w||NETMODES[mode].roles[0],note:'',timer:0,mt:(NP.md&&NP.md.t)||0,adT:0}; lobbyUI(); show('lobby'); lobby.timer=setInterval(lobbyTick,300); lobbyTick();
+  lobby={mode:mode,code:code,gid:gid,want:NP.w||NETMODES[mode].roles[0],note:'',timer:0,mt:(NP.md&&NP.md.t)||0,adT:0,bots:{k:(NP.bt&&NP.bt.k)|0,s:(NP.bt&&NP.bt.s)|0},bt:(NP.bt&&NP.bt.t)||0}; lobbyUI(); show('lobby'); lobby.timer=setInterval(lobbyTick,300); lobbyTick();
 }
 
 /* stages for the two co-op stories */
@@ -2654,7 +2664,8 @@ function netBegin(go){
   lobby=null;
   net={mode:mode,code:code,role:role,gid:go.id,roles:go.roles,t0:performance.now(),el:0,st:0,f:0,hits:0,hp:2,alive:1,acc:{},spd:1,
        E:{x:0,z:0,ry:0,vis:0,cool:mode==='s'?22:30,lost:0,stuck:0,mv:0},ek:{},k:{},o:{g:0,b:0,c:0,gn:{}},hold:[0,0],sendT:0,cd:0,slow:0,boost:0,inv:0,objT:0,lastObj:'',
-       prey:null,esc:0,over:false,stT:0,lx:0,lz:0,an:0,done:false,spec:0,kills:0,world:{}};
+       prey:null,esc:0,over:false,stT:0,lx:0,lz:0,an:0,done:false,spec:0,kills:0,world:{},bots:[]};
+  if (mode==='s' && go.bots && typeof go.bots==='object') botsInit(net,Math.max(0,Math.min(2,num(go.bots.k,0)|0)),Math.max(0,Math.min(5,num(go.bots.s,0)|0)));
   game.net=net; game.role=(role==='k'||role==='killer')?'killer':'victim'; initAudio(); reset(); story.hold=null; story.tearH=null; surv.active=false; setChain(false); stalkerOff(1e9);
   gasCan.visible=battery.visible=keysG.visible=leverG.visible=truckG.visible=boxG.visible=false; moveCar(-64,2.6); allPower(true); resident.g.visible=false; resident.dead=false;
   var ids=Object.keys(go.roles).sort(), idx=Math.max(0,ids.indexOf(netMe)), sp;
@@ -2700,15 +2711,20 @@ function netTick(dt){
     if (p.me){ q.x=P.x; q.z=P.z; me=q; } else { var pp=pr.p; if (!pp || !pp.length) continue; q.x=Math.max(-160,Math.min(112,num(pp[0],0))); q.z=Math.max(-40,Math.min(40,num(pp[1],0))); q.yaw=num(pp[2],0); q.an=num(pp[3],0)|0; }
     if (hostId===null) hostId=p.id; pl.push(q); seen[p.id]=1;
     if (!p.me){ maxSt=Math.max(maxSt,Math.min(99,num(pr.st,0)|0)); maxF=Math.max(maxF,num(pr.f,0)|0); maxEl=Math.max(maxEl,num(pr.el,0)); }
-    var A=N.acc[p.id]||(N.acc[p.id]={g:0,b:0,c:0,gn:{},k:0,ek:0,hold:[0,0]});
+    var A=N.acc[p.id]||(N.acc[p.id]={g:0,b:0,c:0,gn:{},k:0,ek:0,hold:[0,0],kb:{}});
     var o=p.me?N.o:pr.o; if (o && typeof o==='object'){ A.g=Math.max(A.g,num(o.g,0)); A.b=Math.max(A.b,num(o.b,0)); A.c=Math.max(A.c,Math.min(CARNEED,num(o.c,0)));
       if (o.gn && typeof o.gn==='object') SGENS.forEach(function(h){ A.gn[h]=Math.max(A.gn[h]||0,Math.min(GENNEED,num(o.gn[h],0))); }); }
-    var kk=p.me?N.k:pr.k; if (kk && typeof kk==='object') A.k=Math.max(A.k,num(kk[netMe],0));
+    var kk=p.me?N.k:pr.k; if (kk && typeof kk==='object'){ A.k=Math.max(A.k,num(kk[netMe],0)); for (var bq=0;bq<N.bots.length;bq++){ var bid=N.bots[bq].id; A.kb[bid]=Math.max(A.kb[bid]||0,num(kk[bid],0)); } }
     var ee=p.me?N.ek:pr.ek; if (ee && typeof ee==='object'){ A.ek=Math.max(A.ek,num(ee[netMe],0)); if (!p.me) for (var ek in ee) N.ek[ek]=Math.max(N.ek[ek]||0,num(ee[ek],0)); }
     var hh=p.me?N.hold:pr.hp; A.hold=(hh && hh.length===2)?[num(hh[0],-1),Math.max(0,Math.min(600,num(hh[1],0)))]:[-1,0];
   }
   if (!me){ me={id:netMe,me:true,role:N.role,pr:NP,alive:N.alive===1,a:N.alive,x:P.x,z:P.z}; pl.push(me); }
   var host=hostId===null || hostId===netMe;
+  if (N.bots.length){
+    if (!host){ var bz=null; for (i=0;i<pl.length;i++) if (pl[i].id===hostId) bz=pl[i].pr.bz; if (bz && bz.length===N.bots.length) for (i=0;i<bz.length;i++){ var z=bz[i], bb=N.bots[i]; if (!z || z.length<6) continue; bb.x=num(z[0],bb.x); bb.z=num(z[1],bb.z); bb.ry=num(z[2],bb.ry); bb.an=num(z[3],0)|0; bb.a=num(z[4],1)|0; bb.hp=num(z[5],bb.hp); } }
+    N.bots.forEach(function(bb){ seen[bb.id]=1; pl.push({id:bb.id,me:false,bot:bb,role:bb.role,pr:{n:bb.name,sk:bb.sk},alive:bb.a===1,a:bb.a,x:bb.x,z:bb.z,yaw:bb.ry-Math.PI,an:bb.an}); });
+  }
+  N.isHost=host;
   if (maxEl>N.el+1.5) N.t0-=(maxEl-N.el)*1000;
   for (var id in N.acc){ hitsK+=N.acc[id].k; hitsE=Math.max(hitsE,N.acc[id].ek); }
   // other players' bodies
@@ -2754,7 +2770,8 @@ function netTick(dt){
   N.adT=(N.adT||0)-dt; if (N.adT<=0 && !NR.solo){ N.adT=2; dirSend({rm:{c:N.code,m:N.mode,n:pl.length,h:nick(pl[0].pr),g:1}}); }
   N.sendT-=dt; if (N.sendT<=0){ N.sendT=0.08;
     var patch={p:[Math.round(P.x*100)/100,Math.round(P.z*100)/100,Math.round(P.yaw*100)/100,N.an],a:N.alive,el:Math.round(N.el),st:N.st,f:N.f,hp:[N.hold[0],Math.round(N.hold[1]*10)/10]};
-    if (N.mode==='s'){ if (game.role==='killer') patch.k=N.k; else patch.o={g:N.o.g,b:N.o.b,c:Math.round(N.o.c*10)/10,gn:N.o.gn}; }
+    if (N.mode==='s'){ if (game.role==='killer') patch.k=N.k; patch.o={g:N.o.g,b:N.o.b,c:Math.round(N.o.c*10)/10,gn:N.o.gn};
+      if (host && N.bots.length){ patch.bz=N.bots.map(function(b){ return [Math.round(b.x*100)/100,Math.round(b.z*100)/100,Math.round(b.ry*100)/100,b.an,b.a,b.hp]; }); patch.ek=N.ek; } }
     if (eliasOn && host){ patch.e=[Math.round(E.x*100)/100,Math.round(E.z*100)/100,Math.round(E.ry*100)/100,E.vis,E.mv]; patch.ek=N.ek; }
     if (N.prey) patch.pv=[Math.round(N.prey.x*100)/100,Math.round(N.prey.z*100)/100,Math.round(N.prey.ry*100)/100,N.prey.an,N.prey.who,N.prey.dead?1:0,N.st];
     netSend(patch); }
@@ -2773,10 +2790,55 @@ function netElias(dt,tg){
   if (d>46){ E.lost+=dt; if (E.lost>4){ E.vis=0; E.cool=3; } } else E.lost=0;
   if (d<1.2){ N.ek[T.id]=(N.ek[T.id]||0)+1; E.vis=0; E.cool=N.mode==='s'?16:10; if (!T.me) bloodBurst(T.x,1.2,T.z,dx,dz,40); }
 }
+function botsInit(N,nk,ns){
+  var i; for (i=0;i<nk;i++) N.bots.push({id:'botk'+i,role:'k',name:'Killer bot',x:60-i*4,z:i%2?4:-4,ry:-Math.PI/2,an:0,a:1,hp:9,cd:4+i*2,slow:0,stuck:0});
+  for (i=0;i<ns;i++){ var sk=(i*5+3)%NEIGHBOURS.length; N.bots.push({id:'bots'+i,role:'s',name:NEIGHBOURS[sk].n+' bot',sk:sk,x:-57+i*1.6,z:(i%2?-3.2:3.4),ry:Math.PI/2,an:0,a:1,hp:2,st:1,tired:0,jink:0,jinkT:0,acc:0,lx:0,lz:0,inv:0,hits:0,esc:0,ti:i}); }
+}
+// Bots are driven by one player's game and shown to everyone else.
+function botsHost(dt,pl,W){
+  var N=net, o=N.o, killers=pl.filter(function(q){ return q.role==='k'; }), targets=pl.filter(function(q){ return q.role==='s' && q.alive; });
+  function hurt(b,dx,dz){ if (b.a!==1 || b.inv>0) return; b.inv=2.5; b.hp--; bloodBurst(b.x,1.2,b.z,dx,dz,45); if (b.hp<=0){ b.a=0; b.an=0; bloodPool(b.x,groundY(b.x,b.z),b.z,0.9); toast(b.name+' is dead.',2600); } }
+  N.bots.forEach(function(b){
+    if (b.role==='k'){ b.cd-=dt; b.slow-=dt; b.an=0;
+      var T=null, d=1e9; targets.forEach(function(q){ if (q.bot && q.bot.a!==1) return; var dd=Math.hypot(q.x-b.x,q.z-b.z); if (dd<d){ d=dd; T=q; } });
+      if (!T) return;
+      var sp=b.slow>0?1.6:4.5, dx=(T.x-b.x)/(d||1), dz=(T.z-b.z)/(d||1), p={x:b.x+dx*sp*dt,z:b.z+dz*sp*dt};
+      if (b.stuck<2.5) resolve(p,0.45);
+      var mv=Math.hypot(p.x-b.x,p.z-b.z); b.stuck=mv<sp*dt*0.35?b.stuck+dt:(b.stuck>=2.5?(b.stuck+dt>4.5?0:b.stuck+dt):0);
+      b.x=Math.min(72.2,p.x); b.z=p.z; b.ry=Math.atan2(dx,dz); b.an=sp>4?2:1;
+      if (d<1.3 && b.cd<=0){ b.cd=3.2; b.slow=1.3; if (T.bot) hurt(T.bot,dx,dz); else { N.ek[T.id]=(N.ek[T.id]||0)+1; if (!T.me) bloodBurst(T.x,1.2,T.z,dx,dz,40); } }
+      return; }
+    if (b.a!==1){ b.an=0; return; }
+    b.inv-=dt; var tot=0; for (var id in N.acc) tot+=(N.acc[id].kb[b.id]||0);
+    if (tot>b.hits){ b.hits=tot; hurt(b,0,0); if (b.a!==1) return; }
+    var K=null, kd=1e9; killers.forEach(function(q){ var dd=Math.hypot(q.x-b.x,q.z-b.z); if (dd<kd){ kd=dd; K=q; } });
+    var vx=0, vz=0, sp=0, run=false, work=null;
+    if (K && kd<13){ vx=(b.x-K.x)/(kd||1); vz=(b.z-K.z)/(kd||1); killers.forEach(function(q){ if (q===K) return; var ex=b.x-q.x, ez=b.z-q.z, e=Math.hypot(ex,ez)||1; if (e<12){ vx+=ex/e*0.8; vz+=ez/e*0.8; } });
+      if (b.x>64) vx-=1.5; if (b.x<-150) vx+=1.5; if (b.z>34) vz-=1.5; if (b.z<-34) vz+=1.5;
+      run=b.tired<=0; sp=run?6.7:4.2; b.esc=0; }
+    else { var opts=[];
+      if (W.done) opts.push({pt:CARSIDE,r:3.2,f:function(){ b.esc+=dt; if (b.esc>=3){ b.a=2; b.an=0; toast(b.name+' got out.',2600); } }});
+      else { if (W.G===0) opts.push({pt:GAS,r:1.6,f:function(){ o.g=Math.max(o.g,1); }}); if (W.G===1) opts.push({pt:CARSIDE,r:3.2,f:function(){ o.g=2; }});
+        if (W.B===0) opts.push({pt:batPos(),r:1.6,f:function(){ o.b=Math.max(o.b,1); }}); if (W.B===1) opts.push({pt:CARSIDE,r:3.2,f:function(){ o.b=2; }});
+        if (W.G===2 && W.B===2 && !W.carOK) opts.push({pt:CARSIDE,r:3.2,f:function(){ o.c=Math.min(CARNEED,o.c+dt); }});
+        SGENS.forEach(function(h){ if (W.gens[h]<GENNEED) opts.push({pt:genPt(h),r:2.4,f:function(){ o.gn[h]=Math.round(Math.min(GENNEED,(o.gn[h]||0)+dt)*100)/100; }}); }); }
+      if (opts.length){ var O=opts[b.ti%opts.length], gx=O.pt.x-b.x, gz=O.pt.z-b.z, gd=Math.hypot(gx,gz)||1;
+        if (gd<O.r*0.8){ work=O; b.ry=Math.atan2(gx,gz); } else { vx=gx/gd; vz=gz/gd; sp=4.3; } } }
+    if (run){ b.st-=dt/7; if (b.st<=0) b.tired=3; } else { b.st=Math.min(1,b.st+dt/8); b.tired-=dt; }
+    if (work){ work.f(); b.an=0; return; }
+    if (!sp){ b.an=0; return; }
+    var n=Math.hypot(vx,vz)||1; vx/=n; vz/=n;
+    if (b.jinkT>0){ b.jinkT-=dt; var c=Math.cos(1.35*b.jink), sn=Math.sin(1.35*b.jink), tx=vx*c-vz*sn; vz=vx*sn+vz*c; vx=tx; }
+    var p2={x:b.x+vx*sp*dt,z:b.z+vz*sp*dt}; resolve(p2,0.4); p2.x=Math.max(-157,Math.min(71,p2.x)); p2.z=Math.max(-39,Math.min(39,p2.z));
+    b.acc+=dt; if (b.acc>0.7){ if (Math.hypot(p2.x-b.lx,p2.z-b.lz)<sp*0.7*0.3){ b.jink=Math.random()<0.5?1:-1; b.jinkT=1.3; } b.lx=p2.x; b.lz=p2.z; b.acc=0; }
+    b.x=p2.x; b.z=p2.z; b.ry=Math.atan2(vx,vz); b.an=sp>5?2:1;
+  });
+}
 function netSurvival(dt,pl,surv,killers,me){
   var N=net, G=0, B=0, C=0, gens={}, done, i;
   for (var id in N.acc){ var A=N.acc[id]; G=Math.max(G,A.g); B=Math.max(B,A.b); C+=A.c; SGENS.forEach(function(h){ gens[h]=(gens[h]||0)+(A.gn[h]||0); }); }
   var fixed=SGENS.filter(function(h){ return gens[h]>=GENNEED; }), carOK=C>=CARNEED; done=carOK && fixed.length===SGENS.length;
+  if (N.isHost && N.bots.length && N.el>2) botsHost(dt,pl,{G:G,B:B,C:C,gens:gens,carOK:carOK,done:done});
   var W=N.world;
   if (W.G!==G){ if (W.G!==undefined && G===1) toast('Someone has the gas can. Get it to the car.',3000); if (W.G!==undefined && G===2) toast('The gas is in the tank.',3000); W.G=G; gasCan.visible=G===0; }
   if (W.B!==B){ if (W.B!==undefined && B===1) toast('Someone has the battery. Get it to the car.',3000); if (W.B!==undefined && B===2) toast('The battery is at the car.',3000); W.B=B; battery.visible=B===0; }
