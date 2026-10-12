@@ -1434,7 +1434,7 @@ var PARTS={
     {name:'Last One Standing',desc:'They only need 4 fuses, and they are quick.',fuses:4,run:5.8,walk:3.4,reward:100}]
 };
 var cfg=PARTS.victim[1], lastFrame=0, qLeaves=true, settingsBack='menu';
-var SCREENS=['start','menu','story','parts','online','netCreate','netFind','lobby','netEnd','settings','shop','pause','dead','win'];
+var SCREENS=['start','menu','story','parts','online','netFind','lobby','netEnd','settings','shop','pause','dead','win'];
 function show(id){ SCREENS.forEach(function(s){ $(s).hidden = s!==id; }); }
 function setLeaves(v){ leafPts.p.visible = v && qLeaves; }
 
@@ -2412,7 +2412,7 @@ var GIRL={n:'Girl',rig:'w',s:0.9,look:{sk:0xd8a888,hair:0x6a3a1a,top:0xe8e0d0,pa
 var WREN={n:'Wren',rig:'w',s:0.9,look:{sk:0xcfd4dc,hair:0xe8e8ee,top:0x8a8a9a,pants:0x2a2a34,acc:0x8a8a9a,pat:0,w:0.92}};
 var NETMODES={b:{t:'Boy & Girl',roles:['boy','girl'],names:{boy:'The Boy',girl:'The Girl'}},
               k:{t:'Killer & Girl',roles:['killer','girl'],names:{killer:'The Killer',girl:'The Girl'}},
-              s:{t:'Survival',roles:['s','k'],names:{s:'Survivor',k:'Killer'}}};
+              s:{t:'Kill Feast',roles:['s','k'],names:{s:'Survivor',k:'Killer'}}};
 // On claude.ai the page is handed a live room; on its own server it talks to /ws instead.
 function wsCap(){ return {join:function(name){ return new Promise(function(res,rej){
   var ws, peers={}, me=null, mine={}, ok=false;
@@ -2525,7 +2525,7 @@ function dirSend(p){ if (!netDir) return; try { var r=netDir.presence(p); if (r 
 function dirRooms(){
   var out={}, ps=[]; if (!netDir) return []; try { ps=netDir.peers()||[]; } catch(e){}
   ps.forEach(function(p){ var r=p && p.presence && p.presence.rm; if (!r || typeof r!=='object' || (p.isMe && p.sameTab)) return;
-    var c=String(r.c||'').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,10); if (!c || !NETMODES[r.m]) return;
+    var c=String(r.c||'').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,10); if (!c || r.m!=='s') return;
     var n=Math.max(1,Math.min(12,num(r.n,1)|0)); if (!out[c] || n>out[c].n) out[c]={c:c,m:r.m,n:n,h:nick({n:r.h}),g:r.g?1:0}; });
   return Object.keys(out).sort().map(function(k){ return out[k]; });
 }
@@ -2534,8 +2534,8 @@ function netJoin(code,mode){
   var nm=netName(); code=String(code||'').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,10); if (!code || lobby || net) return;
   if (findTimer){ clearInterval(findTimer); findTimer=0; }
   var go=function(R,note){ NR=R; NP={}; netMe=R.solo?'solo':'me';
-    lobby={mode:mode||'s',code:code,gid:0,want:null,note:note||'',timer:0,mt:mode?Date.now():0,adT:0,bots:{k:0,s:0},bt:0}; lobby.want=NETMODES[lobby.mode].roles[0];
-    var p={n:nm,sk:SAVE.equipped,w:lobby.want,v:2}; if (mode) p.md={m:mode,t:lobby.mt}; netSend(p);
+    lobby={mode:'s',code:code,gid:0,want:null,note:note||'',timer:0,mt:mode?Date.now():0,adT:0,bots:{k:0,s:0},bt:0}; lobby.want=NETMODES[lobby.mode].roles[0];
+    var p={n:nm,sk:SAVE.equipped,w:lobby.want,v:2}; if (mode) p.md={m:'s',t:lobby.mt}; netSend(p);
     lobbyUI(); show('lobby'); lobby.timer=setInterval(lobbyTick,300); lobbyTick(); };
   toast('Connecting…',2500);
   if (netCap && netCap.join){ var done=false, to=setTimeout(function(){ if (!done){ done=true; go(soloRoom(),'Could not reach the room, so you are playing alone.'); } },9000);
@@ -2551,7 +2551,7 @@ function lobbyUI(){
   if (isS) [['+ Killer bot',1,0],['− Killer bot',-1,0],['+ Survivor bot',0,1],['− Survivor bot',0,-1]].forEach(function(d){ var b=document.createElement('button'); b.type='button'; b.textContent=d[0];
     b.addEventListener('click',function(){ if (lobby) setBots(lobby.bots.k+d[1],lobby.bots.s+d[2],Date.now()); }); bs.appendChild(b); });
   var M=NETMODES[lobby.mode], seg=$('lobSeg'), ms=$('lobMode'); seg.textContent=''; ms.textContent='';
-  Object.keys(NETMODES).forEach(function(m){ var b=document.createElement('button'); b.type='button'; b.textContent=NETMODES[m].t; b.setAttribute('aria-pressed',String(lobby.mode===m));
+  ['s'].forEach(function(m){ var b=document.createElement('button'); b.type='button'; b.textContent=NETMODES[m].t; b.setAttribute('aria-pressed',String(lobby.mode===m));
     b.addEventListener('click',function(){ if (lobby && lobby.mode!==m){ setLobbyMode(m,Date.now()); lobbyTick(); } }); ms.appendChild(b); });
   M.roles.forEach(function(r){ var b=document.createElement('button'); b.type='button'; b.textContent=M.names[r]; b.setAttribute('aria-pressed',String(lobby.want===r));
     b.addEventListener('click',function(){ lobby.want=r; netSend({w:r}); lobbyUI(); lobbyTick(); }); seg.appendChild(b); });
@@ -2559,7 +2559,7 @@ function lobbyUI(){
 }
 function lobbyTick(){
   if (!lobby) return; var ps=netPeers(), ul=$('lobList'), best=null, known=true, nm=null, nt=lobby.mt;
-  ps.forEach(function(p){ var d=p.pr.md; if (!p.me && d && typeof d==='object' && NETMODES[d.m] && num(d.t,0)>nt){ nt=d.t; nm=d.m; } });
+  ps.forEach(function(p){ var d=p.pr.md; if (!p.me && d && typeof d==='object' && d.m==='s' && num(d.t,0)>nt){ nt=d.t; nm=d.m; } });
   if (nm) setLobbyMode(nm,nt);
   var nb=null, nbt=lobby.bt; ps.forEach(function(p){ var d=p.pr.bt; if (!p.me && d && typeof d==='object' && num(d.t,0)>nbt){ nbt=d.t; nb=d; } });
   if (nb) setBots(num(nb.k,0),num(nb.s,0),nbt,true);
@@ -2569,7 +2569,7 @@ function lobbyTick(){
     if (p.me && p.known===false && !NR.solo) known=false;
     var g=p.pr.go; if (g && typeof g==='object' && num(g.id,0)>lobby.gid && g.roles && typeof g.roles==='object' && (!best || g.id>best.id)) best=g; });
   if (lobby.mode==='s'){ var bi; for (bi=0;bi<lobby.bots.k;bi++){ var lk=document.createElement('li'); lk.textContent='Bot · Killer'; ul.appendChild(lk); } for (bi=0;bi<lobby.bots.s;bi++){ var ls=document.createElement('li'); ls.textContent='Bot · Survivor'; ul.appendChild(ls); } }
-  $('lobInfo').textContent=(lobby.note?lobby.note+' ':'')+M.t+' · '+ps.length+' in the lobby'+(lobby.mode==='s'?' · up to 2 killers and 5 survivors':' · made for 2 players')+'. Friends can find this room under Find Room, or join with the code '+lobby.code.toUpperCase()+'.';
+  $('lobInfo').textContent=(lobby.note?lobby.note+' ':'')+M.t+' · '+ps.length+' in the lobby'+' · up to 2 killers and 5 survivors'+'. Friends can find this room under Find Room, or join with the code '+lobby.code.toUpperCase()+'.';
   $('lobStart').disabled=!known;
   lobby.adT-=0.3; if (lobby.adT<=0 && !NR.solo){ lobby.adT=1.5; dirOpen(); dirSend({rm:{c:lobby.code,m:lobby.mode,n:ps.length,h:nick(ps[0].pr),g:0}}); }
   if (best && (Date.now()-best.id<NIGHT*1000+600000)) netBegin(best);
@@ -2660,7 +2660,7 @@ function lurePt(S){ return S.h<0 ? {x:-88.2,z:0} : doorPt(houses[S.h]); }
 /* start, end */
 function netBegin(go){
   if (lobby && lobby.timer) clearInterval(lobby.timer);
-  var mode=NETMODES[go.mode]?go.mode:lobby.mode, code=lobby.code, M=NETMODES[mode], role=go.roles[netMe]; if (M.roles.indexOf(role)<0) role=mode==='s'?'s':'girl';
+  var mode='s', code=lobby.code, M=NETMODES[mode], role=go.roles[netMe]; if (M.roles.indexOf(role)<0) role=mode==='s'?'s':'girl';
   lobby=null;
   net={mode:mode,code:code,role:role,gid:go.id,roles:go.roles,t0:performance.now(),el:0,st:0,f:0,hits:0,hp:2,alive:1,acc:{},spd:1,
        E:{x:0,z:0,ry:0,vis:0,cool:mode==='s'?22:30,lost:0,stuck:0,mv:0},ek:{},k:{},o:{g:0,b:0,c:0,gn:{}},hold:[0,0],sendT:0,cd:0,slow:0,boost:0,inv:0,objT:0,lastObj:'',
@@ -2852,7 +2852,7 @@ function netSurvival(dt,pl,surv,killers,me){
     if (N.cd<=0) for (i=0;i<surv.length;i++){ var s=surv[i]; if (!s.alive || s.me) continue; var d=Math.hypot(s.x-P.x,s.z-P.z);
       if (d<1.4){ N.k[s.id]=(N.k[s.id]||0)+1; N.kills++; N.cd=3.2; N.slow=1.3; stabSound(); var f=fwd(); bloodBurst(s.x,1.2,s.z,f.x,f.z,50); bloodPool(s.x,groundY(s.x,s.z),s.z,0.8); toast('You cut '+nick(s.pr)+'.',2200); break; } }
     var near=null, nd=1e9; surv.forEach(function(q){ if (!q.alive) return; var dd=Math.hypot(q.x-P.x,q.z-P.z); if (dd<nd){ nd=dd; near=q; } });
-    netObj('Survival · '+clockT,'Hunt them down before morning. '+alive+' alive'+(out?', '+out+' escaped':'')+'. Car '+Math.round(Math.min(1,C/CARNEED)*100)+'%, generators '+fixed.length+'/'+SGENS.length+'.', done?CARSIDE:null);
+    netObj('Kill Feast · '+clockT,'Hunt them down before morning. '+alive+' alive'+(out?', '+out+' escaped':'')+'. Car '+Math.round(Math.min(1,C/CARNEED)*100)+'%, generators '+fixed.length+'/'+SGENS.length+'.', done?CARSIDE:null);
     netSafe(N.slow>0?'Got one':null);
   } else if (N.alive===1){
     var o=N.o, car=nearP(CARSIDE,3.4);
@@ -2873,9 +2873,9 @@ function netSurvival(dt,pl,surv,killers,me){
     else if (B===1){ txt='Take the battery to the car.'; tgt=CARSIDE; }
     else if (!carOK){ txt='Fix the car. More hands are faster.'; tgt=CARSIDE; }
     else { var bh=null, bd=1e9; SGENS.forEach(function(h2){ if (gens[h2]>=GENNEED) return; var dd=Math.hypot(P.x-houses[h2].gen.x,P.z-houses[h2].gen.z); if (dd<bd){ bd=dd; bh=h2; } }); txt='Start the generators behind the dark houses.'; tgt=bh!==null?genPt(bh):null; }
-    netObj('Survival · '+clockT,txt+' Car '+Math.round(Math.min(1,C/CARNEED)*100)+'%, generators '+fixed.length+'/'+SGENS.length+'. '+alive+' alive. Or last until 6:00 AM.',tgt);
+    netObj('Kill Feast · '+clockT,txt+' Car '+Math.round(Math.min(1,C/CARNEED)*100)+'%, generators '+fixed.length+'/'+SGENS.length+'. '+alive+' alive. Or last until 6:00 AM.',tgt);
     netSafe(lab);
-  } else { netObj('Survival · '+clockT,(N.alive===2?'You escaped. ':'You are dead. ')+alive+' still alive.',null); netSafe(null); }
+  } else { netObj('Kill Feast · '+clockT,(N.alive===2?'You escaped. ':'You are dead. ')+alive+' still alive.',null); netSafe(null); }
   if (N.el>6){
     if (left<=0 || (surv.length && alive===0)){
       var lived=surv.filter(function(q){ return q.alive || q.a===2; }).length;
@@ -2937,7 +2937,7 @@ function preyTick(dt,others){
 (function(){
   var nn=$('netName'); if (nn) nn.value=SAVE.nick||'';
   Array.prototype.forEach.call(document.querySelectorAll('[data-net]'),function(b){ b.addEventListener('click',function(){ netJoin(newCode(),b.dataset.net); }); });
-  $('netCreateBtn').addEventListener('click',function(){ netName(); dirOpen(); show('netCreate'); });
+  $('netCreateBtn').addEventListener('click',function(){ netName(); dirOpen(); netJoin(newCode(),'s'); });
   $('netFindBtn').addEventListener('click',findOpen);
   $('findJoin').addEventListener('click',function(){ netJoin($('netCode').value,null); });
   $('netCode').addEventListener('keydown',function(e){ if (e.key==='Enter') netJoin($('netCode').value,null); });

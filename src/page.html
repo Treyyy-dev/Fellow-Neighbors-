@@ -169,24 +169,13 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
 
   <div class="card" id="online" hidden><div class="col">
     <h2>Online</h2>
-    <p>Create a room and pick the mode, or find a room someone else has opened. Everyone waits in the lobby until someone presses Start.</p>
+    <p>Kill Feast: up to 2 killers and 5 survivors. Create a room, or find one someone else has opened. Everyone waits in the lobby until someone presses Start.</p>
     <p class="lab">Your name</p>
     <input class="inp" id="netName" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Player" aria-label="Your name">
     <div class="list">
       <button class="mbtn" id="netCreateBtn" type="button">Create Room</button>
       <button class="mbtn" id="netFindBtn" type="button">Find Room</button>
       <button class="mbtn back" data-to="menu" type="button">Back</button>
-    </div>
-  </div></div>
-
-  <div class="card" id="netCreate" hidden><div class="col">
-    <h2>Create Room</h2>
-    <p>Pick a mode. You can still change it in the lobby.</p>
-    <div class="list">
-      <button class="mbtn" data-net="b" type="button">Co-op Story · Boy &amp; Girl</button>
-      <button class="mbtn" data-net="k" type="button">Co-op Story · Killer &amp; Girl</button>
-      <button class="mbtn" data-net="s" type="button">Survival · 2 Killers, 5 Survivors</button>
-      <button class="mbtn back" data-to="online" type="button">Back</button>
     </div>
   </div></div>
 
@@ -206,8 +195,7 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
     <h2 id="lobTitle">Lobby</h2>
     <p id="lobInfo"></p>
     <ul class="plist" id="lobList"></ul>
-    <p class="lab">Mode</p>
-    <div class="seg" id="lobMode"></div>
+    <div class="seg" id="lobMode" hidden></div>
     <p class="lab">Play as</p>
     <div class="seg" id="lobSeg"></div>
     <p class="lab" id="lobBotLab" hidden>Bots</p>
