@@ -48,6 +48,9 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
 #stamina{left:50%;bottom:18px;transform:translateX(-50%);width:min(40vw,220px);height:5px;background:rgba(231,226,210,.15)}
 #stamina i{display:block;height:100%;width:100%;background:var(--bone)}
 #stamina.low i{background:var(--blood)}
+#items{position:absolute;left:50%;bottom:52px;transform:translateX(-50%);display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:calc(100% - 200px)}
+#items button{font:inherit;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--bone);background:rgba(13,17,27,.66);border:1px solid rgba(231,226,210,.4);border-radius:2px;padding:6px 9px;cursor:pointer}
+#items button:disabled{opacity:.35;cursor:default}
 #hpBar{left:50%;bottom:32px;transform:translateX(-50%);display:flex;gap:6px}
 #hpBar b{display:block;width:36px;height:9px;background:rgba(231,226,210,.14);border:1px solid rgba(0,0,0,.55);border-radius:2px}
 #hpBar b.on{background:#4fb862;box-shadow:0 0 6px rgba(79,184,98,.5)}
@@ -130,6 +133,7 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
   <button class="chip" id="pauseBtn" type="button" hidden>Pause</button>
   <div class="hud" id="stamina" hidden><i></i></div>
   <div class="hud" id="hpBar" hidden aria-label="Health"><b></b><b></b><b></b></div>
+  <div id="items" hidden><button type="button" data-it="heal"></button><button type="button" data-it="trap"></button><button type="button" data-it="knife"></button></div>
   <div class="hud" id="toast"></div>
 
   <div id="stick" hidden><i></i></div>
