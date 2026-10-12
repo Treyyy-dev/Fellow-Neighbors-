@@ -49,6 +49,10 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
 #stamina{left:50%;bottom:18px;transform:translateX(-50%);width:min(40vw,220px);height:5px;background:rgba(231,226,210,.15)}
 #stamina i{display:block;height:100%;width:100%;background:var(--bone)}
 #stamina.low i{background:var(--blood)}
+#hpBar{left:50%;bottom:32px;transform:translateX(-50%);display:flex;gap:6px}
+#hpBar b{display:block;width:36px;height:9px;background:rgba(231,226,210,.14);border:1px solid rgba(0,0,0,.55);border-radius:2px}
+#hpBar b.on{background:#4fb862;box-shadow:0 0 6px rgba(79,184,98,.5)}
+#hpBar.low b.on{background:var(--blood);box-shadow:0 0 8px var(--blood)}
 #toast{left:16px;right:16px;bottom:48px;text-align:center;text-transform:none;letter-spacing:.03em;font-size:15px;opacity:0;transition:opacity .5s;text-shadow:0 2px 6px #000}
 
 #stick{position:absolute;width:110px;height:110px;margin:-55px 0 0 -55px;border:1.5px solid rgba(231,226,210,.35);border-radius:50%;pointer-events:none}
@@ -126,6 +130,7 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
   <div class="hud" id="objective" hidden></div>
   <button class="chip" id="pauseBtn" type="button" hidden>Pause</button>
   <div class="hud" id="stamina" hidden><i></i></div>
+  <div class="hud" id="hpBar" hidden aria-label="Health"><b></b><b></b><b></b></div>
   <div class="hud" id="toast"></div>
 
   <div id="stick" hidden><i></i></div>
@@ -2863,7 +2868,7 @@ function netLeave(){
   if (lobby && lobby.timer) clearInterval(lobby.timer); lobby=null; dirSend({rm:null});
   for (var id in avatars) dropAvatar(id);
   if (net){ FX.hemi=scene.environment?0.36:0.42; scene.fog.color.copy(lin(FOG)); resident.g.visible=false; resident.dead=false; beacon.visible=false; $('safe').hidden=true; }
-  net=null; game.net=null;
+  net=null; game.net=null; hpBar(false);
   if (NR){ try { var p=NR.leave(); if (p && p.catch) p.catch(function(){}); } catch(e){} } NR=null; NP={};
 }
 function netToLobby(){
@@ -2923,7 +2928,7 @@ function netBegin(go){
   if (lobby && lobby.timer) clearInterval(lobby.timer);
   var mode='s', code=lobby.code, M=NETMODES[mode], role=go.roles[netMe]; if (M.roles.indexOf(role)<0) role=mode==='s'?'s':'girl';
   lobby=null;
-  net={mode:mode,code:code,role:role,gid:go.id,roles:go.roles,t0:performance.now(),el:0,st:0,f:0,hits:0,hp:2,alive:1,acc:{},spd:1,
+  net={mode:mode,code:code,role:role,gid:go.id,roles:go.roles,t0:performance.now(),el:0,st:0,f:0,hits:0,hp:3,alive:1,acc:{},spd:1,
        E:{x:0,z:0,ry:0,vis:0,cool:mode==='s'?22:30,lost:0,stuck:0,mv:0},ek:{},k:{},o:{g:0,b:0,c:0,gn:{}},hold:[0,0],sendT:0,cd:0,slow:0,boost:0,inv:0,objT:0,lastObj:'',
        prey:null,esc:0,over:false,stT:0,lx:0,lz:0,an:0,done:false,spec:0,kills:0,world:{},bots:[]};
   if (mode==='s' && go.bots && typeof go.bots==='object') botsInit(net,Math.max(0,Math.min(2,num(go.bots.k,0)|0)),Math.max(0,Math.min(5,num(go.bots.s,0)|0)));
@@ -2944,7 +2949,7 @@ function netBegin(go){
 function netResume(){ if (!net) return; game.mode='play'; game.paused=false; setHud(true); vm.visible=game.role!=='killer' && net.alive===1; vmKnife.visible=game.role==='killer'; setLight(P.light); net.objT=0; net.lastObj=''; if (!isTouch && !document.pointerLockElement) lock(); }
 function netOver(title,text,win){
   if (!net || net.over) return; net.over=true; var first=win && !SAVE['net_'+net.mode], gain=(win?40:10)+(first?60:0); if (win) SAVE['net_'+net.mode]=true; SAVE.tokens+=gain; save();
-  var fin=function(){ game.mode='over'; setHud(false); setPrompt(null); $('safe').hidden=true; $('fear').style.opacity=0; beacon.visible=false; keys={}; touchMove.x=touchMove.y=0; moveId=lookId=null;
+  var fin=function(){ game.mode='over'; setHud(false); hpBar(false); setPrompt(null); $('safe').hidden=true; $('fear').style.opacity=0; beacon.visible=false; keys={}; touchMove.x=touchMove.y=0; moveId=lookId=null;
     wasLocked=false; if (document.exitPointerLock) try { document.exitPointerLock(); } catch(e){}
     $('neTitle').textContent=title; $('neText').textContent=text; $('neReward').textContent='+'+gain+' tokens · you have '+SAVE.tokens+' tokens'; show('netEnd'); };
   if (net.mode!=='s' && win) playCut(COOP[net.mode].outro(),fin); else fin();
@@ -3018,11 +3023,11 @@ function netTick(dt){
   // being hit
   var H=hitsK+hitsE;
   if (H>N.hits){ N.hits=H; if (N.alive===1 && N.inv<=0 && game.role!=='killer'){ N.inv=2.5; netHurt();
-      if (N.mode==='s'){ N.hp--; if (N.hp<=0){ N.alive=0; vm.visible=false; setLight(false); toast('You are dead. You can watch the others.',4000); } else { N.boost=4; toast('You are hurt. One more and it is over.',3500); } }
+      if (N.mode==='s'){ N.hp--; if (N.hp<=0){ N.alive=0; vm.visible=false; setLight(false); toast('You are dead. You can watch the others.',4000); } else { N.boost=4; toast(N.hp===1?'You are badly hurt. One more hit and you are dead.':'You are hurt. Two more hits and you are dead.',3500); } }
       else { N.f=maxF=Math.max(maxF,N.f)+1; N.failMine=true; } } }
   if (N.mode==='s') netSurvival(dt,pl,surv,killers,me); else netCoop(dt,pl,maxSt,maxF,me,host);
   if (!net || net.over) return;
-  N.spd = N.alive!==1 ? 0 : (N.slow>0 ? 0.45 : (N.boost>0 ? 1.15 : (N.mode==='s' && N.hp<2 && game.role!=='killer' ? 0.93 : 1)));
+  N.spd = N.alive!==1 ? 0 : (N.slow>0 ? 0.45 : (N.boost>0 ? 1.15 : (N.mode==='s' && N.hp<3 && game.role!=='killer' ? (N.hp<2?0.86:0.94) : 1)));
   // spectating
   if (N.alive!==1){ var cands=surv.filter(function(q){ return !q.me && q.alive && q.av; }); if (!cands.length) cands=pl.filter(function(q){ return !q.me && q.av; });
     if (cands.length){ var w=cands[N.spec%cands.length], a=w.av, bx=Math.sin(a.ry), bz=Math.cos(a.ry); camera.position.set(a.x-bx*3.2,2.4,a.z-bz*3.2); camera.lookAt(a.x,1.4,a.z); }
@@ -3030,7 +3035,7 @@ function netTick(dt){
   // tell the others
   N.adT=(N.adT||0)-dt; if (N.adT<=0 && !NR.solo){ N.adT=2; dirSend({rm:{c:N.code,m:N.mode,n:pl.length,h:nick(pl[0].pr),g:1}}); }
   N.sendT-=dt; if (N.sendT<=0){ N.sendT=0.08;
-    var patch={p:[Math.round(P.x*100)/100,Math.round(P.z*100)/100,Math.round(P.yaw*100)/100,N.an],a:N.alive,el:Math.round(N.el),st:N.st,f:N.f,hp:[N.hold[0],Math.round(N.hold[1]*10)/10]};
+    var patch={p:[Math.round(P.x*100)/100,Math.round(P.z*100)/100,Math.round(P.yaw*100)/100,N.an],a:N.alive,h:N.hp,el:Math.round(N.el),st:N.st,f:N.f,hp:[N.hold[0],Math.round(N.hold[1]*10)/10]};
     if (N.mode==='s'){ if (game.role==='killer') patch.k=N.k; patch.o={g:N.o.g,b:N.o.b,c:Math.round(N.o.c*10)/10,gn:N.o.gn};
       if (host && N.bots.length){ patch.bz=N.bots.map(function(b){ return [Math.round(b.x*100)/100,Math.round(b.z*100)/100,Math.round(b.ry*100)/100,b.an,b.a,b.hp]; }); patch.ek=N.ek; } }
     if (eliasOn && host){ patch.e=[Math.round(E.x*100)/100,Math.round(E.z*100)/100,Math.round(E.ry*100)/100,E.vis,E.mv]; patch.ek=N.ek; }
@@ -3053,7 +3058,7 @@ function netElias(dt,tg){
 }
 function botsInit(N,nk,ns){
   var i; for (i=0;i<nk;i++) N.bots.push({id:'botk'+i,role:'k',name:'Killer bot',x:60-i*4,z:i%2?4:-4,ry:-Math.PI/2,an:0,a:1,hp:9,cd:4+i*2,slow:0,stuck:0});
-  for (i=0;i<ns;i++){ var sk=(i*5+3)%NEIGHBOURS.length; N.bots.push({id:'bots'+i,role:'s',name:NEIGHBOURS[sk].n+' bot',sk:sk,x:-57+i*1.6,z:(i%2?-3.2:3.4),ry:Math.PI/2,an:0,a:1,hp:2,st:1,tired:0,jink:0,jinkT:0,acc:0,lx:0,lz:0,inv:0,hits:0,esc:0,ti:i}); }
+  for (i=0;i<ns;i++){ var sk=(i*5+3)%NEIGHBOURS.length; N.bots.push({id:'bots'+i,role:'s',name:NEIGHBOURS[sk].n+' bot',sk:sk,x:-57+i*1.6,z:(i%2?-3.2:3.4),ry:Math.PI/2,an:0,a:1,hp:3,st:1,tired:0,jink:0,jinkT:0,acc:0,lx:0,lz:0,inv:0,hits:0,esc:0,ti:i}); }
 }
 // Bots are driven by one player's game and shown to everyone else.
 function botsHost(dt,pl,W){
@@ -3095,7 +3100,10 @@ function botsHost(dt,pl,W){
     b.x=p2.x; b.z=p2.z; b.ry=Math.atan2(vx,vz); b.an=sp>5?2:1;
   });
 }
+function hpBar(show,hp){ var el=$('hpBar'); if (el.hidden!==!show) el.hidden=!show; if (!show || el.dataset.v===String(hp)) return; el.dataset.v=String(hp);
+  Array.prototype.forEach.call(el.children,function(c,i){ c.classList.toggle('on',i<hp); }); el.classList.toggle('low',hp<=1); }
 function netSurvival(dt,pl,surv,killers,me){
+  hpBar(game.role!=='killer' && net.alive===1 && game.mode==='play',net.hp);
   var N=net, G=0, B=0, C=0, gens={}, done, i;
   for (var id in N.acc){ var A=N.acc[id]; G=Math.max(G,A.g); B=Math.max(B,A.b); C+=A.c; SGENS.forEach(function(h){ gens[h]=(gens[h]||0)+(A.gn[h]||0); }); }
   var fixed=SGENS.filter(function(h){ return gens[h]>=GENNEED; }), carOK=C>=CARNEED; done=carOK && fixed.length===SGENS.length;
