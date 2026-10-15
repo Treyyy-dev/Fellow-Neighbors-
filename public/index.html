@@ -2171,7 +2171,7 @@ function beginChapter(ch,fromLoad){
 }
 function completeChapter(){
   var role=game.role;
-  if (SAVE.paid[role]<story.ch){ SAVE.paid[role]=story.ch; SAVE.tokens+=30; }
+  if (SAVE.paid[role]<story.ch) SAVE.paid[role]=story.ch;
   tone(660,0.18,'triangle',0.15); tone(990,0.3,'triangle',0.13,null,0.12);
   if (story.ch+1>=CH().length){ save(); return ending(); }
   SAVE.story[role]=story.ch+1; save(); beginChapter(story.ch+1,false);
@@ -2182,7 +2182,7 @@ function startStory(role,ch){
 }
 function ending(){
   var role=game.role, first=!SAVE['done_'+role];
-  if (first){ SAVE['done_'+role]=true; SAVE.tokens+=100; }
+  if (first) SAVE['done_'+role]=true;
   SAVE.story[role]=0; save();
   playCut(role==='killer'?[
     {cam:[-20,12,0],to:[-40,9,0],look:[20,1,0],text:'By morning Hollow Lane is quiet again.'},
@@ -2196,7 +2196,7 @@ function ending(){
     game.mode='over'; setHud(false); wasLocked=false; if (document.exitPointerLock) try { document.exitPointerLock(); } catch(e){}
     $('winTitle').textContent='The End';
     $('winText').textContent = role==='killer' ? 'The lane kept him one more year.' : 'You went back, and you ended it.';
-    $('winReward').textContent=(first?'+100 tokens · ':'')+'you have '+SAVE.tokens+' tokens';
+    $('winReward').textContent='Story mode does not pay tokens. Play Kill Feast online to earn them.';
     show('win');
   });
 }
@@ -3138,10 +3138,10 @@ function netBegin(go){
 }
 function netResume(){ if (!net) return; game.mode='play'; game.paused=false; setHud(true); vm.visible=game.role!=='killer' && net.alive===1; vmKnife.visible=game.role==='killer'; setLight(P.light); net.objT=0; net.lastObj=''; if (!isTouch && !document.pointerLockElement) lock(); }
 function netOver(title,text,win){
-  if (!net || net.over) return; net.over=true; var first=win && !SAVE['net_'+net.mode], gain=(win?40:10)+(first?60:0); if (win) SAVE['net_'+net.mode]=true; SAVE.tokens+=gain; save();
+  if (!net || net.over) return; net.over=true; var gain=win?20:10; SAVE.tokens+=gain; save();
   var fin=function(){ game.mode='over'; setHud(false); hpBar(false); $('items').hidden=true; $('team').hidden=true; $('senseBtn').hidden=true; setPrompt(null); setPrompt(null); $('safe').hidden=true; $('fear').style.opacity=0; beacon.visible=false; keys={}; touchMove.x=touchMove.y=0; moveId=lookId=null;
     wasLocked=false; if (document.exitPointerLock) try { document.exitPointerLock(); } catch(e){}
-    $('neTitle').textContent=title; $('neText').textContent=text; $('neReward').textContent='+'+gain+' tokens · you have '+SAVE.tokens+' tokens'; show('netEnd'); };
+    $('neTitle').textContent=title; $('neText').textContent=text; $('neReward').textContent='+'+gain+' tokens for '+(win?'winning':'playing')+' · you have '+SAVE.tokens+' tokens'; show('netEnd'); };
   if (net.mode!=='s' && win) playCut(COOP[net.mode].outro(),fin); else fin();
 }
 
