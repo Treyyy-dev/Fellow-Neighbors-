@@ -1,5 +1,5 @@
 <title>Fellow Neighbors</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Special+Elite&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Special+Elite&family=VT323&display=swap">
 <style>
 /* Layout: one full-screen 3D view; HUD pinned to the corners; title cards centered like a 1970s slasher film card. */
 :root{
@@ -139,6 +139,10 @@ body.touch #team{bottom:auto;top:96px}
 #objective b{display:block;color:var(--pumpkin);font-weight:400;letter-spacing:.12em;text-transform:uppercase;font-size:11px}
 #pauseBtn{position:absolute;top:12px;left:50%;transform:translateX(-50%)}
 #dead h1{color:var(--blood);text-shadow:0 0 28px rgba(179,18,29,.5)}
+#vhsOsd{position:absolute;top:calc(10px + env(safe-area-inset-top));right:calc(16px + env(safe-area-inset-right));z-index:30;pointer-events:none;display:flex;flex-direction:column;align-items:flex-end;gap:0;font-family:'VT323',ui-monospace,monospace;color:#f4f4ee;font-size:30px;line-height:1;letter-spacing:1px;text-shadow:2px 0 rgba(255,40,60,.65),-2px 0 rgba(40,170,255,.65),0 0 6px rgba(255,255,255,.35)}
+#vhsOsd span{font-size:22px;opacity:.92}
+#vhsOsd.blink #vhsPlay{opacity:.25}
+@media (max-width:640px){#vhsOsd{font-size:22px}#vhsOsd span{font-size:17px}}
 </style>
 
 <div id="game">
@@ -150,6 +154,7 @@ body.touch #team{bottom:auto;top:96px}
   <div id="jump" hidden></div>
   <div id="inside" hidden></div>
   <div id="peep" hidden></div>
+  <div id="vhsOsd" aria-hidden="true"><b id="vhsPlay">PLAY &#9654;</b><span id="vhsCount">SP 0:00:00</span><span id="vhsDate">OCT. 31 1987</span></div>
 
   <div class="hud" id="safe" hidden></div>
   <div class="hud" id="prompt" hidden></div>
@@ -265,6 +270,8 @@ body.touch #team{bottom:auto;top:96px}
     <div class="seg" id="fpsSeg"><button type="button" data-v="30">30</button><button type="button" data-v="60">60</button><button type="button" data-v="120">120</button></div>
     <p class="lab">Quality</p>
     <div class="seg" id="qSeg"><button type="button" data-v="0">Very low</button><button type="button" data-v="1">Low</button><button type="button" data-v="2">Medium</button><button type="button" data-v="3">High</button><button type="button" data-v="4">Very high</button></div>
+    <p class="lab">VHS tape look</p>
+    <div class="seg" id="vhsSeg"><button type="button" data-v="1">On</button><button type="button" data-v="0">Off</button></div>
     <p class="lab" id="keysHelp">W A S D move &middot; Mouse look &middot; Shift run &middot; C crouch &middot; F flashlight &middot; E use &middot; Esc pause &middot; Online: click or R uses what is in your left hand, killers click or V to swing, Q sense</p>
     <div class="list"><button class="mbtn" id="setDone" type="button">Done</button></div>
   </div></div>

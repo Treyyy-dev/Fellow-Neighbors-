@@ -1675,11 +1675,12 @@ function applyQuality(){
 }
 function syncSeg(){
   SAVE.voices=true;
-  [['fpsSeg',SAVE.fps],['qSeg',SAVE.q]].forEach(function(p){ var bs=$(p[0]).children; for (var i=0;i<bs.length;i++) bs[i].setAttribute('aria-pressed', String(+bs[i].dataset.v===p[1])); });
+  [['fpsSeg',SAVE.fps],['qSeg',SAVE.q],['vhsSeg',SAVE.vhs===false?0:1]].forEach(function(p){ var bs=$(p[0]).children; for (var i=0;i<bs.length;i++) bs[i].setAttribute('aria-pressed', String(+bs[i].dataset.v===p[1])); });
 }
 function openSettings(from){ settingsBack=from; syncSeg(); show('settings'); }
 $('fpsSeg').addEventListener('click',function(e){ var v=e.target.dataset && e.target.dataset.v; if (v===undefined) return; SAVE.fps=+v; save(); syncSeg(); });
 $('qSeg').addEventListener('click',function(e){ var v=e.target.dataset && e.target.dataset.v; if (v===undefined) return; SAVE.q=+v; save(); syncSeg(); applyQuality(); });
+$('vhsSeg').addEventListener('click',function(e){ var v=e.target.dataset && e.target.dataset.v; if (v===undefined) return; SAVE.vhs=v==='1'; save(); syncSeg(); });
 $('setDone').addEventListener('click',function(){ show(settingsBack); });
 
 /* ---------- shop: the neighbours as skins, restocked every two hours ---------- */
@@ -4040,8 +4041,9 @@ function teamTick(pl){
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=45;
+var GAME_VER=46;
 var UPDATES=[
+  {v:46,t:'Found footage',n:['The whole game now looks like an old VHS tape: soft picture, colour bleeding off the edges, scanlines, a wobbling image and a tracking band that rolls through now and then.','PLAY, a tape counter and the date sit in the corner like a camcorder.','It also draws the 3D picture at tape resolution, so it can run smoother on weaker phones. Don’t like it? Settings → VHS tape look → Off.']},
   {v:45,t:'Past the gate: a hospital and a supermarket',n:['In Kill Feast the gate at the end of the lane is open, and there is a whole new side of town behind it.','Hollow Lane General is a three-storey hospital with stairs, an ER, a morgue, wards and an operating room. There are 9 hiding spots across the 3 floors.','Fresh Mart is a big supermarket with aisles, checkouts, a deli, restrooms, an office, a storeroom and a walk-in freezer. There are 6 more hiding spots.','There are new chests out there too. Bots and killers know how to find their way in, up the stairs and through every room.']},
   {v:44,t:'Kicked-in doors and smarter bots',n:['Killers now walk right up to the door and kick it in: three kicks, splinters fly, and the third one bursts it open.','Killers can murder the neighbour inside a house. One stab goes straight into the kill animation, and that house has no one left to help.','Bots play like people now: they open chests, heal, set traps, stab back, run into houses and hide. Killer bots hunt by sight and sound, kick doors in and search hiding spots.','The little gate at the bottom of the stairs is gone.']},
   {v:43,t:'Install button',n:['If your phone can install Fellow Neighbors as a real app, an Install app button now shows in the menu.','Installed, it opens full screen with its own icon instead of inside Chrome.']},
@@ -4079,6 +4081,49 @@ window.addEventListener('appinstalled',function(){ installEvt=null; $('mInstall'
   $('mNews').classList.toggle('dot',(SAVE.seenVer||0)<GAME_VER);
   setTimeout(checkVersion,8000); setInterval(checkVersion,60000);
   document.addEventListener('visibilitychange',function(){ if (!document.hidden) checkVersion(); });
+})();
+
+/* ---------- VHS tape look: the picture is drawn small, then played back like an old tape ---------- */
+var VHS=(function(){
+  var rt=new THREE.WebGLRenderTarget(4,4,{minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter,format:THREE.RGBAFormat,stencilBuffer:false}); rt.texture.encoding=THREE.sRGBEncoding; rt.texture.generateMipmaps=false;
+  var mat=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,toneMapped:false,
+    uniforms:{tD:{value:rt.texture},px:{value:new THREE.Vector2(1,1)},t:{value:0},sl:{value:200},tr:{value:1}},
+    vertexShader:'varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.,1.); }',
+    fragmentShader:[
+      'uniform sampler2D tD; uniform vec2 px; uniform float t; uniform float sl; uniform float tr; varying vec2 vUv;',
+      'float h1(float n){ return fract(sin(n)*43758.5453); }',
+      'float Yf(vec3 c){ return dot(c,vec3(.299,.587,.114)); }',
+      'vec2 IQf(vec3 c){ return vec2(dot(c,vec3(.596,-.274,-.322)),dot(c,vec3(.211,-.523,.312))); }',
+      'void main(){',
+      '  vec2 uv=vUv; float line=floor(uv.y*240.);',
+      '  float wob=sin(uv.y*11.+t*1.6)*0.0008+sin(uv.y*83.+t*6.1)*0.00035;',            // the tape never sits quite still
+      '  float bandY=1.25-fract(t/19.)*6.; float band=smoothstep(0.07,0.,abs(uv.y-bandY))*tr;',   // a tracking band rolls through now and then
+      '  wob+=band*(h1(line+floor(t*24.))-.5)*0.014;',
+      '  float hs=smoothstep(0.03,0.,uv.y); wob+=hs*(0.01+sin(uv.y*380.+t*17.)*0.004);',   // head-switching wobble along the bottom edge
+      '  uv.x+=wob;',
+      '  vec3 c0=texture2D(tD,uv).rgb;',
+      '  float Y=Yf(c0)*.5+(Yf(texture2D(tD,uv+vec2(px.x,0.)).rgb)+Yf(texture2D(tD,uv-vec2(px.x,0.)).rgb))*.25;',
+      '  vec2 IQ=vec2(0.); for (int i=0;i<5;i++){ float o=(float(i)-1.5)*px.x*2.2+0.0028; IQ+=IQf(texture2D(tD,uv+vec2(o,0.)).rgb); } IQ*=0.2*0.9;',   // colour smears sideways and sits off to the right
+      '  vec3 col=vec3(Y+.956*IQ.x+.621*IQ.y, Y-.272*IQ.x-.647*IQ.y, Y-1.106*IQ.x+1.703*IQ.y);',
+      '  col=col*.9+.03; col=mix(vec3(Yf(col)),col,.82); col*=vec3(1.04,1.,.93); col+=band*.07;',
+      '  col*=.87+.13*(.5+.5*sin(vUv.y*sl*6.28318));',                                    // scanlines
+      '  vec2 d=vUv-.5; col*=1.-dot(d,d)*.6;',
+      '  gl_FragColor=vec4(clamp(col,0.,1.),1.);',
+      '}'].join('\n')});
+  var q=new THREE.Mesh(new THREE.PlaneGeometry(2,2),mat); q.frustumCulled=false; var sc=new THREE.Scene(); sc.add(q);
+  var cam=new THREE.OrthographicCamera(-1,1,1,-1,0,1), sz=new THREE.Vector2(), osd=$('vhsOsd'), cnt=$('vhsCount'), play=$('vhsPlay'), lastS=-1, lastMode='';
+  return function(t){
+    var on=SAVE.vhs!==false; if (osd.hidden===on) osd.hidden=!on;
+    if (!on){ renderer.render(scene,camera); return; }
+    renderer.getDrawingBufferSize(sz); var hh=Math.round(Math.min(sz.y*0.75,LOWEND?400:480)), ww=Math.round(hh*sz.x/Math.max(1,sz.y));
+    if (rt.width!==ww || rt.height!==hh){ rt.setSize(ww,hh); mat.uniforms.px.value.set(1/ww,1/hh); }
+    mat.uniforms.t.value=t; mat.uniforms.sl.value=sz.y/3.2; mat.uniforms.tr.value=reduced?0:1;
+    renderer.setRenderTarget(rt); renderer.render(scene,camera); renderer.setRenderTarget(null); renderer.render(sc,cam);
+    var paused=game.paused && game.mode==='play', mode=paused?'p':'r';
+    if (mode!==lastMode){ lastMode=mode; play.innerHTML=paused?'PAUSE &#10074;&#10074;':'PLAY &#9654;'; }
+    osd.classList.toggle('blink',paused && Math.floor(t*2)%2===0);
+    var secs=Math.floor(game.mode==='play'?game.time:t); if (secs!==lastS){ lastS=secs; cnt.textContent='SP '+Math.floor(secs/3600)+':'+('0'+(Math.floor(secs/60)%60)).slice(-2)+':'+('0'+secs%60).slice(-2); }
+  };
 })();
 
 /* ---------- main loop ---------- */
@@ -4249,7 +4294,7 @@ function frame(){
   DYN.acc+=raw; DYN.n++; if (DYN.acc>=1.5){ var fps=DYN.n/DYN.acc, want=Math.min(SAVE.fps,60); DYN.acc=0; DYN.n=0;
     if (fps<want*0.72 && DYN.pr>0.5){ DYN.pr=Math.max(0.5,DYN.pr-0.1); renderer.setPixelRatio(DYN.pr); resize(); }
     else if (fps>want*0.95 && DYN.pr<DYN.base){ DYN.good=(DYN.good||0)+1; if (DYN.good>=3){ DYN.good=0; DYN.pr=Math.min(DYN.base,DYN.pr+0.1); renderer.setPixelRatio(DYN.pr); resize(); } } else DYN.good=0; }
-  renderer.render(scene,camera);
+  VHS(t);
 }
 
 
