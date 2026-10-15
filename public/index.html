@@ -2817,7 +2817,7 @@ function netJoin(code,mode){
   var nm=netName(); code=String(code||'').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,10); if (!code || lobby || net) return;
   if (findTimer){ clearInterval(findTimer); findTimer=0; }
   var go=function(R,note){ NR=R; NP={}; netMe=R.solo?'solo':'me';
-    lobby={mode:'s',code:code,gid:0,want:null,note:note||'',timer:0,mt:mode?Date.now():0,adT:0,bots:{k:0,s:0},bt:0}; lobby.want=NETMODES[lobby.mode].roles[0];
+    lobby={mode:'s',code:code,gid:0,want:null,note:note||'',timer:0,mt:mode?Date.now():0,adT:0,fill:true,bt:0}; lobby.want=NETMODES[lobby.mode].roles[0];
     var p={n:nm,sk:SAVE.equipped,w:lobby.want,v:2}; if (mode) p.md={m:'s',t:lobby.mt}; netSend(p);
     lobbyUI(); show('lobby'); lobby.timer=setInterval(lobbyTick,300); lobbyTick(); };
   toast('Connecting…',2500);
@@ -2828,11 +2828,23 @@ function netJoin(code,mode){
   else go(soloRoom(),'Online is not available from here, so you are playing alone.');
 }
 function setLobbyMode(m,t){ lobby.mode=m; lobby.mt=t; if (NETMODES[m].roles.indexOf(lobby.want)<0) lobby.want=NETMODES[m].roles[0]; netSend({md:{m:m,t:t},w:lobby.want}); lobbyUI(); }
-function setBots(k,s,t,quiet){ lobby.bots={k:Math.max(0,Math.min(2,k|0)),s:Math.max(0,Math.min(5,s|0))}; lobby.bt=t; netSend({bt:{k:lobby.bots.k,s:lobby.bots.s,t:t}}); if (!quiet){ lobbyUI(); lobbyTick(); } }
+var FEAST_K=2, FEAST_S=5;
+function setFill(f,t,quiet){ lobby.fill=!!f; lobby.bt=t; netSend({bt:{f:f?1:0,t:t}}); if (!quiet){ lobbyUI(); lobbyTick(); } }
+// Seats real players first (at most 2 killers and 5 survivors), then fills the empty seats with bots if bots are on.
+function feastRoles(ps,fill){
+  ps=ps.slice().sort(function(a,b){ return a.id<b.id?-1:(a.id>b.id?1:0); }).slice(0,FEAST_K+FEAST_S);
+  var roles={}, hk=0, hs=0, wantK=ps.filter(function(p){ return p.pr.w==='k'; }), rest=ps.filter(function(p){ return p.pr.w!=='k'; });
+  if (!fill){ var nk=Math.min(FEAST_K,Math.max(wantK.length,ps.length>=2?1:0,ps.length-FEAST_S)); if (ps.length===1) nk=wantK.length?1:0;
+    rest.sort(function(){ return Math.random()-0.5; }); var order=wantK.concat(rest);
+    order.forEach(function(p,i){ if (i<nk){ roles[p.id]='k'; hk++; } else { roles[p.id]='s'; hs++; } }); }
+  else { wantK.forEach(function(p){ if (hk<FEAST_K){ roles[p.id]='k'; hk++; } else rest.push(p); });
+    rest.forEach(function(p){ if (hs<FEAST_S){ roles[p.id]='s'; hs++; } else { roles[p.id]='k'; hk++; } }); }
+  return {roles:roles, bots:fill?{k:FEAST_K-hk,s:FEAST_S-hs}:{k:0,s:0}};
+}
 function lobbyUI(){
-  var bs=$('lobBots'), isS=lobby.mode==='s'; bs.textContent=''; bs.hidden=!isS; $('lobBotLab').hidden=!isS;
-  if (isS) [['+ Killer bot',1,0],['− Killer bot',-1,0],['+ Survivor bot',0,1],['− Survivor bot',0,-1]].forEach(function(d){ var b=document.createElement('button'); b.type='button'; b.textContent=d[0];
-    b.addEventListener('click',function(){ if (lobby) setBots(lobby.bots.k+d[1],lobby.bots.s+d[2],Date.now()); }); bs.appendChild(b); });
+  var bs=$('lobBots'); bs.textContent=''; bs.hidden=false; $('lobBotLab').hidden=false;
+  [['Fill empty seats with bots',true],['No bots',false]].forEach(function(d){ var b=document.createElement('button'); b.type='button'; b.textContent=d[0]; b.setAttribute('aria-pressed',String(lobby.fill===d[1]));
+    b.addEventListener('click',function(){ if (lobby && lobby.fill!==d[1]) setFill(d[1],Date.now()); }); bs.appendChild(b); });
   var M=NETMODES[lobby.mode], seg=$('lobSeg'), ms=$('lobMode'); seg.textContent=''; ms.textContent='';
   ['s'].forEach(function(m){ var b=document.createElement('button'); b.type='button'; b.textContent=NETMODES[m].t; b.setAttribute('aria-pressed',String(lobby.mode===m));
     b.addEventListener('click',function(){ if (lobby && lobby.mode!==m){ setLobbyMode(m,Date.now()); lobbyTick(); } }); ms.appendChild(b); });
@@ -2845,17 +2857,19 @@ function lobbyTick(){
   ps.forEach(function(p){ var d=p.pr.md; if (!p.me && d && typeof d==='object' && d.m==='s' && num(d.t,0)>nt){ nt=d.t; nm=d.m; } });
   if (nm) setLobbyMode(nm,nt);
   var nb=null, nbt=lobby.bt; ps.forEach(function(p){ var d=p.pr.bt; if (!p.me && d && typeof d==='object' && num(d.t,0)>nbt){ nbt=d.t; nb=d; } });
-  if (nb) setBots(num(nb.k,0),num(nb.s,0),nbt,true);
+  if (nb){ setFill(nb.f!==0,nbt,true); lobbyUI(); }
   var M=NETMODES[lobby.mode]; ul.textContent='';
   ps.forEach(function(p){ var li=document.createElement('li'), w=M.names[p.pr.w]||M.names[M.roles[0]];
     li.textContent=nick(p.pr)+(p.me?' (you)':'')+' · '+w+(p.pr.gi?' · in a game':''); ul.appendChild(li);
     if (p.me && p.known===false && !NR.solo) known=false;
     var g=p.pr.go; if (g && typeof g==='object' && num(g.id,0)>lobby.gid && g.roles && typeof g.roles==='object' && (!best || g.id>best.id)) best=g; });
+  var pv=feastRoles(ps.filter(function(p){ return !p.pr.gi; }),lobby.fill); lobby.bots=pv.bots;
+  if (ps.length>FEAST_K+FEAST_S){ var full=document.createElement('li'); full.textContent=(ps.length-FEAST_K-FEAST_S)+' waiting: the game holds 7 players'; ul.appendChild(full); }
   if (lobby.mode==='s'){ var bi; for (bi=0;bi<lobby.bots.k;bi++){ var lk=document.createElement('li'); lk.textContent='Bot · Killer'; ul.appendChild(lk); } for (bi=0;bi<lobby.bots.s;bi++){ var ls=document.createElement('li'); ls.textContent='Bot · Survivor'; ul.appendChild(ls); } }
   $('lobInfo').textContent=(lobby.note?lobby.note+' ':'')+M.t+' · '+ps.length+' in the lobby'+' · up to 2 killers and 5 survivors'+'. Friends can find this room under Find Room, or join with the code '+lobby.code.toUpperCase()+'.';
   $('lobStart').disabled=!known;
   lobby.adT-=0.3; if (lobby.adT<=0 && !NR.solo){ lobby.adT=1.5; dirOpen(); dirSend({rm:{c:lobby.code,m:lobby.mode,n:ps.length,h:nick(ps[0].pr),g:0}}); }
-  if (best && (Date.now()-best.id<NIGHT*1000+600000)) netBegin(best);
+  if (best && (Date.now()-best.id<NIGHT*1000+600000)){ if (best.roles[netMe]) netBegin(best); else { lobby.gid=best.id; lobby.note='That game was full (2 killers, 5 survivors). You are in line for the next one.'; } }
 }
 function findOpen(){ netName(); dirOpen(); findKey=''; show('netFind'); if (findTimer) clearInterval(findTimer); findTimer=setInterval(findTick,500); findTick(); }
 function findTick(){
@@ -2869,12 +2883,7 @@ function findTick(){
 }
 function lobbyStart(){
   if (!lobby) return; var ps=netPeers().filter(function(p){ return !p.pr.gi; }), M=NETMODES[lobby.mode], roles={}, i, bots={k:0,s:0};
-  if (lobby.mode==='s' && lobby.bots.k+lobby.bots.s>0){ var hk=0, hs=0;
-    ps.forEach(function(p){ if (p.pr.w==='k' && hk<2){ roles[p.id]='k'; hk++; } else if (hs<5){ roles[p.id]='s'; hs++; } else { roles[p.id]='k'; hk++; } });
-    bots.k=Math.max(0,Math.min(lobby.bots.k,2-hk)); bots.s=Math.max(0,Math.min(lobby.bots.s,5-hs)); }
-  else if (lobby.mode==='s'){ var nk=ps.length>=5?2:(ps.length>=2?1:0), want=ps.filter(function(p){ return p.pr.w==='k'; }), rest=ps.filter(function(p){ return p.pr.w!=='k'; });
-    want.sort(function(){ return Math.random()-0.5; }); rest.sort(function(){ return Math.random()-0.5; });
-    var order=want.concat(rest), ns=0; for (i=0;i<order.length;i++){ if (i<nk) roles[order[i].id]='k'; else if (ns<5){ roles[order[i].id]='s'; ns++; } else roles[order[i].id]='k'; }
+  if (lobby.mode==='s'){ var fr=feastRoles(ps,lobby.fill); roles=fr.roles; bots=fr.bots;
   } else { var a=M.roles[0], b=M.roles[1], used={};
     ps.forEach(function(p){ var w=p.pr.w===b?b:a; if (!used[w]){ used[w]=1; roles[p.id]=w; } });
     ps.forEach(function(p){ if (!roles[p.id]){ var r=!used[a]?a:b; used[r]=1; roles[p.id]=r; } });
@@ -2894,7 +2903,7 @@ function netToLobby(){
   FX.hemi=scene.environment?0.36:0.42; scene.fog.color.copy(lin(FOG)); resident.g.visible=false; resident.dead=false; beacon.visible=false; net=null; game.net=null;
   game.role='victim'; reset(); stalkerOff(14); game.mode='menu'; setHud(false); backdrop();
   netSend({gi:null,go:null,a:null,st:null,f:null,hp:null,o:null,k:null,ek:null,e:null,pv:null,p:null,el:null,r:null});
-  lobby={mode:mode,code:code,gid:gid,want:NP.w||NETMODES[mode].roles[0],note:'',timer:0,mt:(NP.md&&NP.md.t)||0,adT:0,bots:{k:(NP.bt&&NP.bt.k)|0,s:(NP.bt&&NP.bt.s)|0},bt:(NP.bt&&NP.bt.t)||0}; lobbyUI(); show('lobby'); lobby.timer=setInterval(lobbyTick,300); lobbyTick();
+  lobby={mode:mode,code:code,gid:gid,want:NP.w||NETMODES[mode].roles[0],note:'',timer:0,mt:(NP.md&&NP.md.t)||0,adT:0,fill:!(NP.bt&&NP.bt.f===0),bt:(NP.bt&&NP.bt.t)||0}; lobbyUI(); show('lobby'); lobby.timer=setInterval(lobbyTick,300); lobbyTick();
 }
 
 /* stages for the two co-op stories */
@@ -2950,7 +2959,8 @@ function netBegin(go){
        prey:null,esc:0,over:false,stT:0,lx:0,lz:0,an:0,done:false,spec:0,kills:0,world:{},bots:[],bag:{heal:0,trap:0,knife:0},kn:0,cs:[],traps:[],tt:[],kh:{},stun:0,nearChest:-1,khSeen:0,hc:0,knock:null,kd:null,nearDoor:null};
   houses.forEach(function(h){ h.netCd=0; });
   clearItems();
-  if (mode==='s' && go.bots && typeof go.bots==='object') botsInit(net,Math.max(0,Math.min(2,num(go.bots.k,0)|0)),Math.max(0,Math.min(5,num(go.bots.s,0)|0)));
+  if (mode==='s' && go.bots && typeof go.bots==='object'){ var hk2=0, hs2=0; for (var rid in go.roles){ if (go.roles[rid]==='k') hk2++; else hs2++; }
+    botsInit(net,Math.max(0,Math.min(FEAST_K-hk2,num(go.bots.k,0)|0)),Math.max(0,Math.min(FEAST_S-hs2,num(go.bots.s,0)|0))); }
   game.net=net; game.role=(role==='k'||role==='killer')?'killer':'victim'; initAudio(); reset(); story.hold=null; story.tearH=null; surv.active=false; setChain(false); stalkerOff(1e9);
   gasCan.visible=battery.visible=keysG.visible=leverG.visible=truckG.visible=boxG.visible=false; moveCar(-64,2.6); allPower(true); resident.g.visible=false; resident.dead=false;
   var ids=Object.keys(go.roles).sort(), idx=Math.max(0,ids.indexOf(netMe)), sp;
