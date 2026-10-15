@@ -49,6 +49,15 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
 #stamina{left:50%;bottom:18px;transform:translateX(-50%);width:min(40vw,220px);height:5px;background:rgba(231,226,210,.15)}
 #stamina i{display:block;height:100%;width:100%;background:var(--bone)}
 #stamina.low i{background:var(--blood)}
+#team{position:absolute;left:12px;bottom:14px;display:flex;flex-direction:column;gap:6px;pointer-events:none;max-width:min(46vw,220px)}
+.mate{display:flex;align-items:center;gap:8px;background:rgba(7,9,15,.72);border:1px solid rgba(231,226,210,.22);border-radius:3px;padding:4px 8px 4px 4px}
+.mate img{width:38px;height:38px;border-radius:2px;flex:none;display:block}
+.mate div{min-width:0;display:flex;flex-direction:column;gap:3px}
+.mate b{font-weight:400;font-size:12px;letter-spacing:.06em;color:var(--bone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mate em{font-style:normal;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--pumpkin)}
+.mbar{display:flex;gap:3px}.mbar i{display:block;width:18px;height:5px;background:rgba(231,226,210,.15)}.mbar i.on{background:#4fb862}.mbar i.on.low{background:var(--blood)}
+.mate.dead{opacity:.55}.mate.dead img{filter:grayscale(1)}
+body.touch #team{bottom:auto;top:96px}
 #items{position:absolute;left:50%;bottom:52px;transform:translateX(-50%);display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:calc(100% - 200px)}
 #items button{font:inherit;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--bone);background:rgba(13,17,27,.66);border:1px solid rgba(231,226,210,.4);border-radius:2px;padding:6px 9px;cursor:pointer}
 #items button:disabled{opacity:.35;cursor:default}
@@ -134,6 +143,7 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
   <button class="chip" id="pauseBtn" type="button" hidden>Pause</button>
   <div class="hud" id="stamina" hidden><i></i></div>
   <div class="hud" id="hpBar" hidden aria-label="Health"><b></b><b></b><b></b></div>
+  <div id="team" hidden aria-label="Teammates"></div>
   <div id="items" hidden><button type="button" data-it="heal"></button><button type="button" data-it="trap"></button><button type="button" data-it="knife"></button></div>
   <div class="hud" id="toast"></div>
 
@@ -2872,7 +2882,7 @@ function netLeave(){
   if (lobby && lobby.timer) clearInterval(lobby.timer); lobby=null; dirSend({rm:null});
   for (var id in avatars) dropAvatar(id);
   if (net){ FX.hemi=scene.environment?0.36:0.42; scene.fog.color.copy(lin(FOG)); resident.g.visible=false; resident.dead=false; beacon.visible=false; $('safe').hidden=true; }
-  net=null; game.net=null; hpBar(false); clearItems();
+  net=null; game.net=null; hpBar(false); clearItems(); $('team').hidden=true;
   if (NR){ try { var p=NR.leave(); if (p && p.catch) p.catch(function(){}); } catch(e){} } NR=null; NP={};
 }
 function netToLobby(){
@@ -2955,7 +2965,7 @@ function netBegin(go){
 function netResume(){ if (!net) return; game.mode='play'; game.paused=false; setHud(true); vm.visible=game.role!=='killer' && net.alive===1; vmKnife.visible=game.role==='killer'; setLight(P.light); net.objT=0; net.lastObj=''; if (!isTouch && !document.pointerLockElement) lock(); }
 function netOver(title,text,win){
   if (!net || net.over) return; net.over=true; var first=win && !SAVE['net_'+net.mode], gain=(win?40:10)+(first?60:0); if (win) SAVE['net_'+net.mode]=true; SAVE.tokens+=gain; save();
-  var fin=function(){ game.mode='over'; setHud(false); hpBar(false); $('items').hidden=true; setPrompt(null); setPrompt(null); $('safe').hidden=true; $('fear').style.opacity=0; beacon.visible=false; keys={}; touchMove.x=touchMove.y=0; moveId=lookId=null;
+  var fin=function(){ game.mode='over'; setHud(false); hpBar(false); $('items').hidden=true; $('team').hidden=true; setPrompt(null); setPrompt(null); $('safe').hidden=true; $('fear').style.opacity=0; beacon.visible=false; keys={}; touchMove.x=touchMove.y=0; moveId=lookId=null;
     wasLocked=false; if (document.exitPointerLock) try { document.exitPointerLock(); } catch(e){}
     $('neTitle').textContent=title; $('neText').textContent=text; $('neReward').textContent='+'+gain+' tokens · you have '+SAVE.tokens+' tokens'; show('netEnd'); };
   if (net.mode!=='s' && win) playCut(COOP[net.mode].outro(),fin); else fin();
@@ -3121,7 +3131,7 @@ function netSurvival(dt,pl,surv,killers,me){
   for (var id in N.acc){ var A=N.acc[id]; G=Math.max(G,A.g); B=Math.max(B,A.b); C+=A.c; SGENS.forEach(function(h){ gens[h]=(gens[h]||0)+(A.gn[h]||0); }); }
   var fixed=SGENS.filter(function(h){ return gens[h]>=GENNEED; }), carOK=C>=CARNEED; done=carOK && fixed.length===SGENS.length;
   if (N.isHost && N.bots.length && N.el>2) botsHost(dt,pl,{G:G,B:B,C:C,gens:gens,carOK:carOK,done:done});
-  itemsTick(dt,pl,killers);
+  itemsTick(dt,pl,killers); teamTick(pl);
   var W=N.world;
   if (W.G!==G){ if (W.G!==undefined && G===1) toast('Someone has the gas can. Get it to the car.',3000); if (W.G!==undefined && G===2) toast('The gas is in the tank.',3000); W.G=G; gasCan.visible=G===0; }
   if (W.B!==B){ if (W.B!==undefined && B===1) toast('Someone has the battery. Get it to the car.',3000); if (W.B!==undefined && B===2) toast('The battery is at the car.',3000); W.B=B; battery.visible=B===0; }
@@ -3346,6 +3356,54 @@ function netAct(){
   if (N.nearChest>=0){ var ci=N.nearChest, it=chestItem(N.gid,ci); if (N.cs.indexOf(ci)>=0) return; N.cs.push(ci); N.nearChest=-1; setPrompt(null);
     if (it==='knife') N.kn+=2; else N.bag[it]++; noise(0.2,0.25,700); tone(660,0.15,'triangle',0.15); tone(990,0.25,'triangle',0.12,null,0.1);
     toast('Found a '+ITEMN[it].toLowerCase()+(it==='knife'?' (2 stabs). Press 3 near a killer.':it==='heal'?'. Press 1 to heal.':'. Press 2 to set it.'),3200); itemsUI(); }
+}
+
+/* ---------- teammate cards (bottom left) ---------- */
+var portraits={}; if (isTouch) document.body.classList.add('touch');
+function hexc(h){ return '#'+('00000'+(h>>>0).toString(16)).slice(-6); }
+function skinIdx(q){ var si=num(q.pr.sk,-1)|0; if (si<0 || si>=NEIGHBOURS.length){ si=0; for (var c=0;c<q.id.length;c++) si=(si*31+q.id.charCodeAt(c))%NEIGHBOURS.length; } return si; }
+function portrait(key,sp){
+  if (portraits[key]) return portraits[key];
+  var c=document.createElement('canvas'); c.width=c.height=64; var g=c.getContext('2d');
+  var bg=g.createRadialGradient(32,30,4,32,32,40); bg.addColorStop(0,'#2a2018'); bg.addColorStop(1,'#07090f'); g.fillStyle=bg; g.fillRect(0,0,64,64);
+  function el(x,y,rx,ry,col){ g.fillStyle=col; g.beginPath(); g.ellipse(x,y,rx,ry,0,0,7); g.fill(); }
+  if (!sp){ // the killer: hat and white mask
+    el(32,64,24,12,'#1c2533'); el(32,24,22,6,'#151314'); g.fillStyle='#1d1a19'; g.fillRect(19,8,26,15);
+    el(32,36,13,17,'#e8e4dc'); el(26,34,3.6,2.4,'#0b0a0b'); el(38,34,3.6,2.4,'#0b0a0b'); g.fillStyle='#4a2a22'; g.fillRect(28,45,8,1.5);
+  } else if (sp.rig==='w'){ var L=sp.look||{};
+    el(32,64,22,12,hexc(L.top||0x999999)); el(32,24,19,16,hexc(L.hair||0x221a14)); el(18,13,7,6,hexc(L.hair||0x221a14)); el(46,13,7,6,hexc(L.hair||0x221a14));
+    g.fillStyle=hexc(L.sk||0xc89a7c); g.fillRect(28,44,8,8); el(32,33,11,14,hexc(L.sk||0xc89a7c));
+    g.strokeStyle=hexc(L.acc||0xc0281e); g.lineWidth=3; g.beginPath(); g.arc(32,30,15,Math.PI*1.05,Math.PI*1.95); g.stroke(); el(17,32,3.5,5,hexc(L.acc||0xc0281e)); el(47,32,3.5,5,hexc(L.acc||0xc0281e));
+    el(27,32,2,1.6,'#1a1210'); el(37,32,2,1.6,'#1a1210'); g.fillStyle='#6a3a30'; g.fillRect(29,40,6,1.4);
+  } else { var L2=sp.look||{}, sk=sp.skin===0xffffff?0xd8b8a0:(sp.skin===undefined?0xd8b8a0:sp.skin), hd=L2.hd;
+    el(32,64,23,12,hexc(sp.top||0x555555)); g.fillStyle=hexc(sk); g.fillRect(27,44,10,8); el(32,33,11.5,14,hexc(sk));
+    if (hd!=='bald' && hd!=='cap' && hd!=='beanie' && hd!=='flat'){ el(32,23,12,6,hexc(sp.hair)); }
+    if (hd==='long'){ g.fillStyle=hexc(sp.hair); g.fillRect(20,24,4,16); g.fillRect(40,24,4,16); }
+    if (hd==='cowboy'){ el(32,22,20,4.5,hexc(L2.hatc||0x3a2a1a)); g.fillStyle=hexc(L2.hatc||0x3a2a1a); g.fillRect(22,11,20,11); }
+    if (hd==='cap'){ el(32,22,12,7,hexc(L2.hatc||0x2a4a8a)); g.fillStyle=hexc(L2.hatc||0x2a4a8a); g.fillRect(30,22,16,3); }
+    if (hd==='beanie'){ el(32,21,12.5,9,hexc(L2.hatc||0x6a1f1a)); g.fillStyle='rgba(0,0,0,.25)'; g.fillRect(20,25,24,3); }
+    if (hd==='flat'){ el(32,21,13,5,hexc(L2.hatc||0x8a7a52)); }
+    el(27,32,2,1.6,'#1a1210'); el(37,32,2,1.6,'#1a1210');
+    if (L2.gl){ g.strokeStyle='#111'; g.lineWidth=1.3; g.strokeRect(23,29.5,7,5); g.strokeRect(34,29.5,7,5); g.beginPath(); g.moveTo(30,31.5); g.lineTo(34,31.5); g.stroke(); }
+    if (sp.beard){ g.fillStyle=hexc(sp.hair); g.fillRect(26,38,12,3); }
+    g.fillStyle='#5a3028'; g.fillRect(29,42,6,1.4);
+  }
+  return portraits[key]=c.toDataURL();
+}
+function teamTick(pl){
+  var N=net, el=$('team'), mineK=game.role==='killer', mates=pl.filter(function(q){ return !q.me && ((q.role==='k')===mineK); });
+  var show=game.mode==='play' && mates.length>0; if (el.hidden!==!show) el.hidden=!show; if (!show) return;
+  var rows=mates.map(function(q){ var sp=mineK?null:NEIGHBOURS[skinIdx(q)], hp, st;
+    if (mineK){ var sn=num(q.pr.sn,0)>0, hc=Math.max(0,Math.min(4,num(q.pr.hc,0)|0)); hp=4-hc; st=sn?'Stunned':''; }
+    else { hp=q.a===0?0:Math.max(0,Math.min(3,num(q.bot?q.bot.hp:q.pr.h,3)|0)); st=q.a===2?'Escaped':(q.a===0?'Dead':''); }
+    return {id:q.id,name:nick(q.pr),img:portrait(mineK?'k':'s'+skinIdx(q),sp),hp:hp,max:mineK?4:3,st:st}; });
+  var key=JSON.stringify(rows.map(function(r){ return [r.id,r.name,r.hp,r.st]; })); if (el.dataset.k===key) return; el.dataset.k=key; el.textContent='';
+  rows.forEach(function(r){ var card=document.createElement('div'); card.className='mate'+(r.st==='Dead'?' dead':'');
+    var im=document.createElement('img'); im.src=r.img; im.alt=''; card.appendChild(im);
+    var info=document.createElement('div'), nm=document.createElement('b'); nm.textContent=r.name; info.appendChild(nm);
+    var bar=document.createElement('span'); bar.className='mbar'; for (var i=0;i<r.max;i++){ var seg=document.createElement('i'); if (i<r.hp) seg.className=r.hp<=1?'on low':'on'; bar.appendChild(seg); } info.appendChild(bar);
+    if (r.st){ var s=document.createElement('em'); s.textContent=r.st; info.appendChild(s); }
+    card.appendChild(info); el.appendChild(card); });
 }
 
 /* ---------- main loop ---------- */

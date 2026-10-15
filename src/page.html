@@ -48,6 +48,15 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
 #stamina{left:50%;bottom:18px;transform:translateX(-50%);width:min(40vw,220px);height:5px;background:rgba(231,226,210,.15)}
 #stamina i{display:block;height:100%;width:100%;background:var(--bone)}
 #stamina.low i{background:var(--blood)}
+#team{position:absolute;left:12px;bottom:14px;display:flex;flex-direction:column;gap:6px;pointer-events:none;max-width:min(46vw,220px)}
+.mate{display:flex;align-items:center;gap:8px;background:rgba(7,9,15,.72);border:1px solid rgba(231,226,210,.22);border-radius:3px;padding:4px 8px 4px 4px}
+.mate img{width:38px;height:38px;border-radius:2px;flex:none;display:block}
+.mate div{min-width:0;display:flex;flex-direction:column;gap:3px}
+.mate b{font-weight:400;font-size:12px;letter-spacing:.06em;color:var(--bone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mate em{font-style:normal;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--pumpkin)}
+.mbar{display:flex;gap:3px}.mbar i{display:block;width:18px;height:5px;background:rgba(231,226,210,.15)}.mbar i.on{background:#4fb862}.mbar i.on.low{background:var(--blood)}
+.mate.dead{opacity:.55}.mate.dead img{filter:grayscale(1)}
+body.touch #team{bottom:auto;top:96px}
 #items{position:absolute;left:50%;bottom:52px;transform:translateX(-50%);display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:calc(100% - 200px)}
 #items button{font:inherit;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--bone);background:rgba(13,17,27,.66);border:1px solid rgba(231,226,210,.4);border-radius:2px;padding:6px 9px;cursor:pointer}
 #items button:disabled{opacity:.35;cursor:default}
@@ -133,6 +142,7 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
   <button class="chip" id="pauseBtn" type="button" hidden>Pause</button>
   <div class="hud" id="stamina" hidden><i></i></div>
   <div class="hud" id="hpBar" hidden aria-label="Health"><b></b><b></b><b></b></div>
+  <div id="team" hidden aria-label="Teammates"></div>
   <div id="items" hidden><button type="button" data-it="heal"></button><button type="button" data-it="trap"></button><button type="button" data-it="knife"></button></div>
   <div class="hud" id="toast"></div>
 
