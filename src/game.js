@@ -2664,7 +2664,8 @@ function netBegin(go){
   lobby=null;
   net={mode:mode,code:code,role:role,gid:go.id,roles:go.roles,t0:performance.now(),el:0,st:0,f:0,hits:0,hp:3,alive:1,acc:{},spd:1,
        E:{x:0,z:0,ry:0,vis:0,cool:mode==='s'?22:30,lost:0,stuck:0,mv:0},ek:{},k:{},o:{g:0,b:0,c:0,gn:{}},hold:[0,0],sendT:0,cd:0,slow:0,boost:0,inv:0,objT:0,lastObj:'',
-       prey:null,esc:0,over:false,stT:0,lx:0,lz:0,an:0,done:false,spec:0,kills:0,world:{},bots:[],bag:{heal:0,trap:0,knife:0},kn:0,cs:[],traps:[],tt:[],kh:{},stun:0,nearChest:-1,khSeen:0,hc:0};
+       prey:null,esc:0,over:false,stT:0,lx:0,lz:0,an:0,done:false,spec:0,kills:0,world:{},bots:[],bag:{heal:0,trap:0,knife:0},kn:0,cs:[],traps:[],tt:[],kh:{},stun:0,nearChest:-1,khSeen:0,hc:0,knock:null,kd:null,nearDoor:null};
+  houses.forEach(function(h){ h.netCd=0; });
   clearItems();
   if (mode==='s' && go.bots && typeof go.bots==='object') botsInit(net,Math.max(0,Math.min(2,num(go.bots.k,0)|0)),Math.max(0,Math.min(5,num(go.bots.s,0)|0)));
   game.net=net; game.role=(role==='k'||role==='killer')?'killer':'victim'; initAudio(); reset(); story.hold=null; story.tearH=null; surv.active=false; setChain(false); stalkerOff(1e9);
@@ -2778,7 +2779,7 @@ function netTick(dt){
   N.sendT-=dt; if (N.sendT<=0){ N.sendT=0.08;
     var patch={p:[Math.round(P.x*100)/100,Math.round(P.z*100)/100,Math.round(P.yaw*100)/100,N.an],a:N.alive,h:N.hp,el:Math.round(N.el),st:N.st,f:N.f,hp:[N.hold[0],Math.round(N.hold[1]*10)/10]};
     if (N.mode==='s'){ if (game.role==='killer') patch.k=N.k; patch.o={g:N.o.g,b:N.o.b,c:Math.round(N.o.c*10)/10,gn:N.o.gn};
-      patch.cs=N.cs; patch.tp=N.traps; patch.tt=N.tt; patch.kh=N.kh; if (game.role==='killer'){ patch.sn=N.stun>0?Math.ceil(N.stun):0; patch.hc=N.hc; }
+      patch.cs=N.cs; patch.tp=N.traps; patch.tt=N.tt; patch.kh=N.kh; if (N.kd) patch.kd=N.kd; if (game.role==='killer'){ patch.sn=N.stun>0?Math.ceil(N.stun):0; patch.hc=N.hc; }
       if (host && N.bots.length){ patch.bz=N.bots.map(function(b){ return [Math.round(b.x*100)/100,Math.round(b.z*100)/100,Math.round(b.ry*100)/100,b.an,b.a,b.hp,b.stun>0?Math.ceil(b.stun):0,b.hc||0]; }); patch.ek=N.ek; } }
     if (eliasOn && host){ patch.e=[Math.round(E.x*100)/100,Math.round(E.z*100)/100,Math.round(E.ry*100)/100,E.vis,E.mv]; patch.ek=N.ek; }
     if (N.prey) patch.pv=[Math.round(N.prey.x*100)/100,Math.round(N.prey.z*100)/100,Math.round(N.prey.ry*100)/100,N.prey.an,N.prey.who,N.prey.dead?1:0,N.st];
@@ -3004,6 +3005,7 @@ function useItem(k){
 }
 // Called every frame from the Kill Feast tick.
 function itemsTick(dt,pl,killers){
+  net.pl=pl; var pl0=pl;
   var N=net, opened={}, sprung={}, traps=[], id, i;
   buildChests(); chests.forEach(function(c){ c.g.visible=true; });
   for (id in N.acc){ var A=N.acc[id]; (A.cs||[]).forEach(function(c){ opened[c]=1; }); (A.tt||[]).forEach(function(t){ sprung[t]=1; }); }
@@ -3014,12 +3016,17 @@ function itemsTick(dt,pl,killers){
   for (id in trapMeshes) if (!live[id]){ scene.remove(trapMeshes[id].g); delete trapMeshes[id]; }
   // my own traps that went off are spent
   N.traps=N.traps.filter(function(t){ return !sprung[netMe+':'+t[0]]; });
+  N.doorSeen=N.doorSeen||{}; pl.forEach(function(q){ var kd=q.me?null:q.pr.kd; if (!Array.isArray(kd) || kd.length!==2) return; var hi=kd[0]|0, st=num(kd[1],0); if (hi<0 || hi>=houses.length) return;
+    if (N.doorSeen[q.id]!==st){ var first=N.doorSeen[q.id]===undefined; N.doorSeen[q.id]=st; if (!first){ var hh=houses[hi]; if (!(N.knock && N.knock.h===hh)){ hh.open=1; setTimeout(function(){ if (net && !(net.knock && net.knock.h===hh)) hh.open=0; },3200); } } } });
   if (game.role==='killer'){
     if (N.stun<=0) traps.forEach(function(t){ if (t.sp || sprung[t.id]) return; if (Math.hypot(t.x-P.x,t.z-P.z)<0.75){ N.tt.push(t.id); sprung[t.id]=1; N.stun=Math.max(N.stun,3.5); N.stunWhy='trap'; noise(0.3,0.9,2800); thud(0.9); shake(); toast('A bear trap! You are stuck.',2500); } });
   } else if (N.alive===1){
     var near=-1; chests.forEach(function(c,ci){ if (!c.open && Math.hypot(c.x-P.x,c.z-P.z)<1.6) near=ci; });
-    N.nearChest=near;
-    if (near>=0 && !N.working) setPrompt('Open the chest','Open'); else if (curPrompt==='Open the chest') setPrompt(null);
+    N.nearChest=near; N.nearDoor=(near<0 && !N.knock)?nearDoor():null;
+    if (near>=0 && !N.working) setPrompt('Open the chest','Open');
+    else if (N.nearDoor && !N.working) setPrompt('Knock on the door','Knock');
+    else if (curPrompt==='Open the chest' || curPrompt==='Knock on the door') setPrompt(null);
+    netKnockTick(dt);
   }
   if (N.isHost) N.bots.forEach(function(b){ if (b.role!=='k' || b.stun>0) return; traps.forEach(function(t){ if (t.sp || sprung[t.id]) return; if (Math.hypot(t.x-b.x,t.z-b.z)<0.75){ N.tt.push(t.id); sprung[t.id]=1; b.stun=3.5; b.stunWhy='trap'; noise(0.3,0.6,2800); } }); });
   if (N.tt.length>40) N.tt=N.tt.slice(-40);
@@ -3039,9 +3046,33 @@ function itemsTick(dt,pl,killers){
     if (st2>(b.khSeen||0)){ var add2=st2-(b.khSeen||0); b.khSeen=st2; if (!(b.stun>0 && b.stunWhy==='hits')){ b.hc=(b.hc||0)+add2; if (b.hc>=4){ b.hc=0; b.stun=10; b.stunWhy='hits'; toast('The killer bot is stunned for 10 seconds.',2600); } } } });
   itemsUI();
 }
+// Knocking in Kill Feast: half the time someone answers and helps, unless the killer is right behind you.
+var NETLINES={heal:['You are bleeding. Hold still… there. Now go.','Lord, look at you. Take this and press it on.','Here, here. That will hold. Go!'],
+  give:['I can’t let you in, but take this.','Take it. I don’t want it back.','Here. Use it on him.'],
+  no:['I am not opening this door!','Go away! He’ll come here next!','Not tonight. I’m sorry.'],
+  close:['He’s right behind you! I’m sorry!','No, no, no, he’s RIGHT THERE!']};
+function netKnockStart(h,killerNear){
+  var N=net; [0.14,0.33,0.52].forEach(function(w){ tone(170,0.07,'square',0.16,80,w); }); game.kA=0.85;
+  if (h.netCd>game.time){ toast('Nobody comes to this door again.',2000); return; }
+  h.netCd=game.time+60; N.knock={h:h,t:0,ans:!killerNear && Math.random()<0.55,close:killerNear,st:0};
+}
+function netKnockTick(dt){
+  var N=net, k=N.knock; if (!k) return; var h=k.h; k.t+=dt;
+  if (k.st===0 && k.t>1.3){ k.st=1;
+    if (!k.ans){ if (k.close && Math.random()<0.7){ h.open=0.25; say(h.n,NETLINES.close[(Math.random()*2)|0],2400); setTimeout(function(){ thud(1.3); },400); }
+      else if (Math.random()<0.5) say(h.n,NETLINES.no[(Math.random()*3)|0],2600); else toast('No answer.',2000); k.t=99; return; }
+    h.open=1; h.hall.visible=true; showResident(h.n); tmpV.set(0.12,0.6,4.3); h.g.localToWorld(tmpV); resident.g.position.copy(tmpV); resident.g.rotation.y=h.g.rotation.y;
+    tmpV.set(0,2.2,5.2); h.g.localToWorld(tmpV); doorLight.position.copy(tmpV); doorLight.intensity=1.8; tone(140,0.35,'sawtooth',0.03,210);
+    N.kd=[houses.indexOf(h),Date.now()%1e7];
+    if (N.hp<3){ N.hp++; say(h.n,NETLINES.heal[(Math.random()*3)|0],3200); tone(520,0.2,'sine',0.15,780); }
+    else { var it=['heal','trap','knife'][(Math.random()*3)|0]; if (it==='knife') N.kn+=2; else N.bag[it]++; say(h.n,NETLINES.give[(Math.random()*3)|0]+' ('+ITEMN[it]+')',3400); }
+    itemsUI(); }
+  if (k.t>4.6){ if (h.open){ h.open=0; h.hall.visible=false; resident.g.visible=false; doorLight.intensity=0; } N.knock=null; }
+}
 function netAct(){
-  var N=net; if (!N) return; if (N.alive!==1){ N.spec++; return; }
+  var N=net; if (!N) return; var pl=N.pl||[]; if (N.alive!==1){ N.spec++; return; }
   if (N.mode!=='s' || game.role==='killer') return;
+  if (N.nearChest<0 && N.nearDoor && !N.knock){ var kn=false; pl.forEach(function(q){ if ((q.role==='k') && Math.hypot(q.x-P.x,q.z-P.z)<11) kn=true; }); netKnockStart(N.nearDoor,kn); setPrompt(null); return; }
   if (N.nearChest>=0){ var ci=N.nearChest, it=chestItem(N.gid,ci); if (N.cs.indexOf(ci)>=0) return; N.cs.push(ci); N.nearChest=-1; setPrompt(null);
     if (it==='knife') N.kn+=2; else N.bag[it]++; noise(0.2,0.25,700); tone(660,0.15,'triangle',0.15); tone(990,0.25,'triangle',0.12,null,0.1);
     toast('Found a '+ITEMN[it].toLowerCase()+(it==='knife'?' (2 stabs). Press 3 near a killer.':it==='heal'?'. Press 1 to heal.':'. Press 2 to set it.'),3200); itemsUI(); }
