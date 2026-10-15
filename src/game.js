@@ -1301,7 +1301,7 @@ cv.addEventListener('pointerdown',function(e){
       var st=$('stick'); st.hidden=false; st.style.left=(e.clientX-r.left)+'px'; st.style.top=(e.clientY-r.top)+'px'; st.firstElementChild.style.transform='';
     } else if (lookId===null){ lookId=e.pointerId; last.x=e.clientX; last.y=e.clientY; }
     try { cv.setPointerCapture(e.pointerId); } catch(err){}
-  } else { mouseDown=true; last.x=e.clientX; last.y=e.clientY; if (document.pointerLockElement!==cv) lock(); }
+  } else { mouseDown=true; last.x=e.clientX; last.y=e.clientY; if (document.pointerLockElement!==cv) lock(); else if (e.button===0 && game.net && game.role==='killer') swing(); }
   e.preventDefault();
 });
 cv.addEventListener('pointermove',function(e){
@@ -1439,7 +1439,7 @@ function show(id){ SCREENS.forEach(function(s){ $(s).hidden = s!==id; }); }
 function setLeaves(v){ leafPts.p.visible = v && qLeaves; }
 
 /* ---------- weather, wind, reflections, body language ---------- */
-var FX={idle:0,gT:0,gy:0,gp:0,gyS:0,gpS:0,breath:0,roll:0,fovK:0,work:0,lightT:30+Math.random()*30,light:0,rainOn:true,stepN:0};
+var FX={sw:0,idle:0,gT:0,gy:0,gp:0,gyS:0,gpS:0,breath:0,roll:0,fovK:0,work:0,lightT:30+Math.random()*30,light:0,rainOn:true,stepN:0};
 var envTex=null;
 (function(){ try {
   var pm=new THREE.PMREMGenerator(renderer), es=new THREE.Scene();
@@ -2759,7 +2759,7 @@ function netTick(dt){
   for (var aid in avatars) if (!seen[aid]) dropAvatar(aid);
   // my own motion
   var mvd=Math.hypot(P.x-N.lx,P.z-N.lz)/Math.max(dt,0.001); N.lx=P.x; N.lz=P.z; N.an=N.alive!==1?0:(mvd>5.4?2:(mvd>0.6?1:0));
-  N.cd-=dt; N.slow-=dt; N.boost-=dt; N.inv-=dt; N.stun-=dt; N.sense=(N.sense||0)-dt; N.senseCd=(N.senseCd||0)-dt;
+  swingTick(dt); N.cd-=dt; N.slow-=dt; N.boost-=dt; N.inv-=dt; N.stun-=dt; N.sense=(N.sense||0)-dt; N.senseCd=(N.senseCd||0)-dt;
   var surv=pl.filter(function(q){ return !(q.role==='k'||q.role==='killer'); }), killers=pl.filter(function(q){ return q.role==='k'||q.role==='killer'; });
   if (N.mode==='s' && !N.blood && N.el>NIGHT*0.5){ N.blood=true; sting(0.4,true); thud(1.2); shake();
     toast(game.role==='killer'?'Blood Moon. You are faster now, and Elias is hunting with you.':'Blood Moon. The killers are faster, and Elias has come out to hunt.',5000); }
@@ -2879,10 +2879,13 @@ function netSurvival(dt,pl,surv,killers,me){
   var dawn=Math.max(0,Math.min(1,1-left/80)); FX.hemi=(scene.environment?0.36:0.42)+dawn*0.9; scene.fog.color.copy(lin(N.blood?0x2a0709:FOG)).lerp(lin(0x5a6680),dawn*0.8);
   var alive=surv.filter(function(q){ return q.alive; }).length, out=surv.filter(function(q){ return q.a===2; }).length, lab=null, tgt=null;
   if (game.role==='killer'){
-    if (N.cd<=0) for (i=0;i<surv.length;i++){ var s=surv[i]; if (!s.alive || s.me) continue; var d=Math.hypot(s.x-P.x,s.z-P.z);
-      if (d<1.4 && N.stun<=0){ N.k[s.id]=(N.k[s.id]||0)+1; N.kills++; N.cd=3.2; N.slow=1.3; stabSound(); var f=fwd(); bloodBurst(s.x,1.2,s.z,f.x,f.z,50); bloodPool(s.x,groundY(s.x,s.z),s.z,0.8); toast('You cut '+nick(s.pr)+'.',2200); break; } }
+    if (N.swingHit){ N.swingHit=false; var f=fwd(), tgt=null, td=2.1;
+      for (i=0;i<surv.length;i++){ var s=surv[i]; if (!s.alive || s.me) continue; var dx=s.x-P.x, dz=s.z-P.z, d=Math.hypot(dx,dz);
+        if (d<td && (dx*f.x+dz*f.z)/(d||1)>0.45){ td=d; tgt=s; } }
+      if (tgt){ var s2=tgt; N.k[s2.id]=(N.k[s2.id]||0)+1; N.kills++; N.cd=2.4; N.slow=1.1; stabSound(); bloodBurst(s2.x,1.2,s2.z,f.x,f.z,50); bloodPool(s2.x,groundY(s2.x,s2.z),s2.z,0.8); shake(); toast('You cut '+nick(s2.pr)+'.',2200); N.lastHit=s2; }
+      else noise(0.12,0.25,900); }
     var near=null, nd=1e9; surv.forEach(function(q){ if (!q.alive) return; var dd=Math.hypot(q.x-P.x,q.z-P.z); if (dd<nd){ nd=dd; near=q; } });
-    netObj('Kill Feast · '+clockT,'Hunt them down before morning. '+alive+' alive'+(out?', '+out+' escaped':'')+'. Car '+Math.round(Math.min(1,C/CARNEED)*100)+'%, generators '+fixed.length+'/'+SGENS.length+'.', done?CARSIDE:null);
+    netObj('Kill Feast · '+clockT,(isTouch?'Tap Swing':'Click or press V')+' to swing your knife. Hunt them down before morning. '+alive+' alive'+(out?', '+out+' escaped':'')+'. Car '+Math.round(Math.min(1,C/CARNEED)*100)+'%, generators '+fixed.length+'/'+SGENS.length+'.', done?CARSIDE:null);
     netSafe(N.stun>0?(N.stunWhy==='hits'?'Stunned':'Stuck in a trap')+' · '+mmss(N.stun):(N.slow>0?'Got one':null));
   } else if (N.alive===1){
     var o=N.o, car=nearP(CARSIDE,3.4);
@@ -2979,8 +2982,10 @@ function preyTick(dt,others){
   $('neLeave').addEventListener('click',leaveToMenu);
   window.addEventListener('keydown',function(e){ if (!net || game.mode!=='play') return; if (net.alive!==1 && e.code==='Space') net.spec++;
     if (e.code==='KeyQ') useSense();
+    if (e.code==='KeyV') swing();
     if (e.code==='Digit1') useItem('heal'); else if (e.code==='Digit2') useItem('trap'); else if (e.code==='Digit3') useItem('knife'); });
   $('senseBtn').addEventListener('click',useSense);
+  $('btnSwing').addEventListener('pointerdown',function(e){ e.preventDefault(); swing(); });
   Array.prototype.forEach.call(document.querySelectorAll('#items [data-it]'),function(b){ b.addEventListener('click',function(){ useItem(b.dataset.it); }); });
 })();
 
@@ -3011,12 +3016,16 @@ function clearItems(){ chests.forEach(function(c){ c.open=false; c.lid.rotation.
   for (var id in trapMeshes){ scene.remove(trapMeshes[id].g); } trapMeshes={}; $('items').hidden=true; }
 function itemsUI(){
   var N=net, el=$('items'), show=N && N.mode==='s' && game.role!=='killer' && N.alive===1 && game.mode==='play', sb=$('senseBtn'), ks=N && N.mode==='s' && game.role==='killer' && game.mode==='play';
-  if (sb.hidden!==!ks) sb.hidden=!ks; if (ks){ var lab=(isTouch?'':'Q · ')+(N.senseCd>0?'Sense '+Math.ceil(N.senseCd)+'s':'Sense'); if (sb.textContent!==lab) sb.textContent=lab; sb.disabled=N.senseCd>0; }
+  if (sb.hidden!==!ks) sb.hidden=!ks; var sw=$('btnSwing'); if (sw.hidden!==!ks) sw.hidden=!ks; if (ks){ var lab=(isTouch?'':'Q · ')+(N.senseCd>0?'Sense '+Math.ceil(N.senseCd)+'s':'Sense'); if (sb.textContent!==lab) sb.textContent=lab; sb.disabled=N.senseCd>0; }
   if (el.hidden!==!show) el.hidden=!show; if (!show) return;
   var key=JSON.stringify(N.bag)+N.kn; if (el.dataset.k===key) return; el.dataset.k=key;
   [['heal',1],['trap',2],['knife',3]].forEach(function(d){ var b=el.querySelector('[data-it="'+d[0]+'"]'), n=d[0]==='knife'?N.kn:N.bag[d[0]];
     b.textContent=(isTouch?'':d[1]+' · ')+ITEMN[d[0]]+(d[0]==='knife'?' · '+n+' stabs':' ×'+n); b.disabled=!n; });
 }
+function swing(){ var N=net; if (!N || N.mode!=='s' || game.role!=='killer' || game.mode!=='play' || N.stun>0 || N.swingT>0 || N.cd>0) return;
+  N.swingT=0.5; N.swingDone=false; noise(0.18,0.22,1800); tone(240,0.12,'sawtooth',0.04,120); }
+function swingTick(dt){ var N=net; if (!N || !(N.swingT>0)) { FX.sw=0; return; } N.swingT-=dt; var p=1-N.swingT/0.5; FX.sw=Math.sin(Math.PI*Math.min(1,p));
+  if (!N.swingDone && p>0.32){ N.swingDone=true; N.swingHit=true; } }
 function useSense(){ var N=net; if (!N || N.mode!=='s' || game.role!=='killer' || game.mode!=='play' || N.stun>0) return;
   if (N.senseCd>0){ toast('Sense is ready in '+Math.ceil(N.senseCd)+' s.',1400); return; } N.sense=5; N.senseCd=40; tone(90,1.2,'sawtooth',0.12,45); heartbeat(0.4); toast('You can sense every one of them.',2200); }
 function useItem(k){
@@ -3196,7 +3205,7 @@ function update(dt){
   FX.fovK+=((wantRun?1:0)-FX.fovK)*Math.min(1,dt*4.5); if (!reduced) setFov(Math.round((70+FX.fovK*6)*10)/10);
   P.gy+=(groundY(P.x,P.z)-P.gy)*Math.min(1,dt*10);
   camera.position.set(P.x+rx*sdx,1.65+bob+brt+P.gy,P.z+rz*sdx); camera.rotation.set(P.pitch+FX.gpS+shk,P.yaw+FX.gyS+shk*0.7,FX.roll);
-  if (vmKnife.visible){ vmKnife.position.set(sdx*0.5,-bob*0.7+brt-(wantRun?0.02:0),0); vmKnife.rotation.set(wantRun?0.1+Math.sin(P.bob)*0.05:0,0,-FX.roll*2); }
+  if (vmKnife.visible){ var swg=FX.sw||0; vmKnife.position.set(sdx*0.5-swg*0.12,-bob*0.7+brt-(wantRun?0.02:0)+swg*0.1,-swg*0.18); vmKnife.rotation.set((wantRun?0.1+Math.sin(P.bob)*0.05:0)-swg*1.3,swg*0.5,-FX.roll*2+swg*0.6); }
   sway.x*=Math.max(0,1-dt*7); sway.y*=Math.max(0,1-dt*7);
   vm.position.set(vmBase.x+sway.x+(reduced?0:Math.cos(P.bob*.5)*.012*m)+ik*Math.sin(game.time*37)*0.0022, vmBase.y+sway.y-bob*(wantRun?.9:.5)+brt*0.8-(wantRun?.03:0)+ik*Math.sin(game.time*43)*0.0018, vmBase.z);
   vm.rotation.set(sway.y*2+(wantRun?.25+Math.sin(P.bob)*0.04:0)+.04, -sway.x*2+.1, -FX.roll*1.5);
