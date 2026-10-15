@@ -33,3 +33,7 @@ On the free plan the server sleeps when nobody has used it for a while, so the f
 - `public/stalker-model.js` holds the character models and animations.
 - `build.js` joins the two source files into `public/index.html`.
 - `server.js` is the web server and the online relay.
+
+## Shipping an update
+
+At the top of the "update notes" section in `src/game.js`, raise `GAME_VER` by one and add an entry to `UPDATES` describing the change. `npm run build` writes the new number to `public/version.json`; players with the game open see an "A new update is out" bar within a minute, and the What's new screen shows your notes the next time they start.
