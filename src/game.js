@@ -3658,8 +3658,9 @@ function teamTick(pl){
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=42;
+var GAME_VER=43;
 var UPDATES=[
+  {v:43,t:'Install button',n:['If your phone can install Fellow Neighbors as a real app, an Install app button now shows in the menu.','Installed, it opens full screen with its own icon instead of inside Chrome.']},
   {v:42,t:'Update notifications',n:['The game now tells you when there is a new update, and this screen shows what changed.','Turn on “Notify me” to get a phone or desktop alert when an update lands while the game is open in the background.']},
   {v:41,t:'Bloodier, and no more rain',n:['Rain and thunder are gone.','Every survivor has their own build and gear: backpacks, satchels, scarves, hoods and glasses.','Kills are gorier: the knife connects, victims flinch, the last blow is in slow motion and they bleed out.']},
   {v:40,t:'Doors, hands and speed',n:['Killers smash doors down in a 5-second cinematic.','Survivors carry one item in their left hand. Click or press R to use it.','Runs smoother on phones and older computers.']},
@@ -3680,7 +3681,12 @@ function updAlert(v){
 }
 function checkVersion(){ if (!/^https?:$/.test(location.protocol) || (window.claude && window.claude.use)) return;
   try { fetch('/version.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }).then(function(j){ if (j && num(j.v,0)>GAME_VER) updAlert(j.v); }).catch(function(){}); } catch(e){} }
+// Chrome offers a proper install (its own app, not a Chrome shortcut); keep that offer for our own button.
+var installEvt=null;
+window.addEventListener('beforeinstallprompt',function(e){ e.preventDefault(); installEvt=e; $('mInstall').hidden=false; });
+window.addEventListener('appinstalled',function(){ installEvt=null; $('mInstall').hidden=true; toast('Installed. Open Fellow Neighbors from your home screen.',4000); });
 (function(){
+  $('mInstall').addEventListener('click',function(){ if (!installEvt) return; var e=installEvt; installEvt=null; try { e.prompt(); e.userChoice.then(function(c){ if (c && c.outcome==='accepted') $('mInstall').hidden=true; }); } catch(err){} });
   $('mNews').addEventListener('click',openNews);
   $('newsClose').addEventListener('click',function(){ show('menu'); });
   $('newsNotify').addEventListener('click',function(){ try { var p=Notification.requestPermission(); if (p && p.then) p.then(renderNews); } catch(e){} });
