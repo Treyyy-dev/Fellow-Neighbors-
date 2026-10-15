@@ -63,7 +63,7 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
 .mbar{display:flex;gap:3px}.mbar i{display:block;width:18px;height:5px;background:rgba(231,226,210,.15)}.mbar i.on{background:#4fb862}.mbar i.on.low{background:var(--blood)}
 .mate.dead{opacity:.55}.mate.dead img{filter:grayscale(1)}
 body.touch #team{bottom:auto;top:96px}
-#items{position:absolute;left:50%;bottom:52px;transform:translateX(-50%);display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:calc(100% - 200px)}
+#items{position:absolute;left:50%;bottom:50px;transform:translateX(-50%);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone);text-shadow:0 1px 4px #000;white-space:nowrap;pointer-events:none}
 #items button{font:inherit;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--bone);background:rgba(13,17,27,.66);border:1px solid rgba(231,226,210,.4);border-radius:2px;padding:6px 9px;cursor:pointer}
 #items button:disabled{opacity:.35;cursor:default}
 #hpBar{left:50%;bottom:32px;transform:translateX(-50%);display:flex;gap:6px}
@@ -152,12 +152,13 @@ body.touch #team{bottom:auto;top:96px}
   <button type="button" id="senseBtn" hidden>Sense</button>
   <div id="chatBox" hidden><p class="lab">Talking to <b id="chatName"></b></p><div class="chatOpts"><button type="button" data-c="1">1 · Get to safety</button><button type="button" data-c="2">2 · Do you have anything?</button><button type="button" data-c="3">3 · Call the police</button><button type="button" data-c="0">Close</button></div></div>
   <div id="team" hidden aria-label="Teammates"></div>
-  <div id="items" hidden><button type="button" data-it="heal"></button><button type="button" data-it="trap"></button><button type="button" data-it="knife"></button></div>
+  <div id="items" hidden></div>
   <div class="hud" id="toast"></div>
 
   <div id="stick" hidden><i></i></div>
   <div id="pad" hidden>
     <button id="btnSwing" type="button" hidden>Swing</button>
+    <button id="btnUse" type="button" hidden>Use</button>
     <button id="btnKnock" type="button" hidden>Knock</button>
     <button id="btnLight" type="button">Light</button>
     <button id="btnRun" type="button">Run</button>
@@ -246,9 +247,7 @@ body.touch #team{bottom:auto;top:96px}
     <div class="seg" id="fpsSeg"><button type="button" data-v="30">30</button><button type="button" data-v="60">60</button><button type="button" data-v="120">120</button></div>
     <p class="lab">Quality</p>
     <div class="seg" id="qSeg"><button type="button" data-v="0">Very low</button><button type="button" data-v="1">Low</button><button type="button" data-v="2">Medium</button><button type="button" data-v="3">High</button><button type="button" data-v="4">Very high</button></div>
-    <p class="lab">Voices</p>
-    <div class="seg" id="voxSeg"><button type="button" data-v="1">On</button><button type="button" data-v="0">Off</button></div>
-    <p class="lab" id="keysHelp">W A S D move &middot; Mouse look &middot; Shift run &middot; C crouch &middot; F flashlight &middot; E use &middot; Esc pause &middot; Online: 1 2 3 items, killers click or V to swing, Q sense</p>
+    <p class="lab" id="keysHelp">W A S D move &middot; Mouse look &middot; Shift run &middot; C crouch &middot; F flashlight &middot; E use &middot; Esc pause &middot; Online: click or R uses what is in your left hand, killers click or V to swing, Q sense</p>
     <div class="list"><button class="mbtn" id="setDone" type="button">Done</button></div>
   </div></div>
 

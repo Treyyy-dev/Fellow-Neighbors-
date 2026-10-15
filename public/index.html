@@ -64,7 +64,7 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
 .mbar{display:flex;gap:3px}.mbar i{display:block;width:18px;height:5px;background:rgba(231,226,210,.15)}.mbar i.on{background:#4fb862}.mbar i.on.low{background:var(--blood)}
 .mate.dead{opacity:.55}.mate.dead img{filter:grayscale(1)}
 body.touch #team{bottom:auto;top:96px}
-#items{position:absolute;left:50%;bottom:52px;transform:translateX(-50%);display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:calc(100% - 200px)}
+#items{position:absolute;left:50%;bottom:50px;transform:translateX(-50%);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone);text-shadow:0 1px 4px #000;white-space:nowrap;pointer-events:none}
 #items button{font:inherit;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--bone);background:rgba(13,17,27,.66);border:1px solid rgba(231,226,210,.4);border-radius:2px;padding:6px 9px;cursor:pointer}
 #items button:disabled{opacity:.35;cursor:default}
 #hpBar{left:50%;bottom:32px;transform:translateX(-50%);display:flex;gap:6px}
@@ -153,12 +153,13 @@ body.touch #team{bottom:auto;top:96px}
   <button type="button" id="senseBtn" hidden>Sense</button>
   <div id="chatBox" hidden><p class="lab">Talking to <b id="chatName"></b></p><div class="chatOpts"><button type="button" data-c="1">1 · Get to safety</button><button type="button" data-c="2">2 · Do you have anything?</button><button type="button" data-c="3">3 · Call the police</button><button type="button" data-c="0">Close</button></div></div>
   <div id="team" hidden aria-label="Teammates"></div>
-  <div id="items" hidden><button type="button" data-it="heal"></button><button type="button" data-it="trap"></button><button type="button" data-it="knife"></button></div>
+  <div id="items" hidden></div>
   <div class="hud" id="toast"></div>
 
   <div id="stick" hidden><i></i></div>
   <div id="pad" hidden>
     <button id="btnSwing" type="button" hidden>Swing</button>
+    <button id="btnUse" type="button" hidden>Use</button>
     <button id="btnKnock" type="button" hidden>Knock</button>
     <button id="btnLight" type="button">Light</button>
     <button id="btnRun" type="button">Run</button>
@@ -247,9 +248,7 @@ body.touch #team{bottom:auto;top:96px}
     <div class="seg" id="fpsSeg"><button type="button" data-v="30">30</button><button type="button" data-v="60">60</button><button type="button" data-v="120">120</button></div>
     <p class="lab">Quality</p>
     <div class="seg" id="qSeg"><button type="button" data-v="0">Very low</button><button type="button" data-v="1">Low</button><button type="button" data-v="2">Medium</button><button type="button" data-v="3">High</button><button type="button" data-v="4">Very high</button></div>
-    <p class="lab">Voices</p>
-    <div class="seg" id="voxSeg"><button type="button" data-v="1">On</button><button type="button" data-v="0">Off</button></div>
-    <p class="lab" id="keysHelp">W A S D move &middot; Mouse look &middot; Shift run &middot; C crouch &middot; F flashlight &middot; E use &middot; Esc pause &middot; Online: 1 2 3 items, killers click or V to swing, Q sense</p>
+    <p class="lab" id="keysHelp">W A S D move &middot; Mouse look &middot; Shift run &middot; C crouch &middot; F flashlight &middot; E use &middot; Esc pause &middot; Online: click or R uses what is in your left hand, killers click or V to swing, Q sense</p>
     <div class="list"><button class="mbtn" id="setDone" type="button">Done</button></div>
   </div></div>
 
@@ -304,14 +303,15 @@ var isTouch = false;
 try { isTouch = matchMedia('(pointer: coarse)').matches; } catch(e){}
 
 /* ---------- renderer ---------- */
-var renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:'high-performance'});
+var LOWEND=false; try { LOWEND=isTouch || (navigator.hardwareConcurrency||8)<=4 || (navigator.deviceMemory||8)<=4; } catch(e){}
+var renderer = new THREE.WebGLRenderer({antialias:!LOWEND, powerPreference:'high-performance'});
 var pixelRatio = Math.min(window.devicePixelRatio||1, isTouch ? 1.5 : 2);
 renderer.setPixelRatio(pixelRatio);
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.25;
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = LOWEND ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
 wrap.insertBefore(renderer.domElement, wrap.firstChild);
 var scene = new THREE.Scene();
 var FOG = 0x0a0f1c;
@@ -417,7 +417,7 @@ var moonLight = new THREE.DirectionalLight(lin(0x9fb6ff), 0.55);
 var moonDir = new THREE.Vector3(-0.45,0.72,0.3).normalize();
 moonLight.position.copy(moonDir).multiplyScalar(150).add(new THREE.Vector3(5,0,0)); moonLight.target.position.set(5,0,0);
 moonLight.castShadow = true;
-var msz = isTouch ? 2048 : 4096; moonLight.shadow.mapSize.set(msz,msz);
+var msz = LOWEND ? 1024 : (isTouch ? 2048 : 4096); moonLight.shadow.mapSize.set(msz,msz);
 var sc = moonLight.shadow.camera; sc.left=-92; sc.right=92; sc.top=62; sc.bottom=-62; sc.near=20; sc.far=320;
 moonLight.shadow.bias=-0.0006; moonLight.shadow.normalBias=0.06; moonLight.shadow.autoUpdate=false;
 scene.add(moonLight); scene.add(moonLight.target);
@@ -1161,7 +1161,7 @@ var NARR={n:'Narrator',rig:'m',pitch:1,rate:0.9,vi:0,quiet:true,abs:0.95};
 var ELIAS={n:'Elias',rig:'m',pitch:1,rate:0.6,vi:1,quiet:true,abs:0.05};
 var YOU={n:'You',rig:'m',pitch:1,rate:1.0,vi:2,quiet:true,abs:1.05};
 function voice(sp,text){
-  if (SAVE.voices===false) return;
+
   var clean=text.replace(/…/g,',').replace(/[“”—]/g,' '), done=false, w=sp.rig==='w';
   function babble(){ if (done) return; done=true; if (sp.quiet) return; var n=Math.min(24,Math.ceil(clean.length/4)), base=(w?310:150)*sp.pitch;
     for (var i=0;i<n;i++) tone(base*(1+((i*7+sp.n.length)%5)*0.09),0.07,'triangle',0.09,null,i*0.085); }
@@ -1678,7 +1678,7 @@ cv.addEventListener('pointerdown',function(e){
       var st=$('stick'); st.hidden=false; st.style.left=(e.clientX-r.left)+'px'; st.style.top=(e.clientY-r.top)+'px'; st.firstElementChild.style.transform='';
     } else if (lookId===null){ lookId=e.pointerId; last.x=e.clientX; last.y=e.clientY; }
     try { cv.setPointerCapture(e.pointerId); } catch(err){}
-  } else { mouseDown=true; last.x=e.clientX; last.y=e.clientY; if (document.pointerLockElement!==cv) lock(); else if (e.button===0 && game.net && game.role==='killer') swing(); }
+  } else { mouseDown=true; last.x=e.clientX; last.y=e.clientY; if (document.pointerLockElement!==cv) lock(); else if (e.button===0 && game.net && game.role==='killer') swing(); else if (e.button===0 && game.net) useHeld(); }
   e.preventDefault();
 });
 cv.addEventListener('pointermove',function(e){
@@ -1798,7 +1798,7 @@ function nearestLights(t){
 }
 
 /* ---------- save, settings, story parts ---------- */
-var SAVE={kill:0,kowned2:[0],kskin:0,kowned:[0],tokens:0,owned:[],equipped:-1,fps:60,q:isTouch?2:3,prog:{victim:0,killer:0}};
+var SAVE={kill:0,kowned2:[0],kskin:0,kowned:[0],tokens:0,owned:[],equipped:-1,fps:60,q:LOWEND?1:3,prog:{victim:0,killer:0}};
 try { var sv=localStorage.getItem('hollow-lane-save'); if (sv){ sv=JSON.parse(sv); for (var sk in sv) SAVE[sk]=sv[sk]; } } catch(e){}
 function save(){
   try { localStorage.setItem('hollow-lane-save',JSON.stringify(SAVE)); } catch(e){}
@@ -1841,7 +1841,7 @@ var rain=(function(){
 function rainTick(dt){
   var on=FX.rainOn && !shelter && !(game.net && net && net.ih>=0 && !net.jailed); rain.l.visible=on; if (!on) return;
   var cx=camera.position.x, cz=camera.position.z, w=rain.w, p=rain.pos, R=ROOFS, nr=R.length;
-  for (var i=0;i<rain.n;i++){ var o=i*3, q=i*6;
+  for (var i=0,ra=rain.act===undefined?rain.n:rain.act;i<ra;i++){ var o=i*3, q=i*6;
     w[o+1]-=dt*(17+(i%7)); w[o]+=dt*1.5;
     if (w[o+1]<0) w[o+1]+=13;
     if (w[o]-cx>14) w[o]-=28; else if (w[o]-cx<-14) w[o]+=28;
@@ -1907,27 +1907,28 @@ function residentLang(dt,t){
   bodyLang(rig.L,resident.g,dt,t,game.mode!=='finish',nod,[1.7,0.014]);
 }
 
-var QUAL=[{pr:0.5,moon:false,torch:0,grass:.15,mist:false,leaves:false},{pr:0.75,moon:true,torch:0,grass:.35,mist:false,leaves:true},
-          {pr:1,moon:true,torch:512,grass:.6,mist:true,leaves:true},{pr:1.5,moon:true,torch:1024,grass:1,mist:true,leaves:true},{pr:2,moon:true,torch:2048,grass:1,mist:true,leaves:true}];
+var QUAL=[{pr:0.5,moon:false,torch:0,grass:.1,mist:false,leaves:false,rain:0,ms:512},{pr:0.7,moon:false,torch:0,grass:.3,mist:false,leaves:false,rain:.3,ms:1024},
+          {pr:1,moon:true,torch:512,grass:.6,mist:true,leaves:true,rain:.6,ms:2048},{pr:1.5,moon:true,torch:1024,grass:1,mist:true,leaves:true,rain:1,ms:4096},{pr:2,moon:true,torch:2048,grass:1,mist:true,leaves:true,rain:1,ms:4096}];
 function applyQuality(){
   var q=QUAL[SAVE.q]||QUAL[2];
-  pixelRatio = q.pr<=1 ? q.pr : Math.min(q.pr, window.devicePixelRatio||1); renderer.setPixelRatio(pixelRatio);
+  pixelRatio = q.pr<=1 ? q.pr : Math.min(q.pr, window.devicePixelRatio||1); if (typeof DYN!=='undefined' && DYN){ DYN.base=pixelRatio; DYN.pr=pixelRatio; } renderer.setPixelRatio(pixelRatio);
+  var ms=Math.min(q.ms,msz*2); if (moonLight.shadow.mapSize.x!==ms){ moonLight.shadow.mapSize.set(ms,ms); if (moonLight.shadow.map){ moonLight.shadow.map.dispose(); moonLight.shadow.map=null; } }
+  rain.act=Math.floor(rain.n*q.rain); for (var ri=rain.act;ri<rain.n;ri++){ var rq=ri*6; rain.pos[rq+1]=rain.pos[rq+4]=-50; } rain.l.geometry.attributes.position.needsUpdate=true;
   moonLight.castShadow=q.moon; torch.castShadow=q.torch>0;
   if (q.torch && torch.shadow.mapSize.x!==q.torch){ torch.shadow.mapSize.set(q.torch,q.torch); if (torch.shadow.map){ torch.shadow.map.dispose(); torch.shadow.map=null; } }
   if (grassInst) grassInst.count=Math.floor(grassMax*q.grass);
   mist.forEach(function(s){ s.visible=q.mist; });
   qLeaves=q.leaves; setLeaves(!indoorsView());
-  scene.environment=(SAVE.q>=2 && envTex)?envTex:null; FX.hemi=scene.environment?0.36:0.42; FX.rainOn=SAVE.q>=1;
+  scene.environment=(SAVE.q>=2 && envTex)?envTex:null; FX.hemi=scene.environment?0.36:0.42; FX.rainOn=q.rain>0;
   moonLight.shadow.needsUpdate=true; resize();
 }
 function syncSeg(){
-  if (SAVE.voices===undefined) SAVE.voices=true;
-  [['fpsSeg',SAVE.fps],['qSeg',SAVE.q],['voxSeg',SAVE.voices?1:0]].forEach(function(p){ var bs=$(p[0]).children; for (var i=0;i<bs.length;i++) bs[i].setAttribute('aria-pressed', String(+bs[i].dataset.v===p[1])); });
+  SAVE.voices=true;
+  [['fpsSeg',SAVE.fps],['qSeg',SAVE.q]].forEach(function(p){ var bs=$(p[0]).children; for (var i=0;i<bs.length;i++) bs[i].setAttribute('aria-pressed', String(+bs[i].dataset.v===p[1])); });
 }
 function openSettings(from){ settingsBack=from; syncSeg(); show('settings'); }
 $('fpsSeg').addEventListener('click',function(e){ var v=e.target.dataset && e.target.dataset.v; if (v===undefined) return; SAVE.fps=+v; save(); syncSeg(); });
 $('qSeg').addEventListener('click',function(e){ var v=e.target.dataset && e.target.dataset.v; if (v===undefined) return; SAVE.q=+v; save(); syncSeg(); applyQuality(); });
-$('voxSeg').addEventListener('click',function(e){ var v=e.target.dataset && e.target.dataset.v; if (v===undefined) return; SAVE.voices=v==='1'; save(); syncSeg(); if (SAVE.voices) voice(NARR,'Voices on.'); else { try { window.speechSynthesis.cancel(); } catch(er){} } });
 $('setDone').addEventListener('click',function(){ show(settingsBack); });
 
 /* ---------- shop: the neighbours as skins, restocked every two hours ---------- */
@@ -2984,10 +2985,10 @@ function navGoal(e,T){
       if (onStairs(e.x,e.z)) return {x:IX+0.27,z:tf>ef||(T.y||0)>(e.y||0)?-3.6:0.9}; return {x:IX+0.27,z:ef===0?0.3:-3.55}; } }
   return {x:T.x,z:T.z};
 }
-function navStep(e,T,sp,dt){
+function navStep(e,T,sp,dt,breaker){
   var g=navGoal(e,T), dx=g.x-e.x, dz=g.z-e.z, d=Math.hypot(dx,dz)||0.001;
   if (g.exit && d<0.8){ var h=houses[e.ih], dp=doorPt(h); e.ih=-1; e.x=dp.x; e.z=dp.z-h.side*1.1; e.fl=0; e.y=groundY(e.x,e.z); h.open=1; setTimeout(function(){ h.open=0; },1500); return d; }
-  if (g.enter!==undefined && d<1.4){ var h2=houses[g.enter]; e.ih=g.enter; e.x=IX; e.z=3.0; e.fl=0; e.y=0; h2.open=1; setTimeout(function(){ h2.open=0; },1500); return d; }
+  if (g.enter!==undefined && d<1.4){ var h2=houses[g.enter]; if (breaker && !h2.netBroke){ breakDoorFx(h2); if (net.bd.indexOf(g.enter)<0) net.bd.push(g.enter); } e.ih=g.enter; e.x=IX; e.z=3.0; e.fl=0; e.y=0; h2.open=1; setTimeout(function(){ h2.open=0; },1500); return d; }
   var step=Math.min(d,sp*dt), p={x:e.x+dx/d*step,z:e.z+dz/d*step,fl:e.fl|0,y:e.y||0};
   if (e.ih>=0) iFix(p,0.3); else { if (!((e.stuck||0)>=2.5)) resolve(p,0.45); p.x=Math.max(-157,Math.min(72.2,p.x)); p.z=Math.max(-39,Math.min(39,p.z)); p.y=groundY(p.x,p.z); }
   var mv=Math.hypot(p.x-e.x,p.z-e.z), st=e.stuck||0; e.stuck=mv<step*0.35?st+dt:(st>=2.5?(st+dt>4.5?0:st+dt):0);
@@ -2996,7 +2997,7 @@ function navStep(e,T,sp,dt){
 // ---- going in and out of a house
 function styleInterior(h){ var hix=houses.indexOf(h); IM.wall.color.copy(lin(IWALL[hix%12])); IM.sofa.color.copy(lin(ISOFA[hix%12])); IM.rug.color.copy(lin(IRUG[hix%12])); IM.cab.color.copy(lin(ICAB[hix%6])); }
 function netEnterHouse(h){
-  var N=net; N.ih=houses.indexOf(h); N.outX=P.x; N.outZ=P.z; styleInterior(h); iDoorSet(false); iPowerSet(h.power);
+  var N=net; N.ih=houses.indexOf(h); N.outX=P.x; N.outZ=P.z; styleInterior(h); iDoorSet(!!h.netBroke); iPowerSet(h.power);
   P.x=IX; P.z=2.9; P.fl=0; P.y=0; P.gy=0; P.yaw=0; P.pitch=0; h.open=1; setTimeout(function(){ h.open=0; },1400);
   moonLight.intensity=0; setLeaves(false); noise(0.12,0.3,400); N.homeShown=false; setPrompt(null);
   if (game.role!=='killer') toast(h.netHid?'The house is quiet. The neighbour is hiding upstairs.':NEIGHBOURS[h.n].n+' lives here. Go and talk to them.',2600);
@@ -3020,7 +3021,8 @@ function chatPick(n){
   var N=net; if (!N || !N.chat) return; var h=N.chat, nm=h.n;
   if (n===1){ say(nm,['All right. I’m going upstairs and I’m locking the door.','Thank you. I’ll hide. Be careful out there.','Upstairs. Got it. Don’t let him follow you in.'][(Math.random()*3)|0],3000); h.netHid=true; closeChat(); setTimeout(function(){ if (net && net.ih===houses.indexOf(h)) resident.g.visible=false; },1600); return; }
   if (n===2){ if (h.netAsked){ say(nm,'I already gave you everything I could find.',2600); return; } h.netAsked=true;
-    if (Math.random()<0.5){ var it=Math.random()<0.5?'knife':'heal'; if (it==='knife') N.kn+=2; else N.bag.heal++; say(nm,it==='knife'?'Here, take my kitchen knife. Two good stabs in it.':'Here’s the first aid kit. Press 1 when you need it.',3200); tone(660,0.15,'triangle',0.15); itemsUI(); }
+    if (N.held){ h.netAsked=false; say(nm,'Your hands are full. Use what you’ve got first.',2600); return; }
+    if (Math.random()<0.5){ var it=Math.random()<0.5?'knife':'heal'; giveHeld(it); say(nm,it==='knife'?'Here, take my kitchen knife. Two good stabs in it.':'Here’s the first aid kit. Use it when you need it.',3200); tone(660,0.15,'triangle',0.15); itemsUI(); }
     else say(nm,['Nothing, I’m sorry. Not even a bat.','I wish I did. I have nothing.','No… I’m sorry.'][(Math.random()*3)|0],2600); return; }
   if (n===3){ var pv=polInfo(); if (pv[0]>0){ say(nm,'They’re already on their way. Hang on.',2600); return; }
     if (N.called && N.el-N.called<5) return; N.called=N.el; N.pc=[Math.round(N.el*10)/10,houses.indexOf(h)]; netSend({pc:N.pc});
@@ -3040,7 +3042,7 @@ function netHideFrame(dt){
 }
 // ---- what you can do where you stand
 function netInteract(dt,pl){
-  var N=net, killer=game.role==='killer'; N.near=null; if (N.alive!==1 || N.fin || N.jailed) return;
+  var N=net, killer=game.role==='killer'; N.near=null; if (N.alive!==1 || N.fin || N.jailed || N.brk) return;
   if (N.hide){ N.near={k:'unhide'}; return; }
   if (N.ih>=0){
     var h=houses[N.ih], lx=P.x-IX;
@@ -3051,12 +3053,12 @@ function netInteract(dt,pl){
     } else HIDES.forEach(function(s){ if (N.near || Math.abs((P.y||0)-s.f*FLOOR2)>0.4) return; if (Math.hypot(P.x-IX-s.x,P.z-s.z)<s.r) N.near={k:'search',s:s,t:'Search: '+s.t.replace(/^Hide (in|under) /,'')}; });
   } else {
     if (!killer){ var ci=-1; chests.forEach(function(c,i){ if (!c.open && Math.hypot(c.x-P.x,c.z-P.z)<1.6) ci=i; }); if (ci>=0) N.near={k:'chest',i:ci,t:'Open the chest'}; }
-    if (!N.near){ var dh=nearDoor(); if (dh) N.near={k:'door',h:dh,t:'Open the door'}; }
+    if (!N.near){ var dh=nearDoor(); if (dh) N.near={k:'door',h:dh,t:killer&&!dh.netBroke?'Break the door down':'Open the door'}; }
     if (!N.near) OUTHIDES.forEach(function(s){ if (N.near) return; if (Math.hypot(P.x-s.x,P.z-s.z)<s.r) N.near=killer?{k:'search',s:s,t:'Search the dumpster'}:{k:'hide',s:s,t:s.t}; });
   }
   if (N.chat && (!N.near || N.near.k!=='chat')) closeChat();
-  var lab={chest:'Open',door:'Open',chat:'Chat',hide:'Hide',search:'Search',unhide:'Out'};
-  if (N.near && !N.working) setPrompt(N.near.t,lab[N.near.k]); else if (curPrompt && !N.working && /^(Open the|Chat with|Hide|Search|Come out)/.test(curPrompt)) setPrompt(null);
+  var lab={chest:'Open',door:killer&&N.near&&N.near.h&&!N.near.h.netBroke?'Break':'Open',chat:'Chat',hide:'Hide',search:'Search',unhide:'Out'};
+  if (N.near && !N.working) setPrompt(N.near.t,lab[N.near.k]); else if (curPrompt && !N.working && /^(Open the|Break the|Chat with|Hide|Search|Come out)/.test(curPrompt)) setPrompt(null);
 }
 // ---- police (run by one player's game, shown to everyone)
 function polTick(dt,pl,killers){
@@ -3092,6 +3094,29 @@ function jailTick(dt,pl){
     if (!N.jailed){ N.jailed=true; if (N.ih>=0){ N.ih=-1; moonLight.intensity=0.55; setLeaves(true); } P.x=JAIL.x; P.z=JAIL.z; P.y=0; toast('Arrested! You are locked in a cell for 30 seconds.',3500); thud(1.0); }
     P.x=Math.max(JAIL.x0,Math.min(JAIL.x1,P.x)); P.z=Math.max(JAIL.z0,Math.min(JAIL.z1,P.z)); netSafe('In jail · '+mmss(until-N.el)); }
   else if (N.jailed){ N.jailed=false; P.x=RELEASE.x; P.z=RELEASE.z; P.yaw=Math.PI; toast('They let you out. Back to the hunt.',2600); netSafe(null); }
+}
+
+/* ---------- killers break doors down ---------- */
+function breakDoorFx(h){ if (h.netBroke) return; h.netBroke=true; h.pivot.visible=false; h.broken.visible=true; h.hall.visible=true; h.hall.material.color.copy(lin(h.power?0xffc070:0x05070c)); moonLight.shadow.needsUpdate=true;
+  var d=doorPt(h), dd=Math.hypot(d.x-P.x,d.z-P.z); if (dd<40 && !(net && net.ih>=0)){ noise(0.5,0.9*(1-dd/40),1800); thud(1.2*(1-dd/40)); } }
+function startDoorBreak(h){
+  var N=net, K=finRig(SAVE.kskin), d=doorPt(h), side=h.side; if (!K){ breakDoorFx(h); N.bd.push(houses.indexOf(h)); return netEnterHouse(h); }
+  N.brk={h:h,t:0,K:K,d:d,side:side,hit:0}; closeChat(); setPrompt(null);
+  K.g.visible=true; K.g.position.set(d.x,groundY(d.x,d.z-side*0.7),d.z-side*0.7); K.g.rotation.set(0,side>0?0:Math.PI,0); anim(K.rig,'Idle');
+  setHud(false); ['safe','items','senseBtn','btnSwing','team'].forEach(function(id){ $(id).hidden=true; }); vmKnife.visible=false;
+  $('cine').hidden=false; $('cineText').textContent=''; $('cineSkip').hidden=true;
+}
+function doorBreakFrame(dt){
+  var N=net, B=N.brk, K=B.K, t=(B.t+=dt), d=B.d, sd=B.side, h=B.h;
+  ['safe','items','senseBtn','btnSwing','team','objective'].forEach(function(id){ $(id).hidden=true; }); vmKnife.visible=false; vmL.visible=false;
+  var ang=0.9+t*0.08; camera.position.set(d.x+Math.sin(ang)*3.4, groundY(d.x,d.z)+1.9, d.z-sd*(1.2+Math.cos(ang)*2.6)); cineLook.set(d.x,groundY(d.x,d.z)+1.3,d.z); camera.lookAt(cineLook);
+  var raise=0, hits=[1.0,2.0,3.0], i;
+  for (i=0;i<hits.length;i++){ var a=t-(hits[i]-0.55); if (a>0 && a<0.7) raise=Math.max(raise,a<0.45?a/0.45:1-(a-0.45)/0.12); }
+  for (i=0;i<hits.length;i++) if (B.hit<i+1 && t>=hits[i]){ B.hit=i+1; thud(1.0+i*0.2); noise(0.18,0.5,900); shake(); h.open=0.12; setTimeout(function(){ h.open=0; },140); }
+  if (B.hit<4 && t>=3.8){ B.hit=4; breakDoorFx(h); var hi=houses.indexOf(h); if (N.bd.indexOf(hi)<0) N.bd.push(hi); shake(); }
+  if (t>3.9){ var f=clamp01((t-3.9)/1.0); K.g.position.set(d.x,groundY(d.x,d.z),d.z-sd*(0.7-f*1.0)); anim(K.rig,'Walk'); } else anim(K.rig,'Idle');
+  K.rig.mixer.update(dt); var arm=K.arm; if (arm && raise>0) arm.rotateX(RAISE[0]*raise);
+  if (t>=5){ K.g.visible=false; N.brk=null; $('cine').hidden=true; $('cineSkip').hidden=false; setHud(true); vmKnife.visible=true; netEnterHouse(h); }
 }
 
 /* ---------- online: co-op stories and survival ---------- */
@@ -3172,7 +3197,7 @@ function avatarStep(a,dt,x,z,ry,an,dead,y){
   a.x+=(x-a.x)*k; a.z+=(z-a.z)*k; var d=ry-a.ry; d=Math.atan2(Math.sin(d),Math.cos(d)); a.ry+=d*k;
   a.g.position.set(a.x,(y===undefined?groundY(a.x,a.z):y)+(dead?0.14:0),a.z); a.g.rotation.set(dead?-1.45:0,a.ry,0,'YXZ');
   if (a.tag) a.tag.visible=!dead;
-  if (a.rig && !dead){ anim(a.rig,an===2?'Run':(an===1?'Walk':'Idle')); a.rig.mixer.update(dt); if (a.scared) scaredIdle(a,dt,an===0); }
+  if (a.rig && !dead && a.g.visible){ anim(a.rig,an===2?'Run':(an===1?'Walk':'Idle')); a.rig.mixer.update(dt); if (a.scared) scaredIdle(a,dt,an===0); }
 }
 // A frightened stance layered over the idle: hunched, arms clutched in, shivering, head darting about.
 function scaredIdle(a,dt,still){
@@ -3364,12 +3389,12 @@ function netBegin(go){
   lobby=null;
   net={mode:mode,code:code,role:role,gid:go.id,roles:go.roles,t0:performance.now(),el:0,st:0,f:0,hits:0,hp:3,alive:1,acc:{},spd:1,
        E:{x:0,z:0,ry:0,vis:0,cool:mode==='s'?22:30,lost:0,stuck:0,mv:0},ek:{},k:{},o:{g:0,b:0,c:0,gn:{}},hold:[0,0],sendT:0,cd:0,slow:0,boost:0,inv:0,objT:0,lastObj:'',
-       prey:null,esc:0,over:false,stT:0,lx:0,lz:0,an:0,done:false,spec:0,kills:0,world:{},bots:[],bag:{heal:0,trap:0,knife:0},kn:0,cs:[],traps:[],tt:[],kh:{},stun:0,nearChest:-1,khSeen:0,hc:0,knock:null,kd:null,nearDoor:null};
+       prey:null,esc:0,over:false,stT:0,lx:0,lz:0,an:0,done:false,spec:0,kills:0,world:{},bots:[],held:null,bd:[],brk:null,kn:0,cs:[],traps:[],tt:[],kh:{},stun:0,nearChest:-1,khSeen:0,hc:0,knock:null,kd:null,nearDoor:null};
   houses.forEach(function(h){ h.netCd=0; });
   clearItems();
   if (mode==='s' && go.bots && typeof go.bots==='object'){ var hk2=0, hs2=0; for (var rid in go.roles){ if (go.roles[rid]==='k') hk2++; else hs2++; }
     botsInit(net,Math.max(0,Math.min(FEAST_K-hk2,num(go.bots.k,0)|0)),Math.max(0,Math.min(FEAST_S-hs2,num(go.bots.s,0)|0))); }
-  game.net=net; game.role=(role==='k'||role==='killer')?'killer':'victim'; initAudio(); reset(); stairsOpen(true); net.ih=-1; P.fl=0; P.y=0; houses.forEach(function(h){ h.netHid=false; h.netAsked=false; }); polCar.visible=false; if (polCop) polCop.g.visible=false; closeChat(); story.hold=null; story.tearH=null; surv.active=false; setChain(false); stalkerOff(1e9);
+  game.net=net; game.role=(role==='k'||role==='killer')?'killer':'victim'; initAudio(); reset(); stairsOpen(true); net.ih=-1; P.fl=0; P.y=0; houses.forEach(function(h){ h.netHid=false; h.netAsked=false; h.netBroke=false; }); polCar.visible=false; if (polCop) polCop.g.visible=false; closeChat(); story.hold=null; story.tearH=null; surv.active=false; setChain(false); stalkerOff(1e9);
   gasCan.visible=battery.visible=keysG.visible=leverG.visible=truckG.visible=boxG.visible=false; moveCar(-64,2.6); allPower(true); resident.g.visible=false; resident.dead=false;
   var ids=Object.keys(go.roles).sort(), idx=Math.max(0,ids.indexOf(netMe)), sp;
   if (mode==='s'){ if (role==='k'){ sp=[60-idx*2,idx%2?3:-3]; P.yaw=Math.PI/2; } else { sp=[-60+(idx%3)*1.6,-1.5+((idx/3)|0)*2.6]; P.yaw=-Math.PI/2; } SGENS.forEach(function(h){ setPower(houses[h],false); }); showItem(gasCan,GAS); showItem(battery,batPos()); }
@@ -3434,6 +3459,7 @@ function netTick(dt){
     N.bots.forEach(function(bb){ seen[bb.id]=1; pl.push({id:bb.id,me:false,bot:bb,role:bb.role,pr:{n:bb.name,sk:bb.sk,sn:host?(bb.stun>0?1:0):bb.sn,hc:bb.hc},alive:bb.a===1,a:bb.a,x:bb.x,z:bb.z,yaw:bb.ry-Math.PI,an:bb.an,ih:bb.ih==null?-1:bb.ih,y:bb.y||0,hid:false}); });
   }
   N.isHost=host;
+  if (N.mode==='s') pl.forEach(function(q){ var bd=q.me?null:q.pr.bd; if (Array.isArray(bd)) bd.forEach(function(hi){ hi=hi|0; if (hi>=0 && hi<houses.length && !houses[hi].netBroke){ breakDoorFx(houses[hi]); if (N.ih===hi) iDoorSet(true); } }); });
   if (N.mode==='s'){ if (host){ N.jlView=N.jl||[]; } else { for (i=0;i<pl.length;i++) if (pl[i].id===hostId){ var hpv=pl[i].pr; if (Array.isArray(hpv.pol)) N.polView=hpv.pol; if (Array.isArray(hpv.jl)) N.jlView=hpv.jl; } }
     pl.forEach(function(q){ q.jailUntil=0; (N.jlView||[]).forEach(function(j){ if (Array.isArray(j) && j[0]===q.id) q.jailUntil=Math.max(q.jailUntil,num(j[1],0)); }); if (q.bot && q.bot.jail>N.el) q.jailUntil=q.bot.jail; }); }
   if (maxEl>N.el+1.5) N.t0-=(maxEl-N.el)*1000;
@@ -3490,7 +3516,7 @@ function netTick(dt){
   N.sendT-=dt; if (N.sendT<=0){ N.sendT=0.08;
     var patch={p:[Math.round(P.x*100)/100,Math.round(P.z*100)/100,Math.round(P.yaw*100)/100,N.an],a:N.alive,h:N.hp,cr:P.crouch?1:0,el:Math.round(N.el),st:N.st,f:N.f,hp:[N.hold[0],Math.round(N.hold[1]*10)/10]};
     if (N.mode==='s'){ if (game.role==='killer') patch.k=N.k; patch.o={g:N.o.g,b:N.o.b,c:Math.round(N.o.c*10)/10,gn:N.o.gn};
-      patch.ih=N.ih; patch.fy=N.ih>=0?Math.round((P.y||0)*100)/100:0; patch.hid=N.hide?1:0; if (N.pc) patch.pc=N.pc; if (host){ patch.pol=N.polView||[0]; patch.jl=N.jl||[]; }
+      patch.bd=N.bd; patch.ih=N.ih; patch.fy=N.ih>=0?Math.round((P.y||0)*100)/100:0; patch.hid=N.hide?1:0; if (N.pc) patch.pc=N.pc; if (host){ patch.pol=N.polView||[0]; patch.jl=N.jl||[]; }
       patch.nz=game.role==='killer'?0:(N.nz||0); patch.bl=N.blood?1:0; patch.cs=N.cs; patch.tp=N.traps; patch.tt=N.tt; patch.kh=N.kh; if (N.kd) patch.kd=N.kd; if (game.role==='killer'){ patch.sn=N.stun>0?Math.ceil(N.stun):0; patch.hc=N.hc; }
       if (host && N.bots.length){ patch.bz=N.bots.map(function(b){ return [Math.round(b.x*100)/100,Math.round(b.z*100)/100,Math.round(b.ry*100)/100,b.an,b.a,b.hp,b.stun>0?Math.ceil(b.stun):0,b.hc||0,b.nz||0,b.ih==null?-1:b.ih,Math.round((b.y||0)*100)/100]; }); patch.ek=N.ek; } }
     if (eliasOn && host){ patch.e=[Math.round(E.x*100)/100,Math.round(E.z*100)/100,Math.round(E.ry*100)/100,E.vis,E.mv]; patch.ek=N.ek; }
@@ -3525,7 +3551,7 @@ function botsHost(dt,pl,W){
       var T=null, d=1e9, best=1e9; targets.forEach(function(q){ if ((q.bot && q.bot.a!==1) || q.hid) return; var dd=Math.hypot(q.x-b.x,q.z-b.z)+((q.ih==null?-1:q.ih)!==(b.ih==null?-1:b.ih)?12:0), loud=q.bot?q.bot.nz:num(q.pr.nz,0), sc=dd*(loud?0.55:1); if (!q.bot && num(q.pr.cr,0) && !loud && dd>9) return; if (sc<best){ best=sc; d=dd; T=q; } });
       if (!T) return;
       if (b.ih==null) b.ih=-1; var sp=b.slow>0?1.6:(N.blood?5.1:4.5), dx=(T.x-b.x)/(d||1), dz=(T.z-b.z)/(d||1);
-      navStep(b,{x:T.x,z:T.z,ih:T.ih==null?-1:T.ih,y:T.y||0},sp,dt); b.an=sp>4?2:1; d=Math.hypot(T.x-b.x,T.z-b.z);
+      navStep(b,{x:T.x,z:T.z,ih:T.ih==null?-1:T.ih,y:T.y||0},sp,dt,true); b.an=sp>4?2:1; d=Math.hypot(T.x-b.x,T.z-b.z);
       if (d<1.3 && b.cd<=0 && b.ih===(T.ih==null?-1:T.ih) && Math.abs((b.y||0)-(T.y||0))<1.2){ b.cd=3.2; b.slow=1.3; if (T.bot) hurt(T.bot,dx,dz); else { N.ek[T.id]=(N.ek[T.id]||0)+1; if (!T.me) bloodBurst(T.x,1.2,T.z,dx,dz,40); } }
       return; }
     if (b.a!==1){ b.an=0; return; }
@@ -3682,11 +3708,11 @@ function preyTick(dt,others){
     if (e.code==='KeyQ') useSense();
     if (e.code==='KeyV') swing();
     if (net.chat){ if (e.code==='Digit1') chatPick(1); else if (e.code==='Digit2') chatPick(2); else if (e.code==='Digit3') chatPick(3); return; }
-    if (e.code==='Digit1') useItem('heal'); else if (e.code==='Digit2') useItem('trap'); else if (e.code==='Digit3') useItem('knife'); });
+    if (e.code==='KeyR') useHeld(); });
   Array.prototype.forEach.call(document.querySelectorAll('#chatBox [data-c]'),function(b){ b.addEventListener('click',function(){ chatPick(+b.dataset.c); }); });
   $('senseBtn').addEventListener('click',useSense);
   $('btnSwing').addEventListener('pointerdown',function(e){ e.preventDefault(); swing(); });
-  Array.prototype.forEach.call(document.querySelectorAll('#items [data-it]'),function(b){ b.addEventListener('click',function(){ useItem(b.dataset.it); }); });
+  $('btnUse').addEventListener('pointerdown',function(e){ e.preventDefault(); useHeld(); });
 })();
 
 /* ---------- Kill Feast: chests, heals, bear traps, knives ---------- */
@@ -3717,10 +3743,8 @@ function clearItems(){ chests.forEach(function(c){ c.open=false; c.lid.rotation.
 function itemsUI(){
   var N=net, el=$('items'), show=N && N.mode==='s' && game.role!=='killer' && N.alive===1 && game.mode==='play', sb=$('senseBtn'), ks=N && N.mode==='s' && game.role==='killer' && game.mode==='play';
   if (sb.hidden!==!ks) sb.hidden=!ks; var sw=$('btnSwing'); if (sw.hidden!==!ks) sw.hidden=!ks; if (ks){ var lab=(isTouch?'':'Q · ')+(N.senseCd>0?'Sense '+Math.ceil(N.senseCd)+'s':'Sense'); if (sb.textContent!==lab) sb.textContent=lab; sb.disabled=N.senseCd>0; }
-  if (el.hidden!==!show) el.hidden=!show; if (!show) return;
-  var key=JSON.stringify(N.bag)+N.kn; if (el.dataset.k===key) return; el.dataset.k=key;
-  [['heal',1],['trap',2],['knife',3]].forEach(function(d){ var b=el.querySelector('[data-it="'+d[0]+'"]'), n=d[0]==='knife'?N.kn:N.bag[d[0]];
-    b.textContent=(isTouch?'':d[1]+' · ')+ITEMN[d[0]]+(d[0]==='knife'?' · '+n+' stabs':' ×'+n); b.disabled=!n; });
+  show=show && !!N.held; if (el.hidden!==!show) el.hidden=!show; var ub=$('btnUse'); if (ub.hidden!==!show) ub.hidden=!show; if (!show) return;
+  var lab='Holding: '+HELDN[N.held]+(N.held==='knife'?' ('+N.kn+(N.kn===1?' stab':' stabs')+')':'')+(isTouch?' · tap Use':' · click or R to use'); if (el.textContent!==lab) el.textContent=lab;
 }
 function swing(){ var N=net; if (!N || N.mode!=='s' || game.role!=='killer' || game.mode!=='play' || N.stun>0 || N.jailed || N.swingT>0 || N.cd>0) return;
   N.swingT=0.5; N.swingDone=false; noise(0.18,0.22,1800); tone(240,0.12,'sawtooth',0.04,120); }
@@ -3728,14 +3752,27 @@ function swingTick(dt){ var N=net; if (!N || !(N.swingT>0)) { FX.sw=0; return; }
   if (!N.swingDone && p>0.32){ N.swingDone=true; N.swingHit=true; } }
 function useSense(){ var N=net; if (!N || N.mode!=='s' || game.role!=='killer' || game.mode!=='play' || N.stun>0) return;
   if (N.senseCd>0){ toast('Sense is ready in '+Math.ceil(N.senseCd)+' s.',1400); return; } N.sense=5; N.senseCd=40; tone(90,1.2,'sawtooth',0.12,45); heartbeat(0.4); toast('You can sense every one of them.',2200); }
-function useItem(k){
-  var N=net; if (!N || N.mode!=='s' || game.role==='killer' || N.alive!==1 || game.mode!=='play') return;
-  if (k==='heal'){ if (!N.bag.heal) return; if (N.hp>=3){ toast('You are not hurt.',1600); return; } N.bag.heal--; N.hp=Math.min(3,N.hp+1); tone(520,0.2,'sine',0.15,780); toast('Patched up. +1 health.',2000); }
-  else if (k==='trap'){ if (!N.bag.trap) return; var f=fwd(), x=P.x+f.x*0.9, z=P.z+f.z*0.9; if (blocked(x,z,0.2)){ toast('No room for a trap there.',1600); return; }
-    N.bag.trap--; N.tn=(N.tn||0)+1; N.traps.push([N.tn,Math.round(x*100)/100,Math.round(z*100)/100]); if (N.traps.length>4) N.traps.shift(); noise(0.12,0.3,2400); tone(180,0.1,'square',0.08); toast('Bear trap set.',1800); }
-  else if (k==='knife'){ if (!N.kn) return; N.stabReq=true; }
+/* ---------- one thing in your left hand ---------- */
+var HELDN={heal:'First aid kit',trap:'Bear trap',knife:'Knife'};
+var vmHeld=(function(){ var g={heal:new THREE.Group(),trap:new THREE.Group(),knife:new THREE.Group()};
+  box(0.11,0.08,0.05,mat(0xc0201a,{roughness:.5}),0,0.05,-0.06,g.heal); box(0.05,0.015,0.052,mat(0xf4f0e8),0,0.06,-0.06,g.heal); box(0.015,0.05,0.052,mat(0xf4f0e8),0,0.06,-0.06,g.heal);
+  var r=new THREE.Mesh(new THREE.TorusGeometry(0.06,0.008,6,18),mat(0x3a3c40,{roughness:.45,metalness:.7})); r.rotation.x=Math.PI/2; r.position.set(0,0.04,-0.07); g.trap.add(r);
+  for (var i=0;i<8;i++){ var a=i/8*Math.PI*2, t=new THREE.Mesh(new THREE.ConeGeometry(0.008,0.025,4),r.material); t.position.set(Math.cos(a)*0.06,0.055,-0.07+Math.sin(a)*0.06); g.trap.add(t); }
+  var k=makeKnife(); k.scale.setScalar(0.7); k.rotation.set(-1.2,0,0.2); k.position.set(0,0.01,-0.05); g.knife.add(k);
+  Object.keys(g).forEach(function(n){ g[n].visible=false; vmL.add(g[n]); }); return g; })();
+function heldShow(){ var h=net && net.mode==='s' && net.alive===1 ? net.held : null; Object.keys(vmHeld).forEach(function(n){ vmHeld[n].visible=h===n; }); return h; }
+function giveHeld(it){ var N=net; if (N.held) return false; N.held=it; if (it==='knife') N.kn=2; game.grab=0.5; itemsUI(); return true; }
+function useHeld(){
+  var N=net; if (!N || N.mode!=='s' || game.role==='killer' || N.alive!==1 || game.mode!=='play' || N.hide || !N.held) return;
+  var k=N.held;
+  if (k==='heal'){ if (N.hp>=3){ toast('You are not hurt.',1600); return; } N.held=null; N.hp=Math.min(3,N.hp+1); tone(520,0.2,'sine',0.15,780); toast('Patched up. +1 health.',2000); game.grab=0.5; }
+  else if (k==='trap'){ var f=fwd(), x=P.x+f.x*0.9, z=P.z+f.z*0.9; if (N.ih>=0 || blocked(x,z,0.2)){ toast('No room for a trap there.',1600); return; }
+    N.held=null; N.tn=(N.tn||0)+1; N.traps.push([N.tn,Math.round(x*100)/100,Math.round(z*100)/100]); if (N.traps.length>4) N.traps.shift(); noise(0.12,0.3,2400); tone(180,0.1,'square',0.08); toast('Bear trap set.',1800); game.grab=0.5; }
+  else if (k==='knife'){ if (!N.kn){ N.held=null; } else N.stabReq=true; }
   itemsUI();
 }
+
+function useItem(){ useHeld(); }
 // Called every frame from the Kill Feast tick.
 function itemsTick(dt,pl,killers){
   net.pl=pl; var pl0=pl;
@@ -3759,7 +3796,7 @@ function itemsTick(dt,pl,killers){
   // knife stab: needs a killer close and in front of you
   if (N.stabReq){ N.stabReq=false; var f=fwd(), hit=null, hd=2.2;
     killers.forEach(function(k){ if (k.ih!==N.ih || Math.abs((k.y||0)-(N.ih>=0?(P.y||0):0))>1.3) return; var dx=k.x-P.x, dz=k.z-P.z, d=Math.hypot(dx,dz); if (d<hd && (dx*f.x+dz*f.z)/(d||1)>0.35){ hd=d; hit=k; } });
-    N.kn--; vmL.visible=true; game.grab=0.35;
+    N.kn--; if (N.kn<=0){ N.kn=0; N.held=null; } vmL.visible=true; game.grab=0.35;
     if (hit){ N.kh[hit.id]=(N.kh[hit.id]||0)+1; stabSound(); bloodBurst(hit.x,1.3,hit.z,f.x,f.z,30); var hc=Math.min(4,num(hit.pr.hc,0)+1); toast(num(hit.pr.sn,0)>0?'The killer is already stunned.':(hc>=4?'Four hits! The killer is stunned for 10 seconds.':'You stabbed '+(hit.bot?'the killer bot':nick(hit.pr))+'. '+hc+' of 4.'),2200); }
     else { noise(0.08,0.2,3000); toast('Missed.',1200); }
   }
@@ -3791,7 +3828,7 @@ function netKnockTick(dt){
     tmpV.set(0,2.2,5.2); h.g.localToWorld(tmpV); doorLight.position.copy(tmpV); doorLight.intensity=1.8; tone(140,0.35,'sawtooth',0.03,210);
     N.kd=[houses.indexOf(h),Date.now()%1e7];
     if (N.hp<3){ N.hp++; say(h.n,NETLINES.heal[(Math.random()*3)|0],3200); tone(520,0.2,'sine',0.15,780); }
-    else { var it=['heal','trap','knife'][(Math.random()*3)|0]; if (it==='knife') N.kn+=2; else N.bag[it]++; say(h.n,NETLINES.give[(Math.random()*3)|0]+' ('+ITEMN[it]+')',3400); }
+    else { var it=['heal','trap','knife'][(Math.random()*3)|0]; giveHeld(it); say(h.n,NETLINES.give[(Math.random()*3)|0]+' ('+ITEMN[it]+')',3400); }
     itemsUI(); }
   if (k.t>4.6){ if (h.open){ h.open=0; h.hall.visible=false; resident.g.visible=false; doorLight.intensity=0; } N.knock=null; }
 }
@@ -3799,14 +3836,14 @@ function netAct(){
   var N=net; if (!N) return; var pl=N.pl||[]; if (N.alive!==1){ N.spec++; return; }
   if (N.mode!=='s' || N.fin) return; var n=N.near; if (!n) return;
   if (n.k==='unhide') return netUnhide();
-  if (n.k==='door') return netEnterHouse(n.h);
+  if (n.k==='door'){ if (game.role==='killer' && !n.h.netBroke) return startDoorBreak(n.h); return netEnterHouse(n.h); }
   if (n.k==='chat'){ if (N.chat) closeChat(); else openChat(n.h); return; }
   if (n.k==='hide') return netHideAt(n.s);
   if (n.k==='search'){ var sx=(n.s.in?IX:0)+n.s.x, sz=n.s.z, found=null; pl.forEach(function(q){ if (q.hid && q.alive && q.ih===N.ih && Math.hypot(q.x-sx,q.z-sz)<1.3) found=q; });
     noise(0.25,0.4,700); thud(0.6); if (found){ N.k[found.id]=(N.k[found.id]||0)+1; stabSound(); bloodBurst(sx,1.0,sz,0,1,40); toast('Found '+nick(found.pr)+' hiding!',2400); } else toast('Nobody in there.',1600); return; }
-  if (n.k==='chest'){ var ci=n.i, it=chestItem(N.gid,ci); if (N.cs.indexOf(ci)>=0) return; N.cs.push(ci); setPrompt(null);
-    if (it==='knife') N.kn+=2; else N.bag[it]++; noise(0.2,0.25,700); tone(660,0.15,'triangle',0.15); tone(990,0.25,'triangle',0.12,null,0.1);
-    toast('Found a '+ITEMN[it].toLowerCase()+(it==='knife'?' (2 stabs). Press 3 near a killer.':it==='heal'?'. Press 1 to heal.':'. Press 2 to set it.'),3200); itemsUI(); }
+  if (n.k==='chest'){ var ci=n.i, it=chestItem(N.gid,ci); if (N.cs.indexOf(ci)>=0) return; if (N.held){ toast('Your hands are full. Use what you’re holding first.',2200); return; } N.cs.push(ci); setPrompt(null);
+    giveHeld(it); noise(0.2,0.25,700); tone(660,0.15,'triangle',0.15); tone(990,0.25,'triangle',0.12,null,0.1);
+    toast('Found a '+HELDN[it].toLowerCase()+(it==='knife'?' (2 stabs).':'.')+' It’s in your left hand.',3000); itemsUI(); }
 }
 /* ---------- teammate cards (bottom left) ---------- */
 var portraits={}; if (isTouch) document.body.classList.add('touch');
@@ -3857,13 +3894,14 @@ function teamTick(pl){
 }
 
 /* ---------- main loop ---------- */
-var clock=new THREE.Clock();
+var clock=new THREE.Clock(), DYN={acc:0,n:0,pr:1,base:1,good:0};
 function update(dt){
   game.time+=dt; game.stingCd-=dt;
   stationDoor(dt);
   for (var hi2=0;hi2<houses.length;hi2++){ var hh=houses[hi2], tr=-1.35*hh.open; hh.pivot.rotation.y+=(tr-hh.pivot.rotation.y)*Math.min(1,dt*5); }
   if (game.net && net.fin){ netTick(dt); if (net && net.fin) netFinFrame(dt); return; }
   if (game.net && net.hide){ netHideFrame(dt); netTick(dt); return; }
+  if (game.net && net.brk){ netTick(dt); if (net && net.brk) doorBreakFrame(dt); return; }
   var vic=game.role!=='killer';
   if (vic && !game.net){
     if (shelter) return updateShelter(dt);
@@ -3921,8 +3959,10 @@ function update(dt){
       vmL.visible=true; vmL.position.set(-0.12,-0.4+gk*0.14,-0.38-gk*0.2); vmL.rotation.set(-0.5*gk,0.2,0.5*gk); }
     else if (FX.work>0.02){ var wt=game.time;
       vmL.visible=true; vmL.position.set(-0.13+Math.sin(wt*6.5)*0.03,-0.48+FX.work*0.26+Math.sin(wt*13)*0.012,-0.42+Math.cos(wt*6.5)*0.03); vmL.rotation.set(0.3+Math.sin(wt*13)*0.14,0.25,0.35+Math.sin(wt*6.5)*0.2); }
+    else if (heldShow()){ vmL.visible=true; vmL.position.set(-0.2,-0.3+(reduced?0:Math.sin(P.bob)*0.01),-0.45); vmL.rotation.set(0.15,0.35,0.1); }
     else if (vmL.visible) vmL.visible=false;
   }
+  heldShow();
 
   for (var i=0;i<fuses.length;i++){ var fu=fuses[i]; if (fu.taken) continue;
     fu.core.rotation.y+=dt*2; fu.core.position.y=0.8+Math.sin(game.time*2+i)*0.08;
@@ -4010,13 +4050,17 @@ function frame(){
   if (spinner) spinner.rotation.y+=dt*0.25;
   for (var k=0;k<mist.length;k++){ var s=mist[k]; s.position.x+=s.userData.v*dt; if (s.position.x>74) s.position.x=-74; }
   var lp=leafPts, pos=lp.pos, cx=camera.position.x, cz=camera.position.z;
-  for (var i=0;i<lp.n;i++){ var o=i*3;
+  if (lp.p.visible) for (var i=0;i<lp.n;i++){ var o=i*3;
     pos[o+1]-=dt*(0.5+(i%5)*0.12); pos[o]+=dt*(0.5+Math.sin(t*1.3+lp.ph[i])*0.6); pos[o+2]+=dt*Math.cos(t+lp.ph[i])*0.5;
     if (pos[o+1]<0){ pos[o+1]=9; }
     if (pos[o]-cx>22) pos[o]-=44; else if (pos[o]-cx<-22) pos[o]+=44;
     if (pos[o+2]-cz>22) pos[o+2]-=44; else if (pos[o+2]-cz<-22) pos[o+2]+=44;
   }
-  lp.p.geometry.attributes.position.needsUpdate=true;
+  if (lp.p.visible) lp.p.geometry.attributes.position.needsUpdate=true;
+  var inside=camera.position.x>300; if (interior.visible!==inside) interior.visible=inside; if (world.visible===inside){ world.visible=!inside; if (grassInst) grassInst.visible=!inside; }
+  DYN.acc+=raw; DYN.n++; if (DYN.acc>=1.5){ var fps=DYN.n/DYN.acc, want=Math.min(SAVE.fps,60); DYN.acc=0; DYN.n=0;
+    if (fps<want*0.72 && DYN.pr>0.5){ DYN.pr=Math.max(0.5,DYN.pr-0.1); renderer.setPixelRatio(DYN.pr); resize(); }
+    else if (fps>want*0.95 && DYN.pr<DYN.base){ DYN.good=(DYN.good||0)+1; if (DYN.good>=3){ DYN.good=0; DYN.pr=Math.min(DYN.base,DYN.pr+0.1); renderer.setPixelRatio(DYN.pr); resize(); } } else DYN.good=0; }
   renderer.render(scene,camera);
 }
 
