@@ -156,6 +156,7 @@ body.touch #team{bottom:auto;top:96px}
     <button id="btnKnock" type="button" hidden>Knock</button>
     <button id="btnLight" type="button">Light</button>
     <button id="btnRun" type="button">Run</button>
+    <button id="btnCrouch" type="button">Crouch</button>
   </div>
   <div id="fade"></div>
   <div id="cine" hidden><div class="bar t"></div><div class="bar b"><p id="cineText"></p></div><button class="chip" id="cineSkip" type="button">Skip</button></div>
@@ -242,7 +243,7 @@ body.touch #team{bottom:auto;top:96px}
     <div class="seg" id="qSeg"><button type="button" data-v="0">Very low</button><button type="button" data-v="1">Low</button><button type="button" data-v="2">Medium</button><button type="button" data-v="3">High</button><button type="button" data-v="4">Very high</button></div>
     <p class="lab">Voices</p>
     <div class="seg" id="voxSeg"><button type="button" data-v="1">On</button><button type="button" data-v="0">Off</button></div>
-    <p class="lab" id="keysHelp">W A S D move &middot; Mouse look &middot; Shift run &middot; F flashlight &middot; E use &middot; Esc pause</p>
+    <p class="lab" id="keysHelp">W A S D move &middot; Mouse look &middot; Shift run &middot; C crouch &middot; F flashlight &middot; E use &middot; Esc pause &middot; Online: 1 2 3 items, killers click or V to swing, Q sense</p>
     <div class="list"><button class="mbtn" id="setDone" type="button">Done</button></div>
   </div></div>
 
@@ -1528,7 +1529,7 @@ function setHud(on){ ['objective','pauseBtn','stamina'].forEach(function(id){ $(
 function setLight(on){ P.light=on; torch.visible=on; lensM.color.copy(lin(on?0xfff4d8:0x1a1a1a)); }
 
 function reset(){
-  P.x=-62; P.z=0; P.yaw=-Math.PI/2; P.pitch=0; P.stamina=1; P.spent=false; setLight(true);
+  P.x=-62; P.z=0; P.yaw=-Math.PI/2; P.pitch=0; P.stamina=1; P.spent=false; P.crouch=false; P.eye=1.65; setLight(true); crouchUI();
   game.got=0; game.time=0; game.gateOpen=0; game.gateOpening=false; game.heart=0; game.stingCd=0; game.dying=0; game.hint=0;
   pips.forEach(function(p){ p.classList.remove('on'); });
   if (colliders.indexOf(gateCollider)<0) colliders.push(gateCollider);
@@ -1563,10 +1564,13 @@ window.addEventListener('keydown',function(e){
   if (e.code==='KeyF' && game.mode==='play' && !game.paused && (!shelter || shelter.view==='walk')) toggleLight();
   if ((e.code==='Escape' || e.code==='KeyP') && game.mode==='play'){ if (game.paused) resume(); else pause(); }
   if (e.code==='KeyE') act();
+  if (e.code==='KeyC' || e.code==='ControlLeft') toggleCrouch();
   if (game.mode==='play' && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].indexOf(e.code)>=0) e.preventDefault();
 });
 window.addEventListener('keyup',function(e){ keys[e.code]=false; });
 window.addEventListener('blur',function(){ keys={}; });
+function crouchUI(){ var b=$('btnCrouch'); if (!b) return; b.hidden=game.role==='killer'; b.classList.toggle('held',!!P.crouch); }
+function toggleCrouch(){ if (game.mode!=='play' || game.paused || shelter || game.role==='killer' || (game.net && net.alive!==1)) return; P.crouch=!P.crouch; crouchUI(); noise(0.08,0.06,400); }
 function toggleLight(){ setLight(!P.light); tone(900,0.04,'square',0.05); }
 function lock(){ var el=renderer.domElement; try { var p=el.requestPointerLock&&el.requestPointerLock(); if (p&&p.catch) p.catch(function(){}); } catch(e){} }
 function look(dx,dy,k){
@@ -1611,6 +1615,7 @@ br.addEventListener('pointerdown',function(e){ runHeld=true; br.classList.add('h
 ['pointerup','pointercancel','pointerleave'].forEach(function(n){ br.addEventListener(n,function(){ runHeld=false; br.classList.remove('held'); }); });
 $('btnLight').addEventListener('click',function(){ if (game.mode==='play' && !game.paused && (!shelter || shelter.view==='walk')) toggleLight(); });
 $('btnKnock').addEventListener('click',act);
+$('btnCrouch').addEventListener('click',function(){ toggleCrouch(); });
 
 /* ---------- stalker logic ---------- */
 function fwd(){ return {x:-Math.sin(P.yaw), z:-Math.cos(P.yaw)}; }
@@ -1648,7 +1653,7 @@ function updateStalker(dt){
   if (shelter){ var hh=shelter.h;
     if (hh.breached){ S.tx=hh.x; S.tz=hh.z-hh.side*4.95; if (S.state==='hunt' && Math.hypot(g.position.x-S.tx,g.position.z-S.tz)<1.3){ goIndoor(); return 4; } }
     else { S.tx=hh.x+3; S.tz=hh.z-hh.side*10.5; } }
-  else if (P.light || dist<12 || (P.sprinting && dist<26)){ S.tx=P.x; S.tz=P.z; }
+  else if (P.light || dist<(P.crouch?6:12) || (P.sprinting && dist<26)){ S.tx=P.x; S.tz=P.z; }
   var moving=false, sp=cfg.base+cfg.inc*game.got;
   if (S.state==='watch'){
     turnTo(g,Math.atan2(dx,dz),dt);
@@ -3039,6 +3044,7 @@ function netTick(dt){
     if (kind==='p' && N.mode==='s'){ var loud=game.role==='killer' && o2.a===1 && (N.sense>0 || (o2.bot?o2.bot.nz:num(o2.pr.nz,0)));
       if (loud && !av.ping) av.ping=halo(0xff2020,1.4,0,2.75,0,av.g,0.9);
       if (av.ping){ av.ping.visible=!!loud; if (loud){ av.ping.material.opacity=0.45+Math.sin(clock.elapsedTime*7)*0.35; av.ping.material.depthTest=false; } } }
+    var crc=kind==='p' && !o2.bot && num(o2.pr.cr,0) && o2.a===1; av.cr=(av.cr||0)+((crc?1:0)-(av.cr||0))*Math.min(1,dt*8); av.g.scale.y=1-av.cr*0.32; if (av.cr>0.01) av.g.rotation.x=av.cr*0.18;
     if (dz){ av.g.rotation.x=0.28+Math.sin(clock.elapsedTime*2.2)*0.06; av.g.rotation.z=Math.sin(clock.elapsedTime*1.7)*0.12; } else av.g.rotation.z=0; o2.av=av; }
   for (var aid in avatars) if (!seen[aid]) dropAvatar(aid);
   // my own motion
@@ -3077,7 +3083,7 @@ function netTick(dt){
   // tell the others
   N.adT=(N.adT||0)-dt; if (N.adT<=0 && !NR.solo){ N.adT=2; dirSend({rm:{c:N.code,m:N.mode,n:pl.length,h:nick(pl[0].pr),g:1}}); }
   N.sendT-=dt; if (N.sendT<=0){ N.sendT=0.08;
-    var patch={p:[Math.round(P.x*100)/100,Math.round(P.z*100)/100,Math.round(P.yaw*100)/100,N.an],a:N.alive,h:N.hp,el:Math.round(N.el),st:N.st,f:N.f,hp:[N.hold[0],Math.round(N.hold[1]*10)/10]};
+    var patch={p:[Math.round(P.x*100)/100,Math.round(P.z*100)/100,Math.round(P.yaw*100)/100,N.an],a:N.alive,h:N.hp,cr:P.crouch?1:0,el:Math.round(N.el),st:N.st,f:N.f,hp:[N.hold[0],Math.round(N.hold[1]*10)/10]};
     if (N.mode==='s'){ if (game.role==='killer') patch.k=N.k; patch.o={g:N.o.g,b:N.o.b,c:Math.round(N.o.c*10)/10,gn:N.o.gn};
       patch.nz=game.role==='killer'?0:(N.nz||0); patch.bl=N.blood?1:0; patch.cs=N.cs; patch.tp=N.traps; patch.tt=N.tt; patch.kh=N.kh; if (N.kd) patch.kd=N.kd; if (game.role==='killer'){ patch.sn=N.stun>0?Math.ceil(N.stun):0; patch.hc=N.hc; }
       if (host && N.bots.length){ patch.bz=N.bots.map(function(b){ return [Math.round(b.x*100)/100,Math.round(b.z*100)/100,Math.round(b.ry*100)/100,b.an,b.a,b.hp,b.stun>0?Math.ceil(b.stun):0,b.hc||0,b.nz||0]; }); patch.ek=N.ek; } }
@@ -3109,7 +3115,7 @@ function botsHost(dt,pl,W){
   function hurt(b,dx,dz){ if (b.a!==1 || b.inv>0) return; b.inv=2.5; b.hp--; bloodBurst(b.x,1.2,b.z,dx,dz,45); if (b.hp<=0){ b.a=0; b.an=0; bloodPool(b.x,groundY(b.x,b.z),b.z,0.9); toast(b.name+' is dead.',2600); } }
   N.bots.forEach(function(b){
     if (b.role==='k'){ b.cd-=dt; b.slow-=dt; b.an=0; b.stun=(b.stun||0)-dt; if (b.stun>0) return;
-      var T=null, d=1e9, best=1e9; targets.forEach(function(q){ if (q.bot && q.bot.a!==1) return; var dd=Math.hypot(q.x-b.x,q.z-b.z), loud=q.bot?q.bot.nz:num(q.pr.nz,0), sc=dd*(loud?0.55:1); if (sc<best){ best=sc; d=dd; T=q; } });
+      var T=null, d=1e9, best=1e9; targets.forEach(function(q){ if (q.bot && q.bot.a!==1) return; var dd=Math.hypot(q.x-b.x,q.z-b.z), loud=q.bot?q.bot.nz:num(q.pr.nz,0), sc=dd*(loud?0.55:1); if (!q.bot && num(q.pr.cr,0) && !loud && dd>9) return; if (sc<best){ best=sc; d=dd; T=q; } });
       if (!T) return;
       var sp=b.slow>0?1.6:(N.blood?5.1:4.5), dx=(T.x-b.x)/(d||1), dz=(T.z-b.z)/(d||1), p={x:b.x+dx*sp*dt,z:b.z+dz*sp*dt};
       if (b.stuck<2.5) resolve(p,0.45);
@@ -3181,7 +3187,7 @@ function netSurvival(dt,pl,surv,killers,me){
     if (done && car){ N.esc+=dt; work=true; lab='Getting in the car · '+mmss(3-N.esc); if (N.esc>=3){ N.alive=2; vm.visible=false; toast('You are out. Watching the others.',3500); } } else N.esc=0;
     if (!done && G===2 && B===2 && !carOK && car){ o.c=Math.min(CARNEED,o.c+dt); work=true; lab='Fixing the car · '+Math.round(Math.min(1,C/CARNEED)*100)+'%'; }
     if (!work) for (i=0;i<SGENS.length;i++){ var h=SGENS[i]; if (gens[h]>=GENNEED) continue; if (Math.hypot(P.x-houses[h].gen.x,P.z-houses[h].gen.z)<2.6){ o.gn[h]=Math.round(Math.min(GENNEED,(o.gn[h]||0)+dt)*100)/100; work=true; lab='Fixing generator · '+Math.round(Math.min(1,gens[h]/GENNEED)*100)+'%'; break; } }
-    N.nz=(work || P.sprinting || N.hp===1)?1:0;
+    N.nz=(work || P.sprinting || (N.hp===1 && !P.crouch))?1:0;
     if (N.hp===1){ N.drip=(N.drip||0)-dt; if (N.drip<=0){ N.drip=2.2; bloodPool(P.x,P.gy,P.z,0.35); } }
     N.working=work; if (work){ N.tk=(N.tk||0)+dt; if (N.tk>0.8){ N.tk=0; tone(300+Math.random()*80,0.05,'square',0.07); } }
     var txt;
@@ -3467,15 +3473,16 @@ function update(dt){
   var mx=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)+touchMove.x;
   var mz=(keys.KeyS||keys.ArrowDown?1:0)-(keys.KeyW||keys.ArrowUp?1:0)+touchMove.y;
   var m=Math.hypot(mx,mz); if (m>1){ mx/=m; mz/=m; m=1; }
-  var wantRun=(keys.ShiftLeft||keys.ShiftRight||runHeld) && m>0.2 && !P.spent;
+  if (!vic) P.crouch=false;
+  var wantRun=(keys.ShiftLeft||keys.ShiftRight||runHeld) && m>0.2 && !P.spent && !P.crouch;
   P.sprinting=wantRun;
   if (wantRun){ P.stamina-=dt/5; P.rest=0; if (P.stamina<=0){ P.stamina=0; P.spent=true; } }
   else { P.rest+=dt; if (P.rest>0.8) P.stamina=Math.min(1,P.stamina+dt/7); if (P.stamina>0.3) P.spent=false; }
-  var speed=(vic?(wantRun?7.2:4.2):(wantRun?6.5:4.5))*(game.net?net.spd:1), f=fwd(), rx=Math.cos(P.yaw), rz=-Math.sin(P.yaw);
+  var speed=(vic?(wantRun?7.2:(P.crouch?2.1:4.2)):(wantRun?6.5:4.5))*(game.net?net.spd:1), f=fwd(), rx=Math.cos(P.yaw), rz=-Math.sin(P.yaw);
   P.x+=(rx*mx-f.x*mz)*speed*dt; P.z+=(rz*mx-f.z*mz)*speed*dt;
   P.x=Math.max(-158.4,Math.min(110,P.x)); P.z=Math.max(-39.4,Math.min(39.4,P.z));
   resolve(P,0.45);
-  if (m>0.1){ P.bob+=dt*speed*1.9; P.step+=dt*speed; if (P.step>2.3){ P.step=0; stepSound(wantRun,false); } }
+  if (m>0.1){ P.bob+=dt*speed*1.9; P.step+=dt*speed; if (P.step>2.3){ P.step=0; if (!P.crouch) stepSound(wantRun,false); else noise(0.05,0.025,300); } }
   var bob=reduced?0:Math.sin(P.bob)*(wantRun?0.06:0.045);
   // standing still, the character can't settle: quick glances, shallow breathing, shaking hands
   FX.idle=(m<0.1 && Math.abs(sway.x)+Math.abs(sway.y)<0.004)?FX.idle+dt:0;
@@ -3488,7 +3495,8 @@ function update(dt){
   FX.roll+=((reduced?0:-mx*(wantRun?0.032:0.022)+Math.cos(P.bob*.5)*0.004*m)-FX.roll)*Math.min(1,dt*7);
   FX.fovK+=((wantRun?1:0)-FX.fovK)*Math.min(1,dt*4.5); if (!reduced) setFov(Math.round((70+FX.fovK*6)*10)/10);
   P.gy+=(groundY(P.x,P.z)-P.gy)*Math.min(1,dt*10);
-  camera.position.set(P.x+rx*sdx,1.65+bob+brt+P.gy,P.z+rz*sdx); camera.rotation.set(P.pitch+FX.gpS+shk,P.yaw+FX.gyS+shk*0.7,FX.roll);
+  P.eye=(P.eye||1.65)+(((P.crouch?1.0:1.65))-(P.eye||1.65))*Math.min(1,dt*9);
+  camera.position.set(P.x+rx*sdx,P.eye+bob*(P.crouch?0.5:1)+brt+P.gy,P.z+rz*sdx); camera.rotation.set(P.pitch+FX.gpS+shk,P.yaw+FX.gyS+shk*0.7,FX.roll);
   if (vmKnife.visible){ var swg=FX.sw||0; vmKnife.position.set(sdx*0.5-swg*0.12,-bob*0.7+brt-(wantRun?0.02:0)+swg*0.1,-swg*0.18); vmKnife.rotation.set((wantRun?0.1+Math.sin(P.bob)*0.05:0)-swg*1.3,swg*0.5,-FX.roll*2+swg*0.6); }
   sway.x*=Math.max(0,1-dt*7); sway.y*=Math.max(0,1-dt*7);
   vm.position.set(vmBase.x+sway.x+(reduced?0:Math.cos(P.bob*.5)*.012*m)+ik*Math.sin(game.time*37)*0.0022, vmBase.y+sway.y-bob*(wantRun?.9:.5)+brt*0.8-(wantRun?.03:0)+ik*Math.sin(game.time*43)*0.0018, vmBase.z);
