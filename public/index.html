@@ -252,6 +252,7 @@ body.touch #team{bottom:auto;top:96px}
     <p class="tok"><span class="tokN">0</span> tokens</p>
     <p class="lab" id="shopTimer"></p>
     <p class="tok">Viewing: <span id="shopName"></span></p>
+    <div class="seg" id="shopTabs"></div>
     <div id="shopGrid"></div>
     <div class="list"><button class="mbtn back" data-to="menu" type="button">Back</button></div>
   </div></div>
@@ -1011,7 +1012,15 @@ var NEIGHBOURS=[
   {n:'Lena',  rig:'w', tint:0xe0c0a0, s:1.08, hand:0x80543a, sleeve:0x80543a},
   {n:'Cole',  rig:'m', top:0x1f3a5a, bottom:0x1a1a1e, hair:0x2a1a10, beard:true,  skin:0xa87a58, s:1.03, hand:0x86603f},
   {n:'Mae',   rig:'w', tint:0xd8d0b0, s:0.94, hand:0x74523c, sleeve:0x74523c},
-  {n:'Dean',  rig:'m', top:0xa83a5a, bottom:0x4a4a3a, hair:0x4a3020, beard:false, skin:0xf0d8c8, s:1.0,  hand:0xd4a88c}
+  {n:'Dean',  rig:'m', top:0xa83a5a, bottom:0x4a4a3a, hair:0x4a3020, beard:false, skin:0xf0d8c8, s:1.0,  hand:0xd4a88c},
+  {n:'Rosa',  rig:'w', tint:0xffffff, s:1.0, hand:0x7a4a32, sleeve:0x7a4a32},
+  {n:'Felix', rig:'m', top:0x2a6a8a, bottom:0x2a2a30, hair:0x1a1410, beard:false, skin:0x7a5640, s:1.02, hand:0x6a4a36},
+  {n:'Hazel', rig:'w', tint:0xffffff, s:0.97, hand:0xe0b090, sleeve:0xe0b090},
+  {n:'Duke',  rig:'m', top:0x3a3a2a, bottom:0x5a4a3a, hair:0x8a8a84, beard:true, skin:0xe8c8b0, s:1.1, hand:0xc8987a},
+  {n:'Nina',  rig:'w', tint:0xffffff, s:0.95, hand:0x4e3020, sleeve:0x4e3020},
+  {n:'Abe',   rig:'m', top:0xd8c8a0, bottom:0x3a3a44, hair:0xe0e0d8, beard:true, skin:0xf2d8c4, s:0.95, hand:0xd4a88c},
+  {n:'Opal',  rig:'w', tint:0xffffff, s:1.04, hand:0xb07a58, sleeve:0xb07a58},
+  {n:'Rex',   rig:'m', top:0x1a1a1c, bottom:0x2a3a5a, hair:0x6a2a14, beard:false, skin:0xffffff, s:1.05, hand:0xc99a7c}
 ];
 NEIGHBOURS.forEach(function(sp,i){ sp.line=LINES[i%LINES.length]; if (sp.sleeve===undefined) sp.sleeve=sp.top; sp.pitch=0.8+((i*37)%9)/20; sp.rate=0.88+(i%4)*0.06; sp.vi=i; });
 /* ---------- every neighbour gets their own look ---------- */
@@ -1030,7 +1039,15 @@ var LOOKS={
   Vera:{sk:0xb88460,hair:0x5a2a6a,top:0xf0b8c8,pants:0x2a2a34,acc:0xf06aa0,pat:1,w:1.02},
   Ivy:{sk:0xeac4a8,hair:0xb84a1e,top:0x3a5a3a,pants:0x4a6a9a,acc:0x2a2a2a,pat:0,w:0.92},
   Lena:{sk:0x6a452e,hair:0x1a1410,top:0xc0281e,pants:0xe8e4dc,acc:0xd0a030,pat:2,w:1.0},
-  Mae:{sk:0xdcb090,hair:0x9a9088,top:0xd8c8a0,pants:0x7a4a3a,acc:0x4a7a8a,pat:3,w:1.08}
+  Mae:{sk:0xdcb090,hair:0x9a9088,top:0xd8c8a0,pants:0x7a4a3a,acc:0x4a7a8a,pat:3,w:1.08},
+  Rosa:{sk:0x7a4a32,hair:0x0c0a0a,top:0xc8a020,pants:0x2a2a34,acc:0xe04a2a,pat:2,w:1.04},
+  Felix:{hd:'cap',hatc:0xc0281e,w:1.0},
+  Hazel:{sk:0xe0b090,hair:0x5a3218,top:0x6a8a5a,pants:0x3a2a20,acc:0xd8d0b8,pat:3,w:0.98},
+  Duke:{hd:'flat',hatc:0x4a3a2a,pat:1,w:1.2},
+  Nina:{sk:0x4e3020,hair:0x1a0e08,top:0x8a2a8a,pants:0xe8d8b0,acc:0x2ab0a0,pat:1,w:0.95},
+  Abe:{hd:'bald',gl:1,w:1.06},
+  Opal:{sk:0xb07a58,hair:0xd0c0a0,top:0x2a4a6a,pants:0xa83a5a,acc:0xf0e0c0,pat:0,w:1.06},
+  Rex:{hd:'long',pat:2,w:1.04}
 };
 NEIGHBOURS.forEach(function(sp){ var L=LOOKS[sp.n]||{}; sp.look=L; if (L.beard!==undefined) sp.beard=L.beard; if (sp.rig==='w' && L.sk){ sp.hand=L.sk; sp.sleeve=L.sk; } });
 var GEARC={y:0.094,z:0.017,r:0.1,eyeY:0.096,faceZ:0.104};
@@ -1706,7 +1723,7 @@ function nearestLights(t){
 }
 
 /* ---------- save, settings, story parts ---------- */
-var SAVE={tokens:0,owned:[],equipped:-1,fps:60,q:isTouch?2:3,prog:{victim:0,killer:0}};
+var SAVE={kskin:0,kowned:[0],tokens:0,owned:[],equipped:-1,fps:60,q:isTouch?2:3,prog:{victim:0,killer:0}};
 try { var sv=localStorage.getItem('hollow-lane-save'); if (sv){ sv=JSON.parse(sv); for (var sk in sv) SAVE[sk]=sv[sk]; } } catch(e){}
 function save(){
   try { localStorage.setItem('hollow-lane-save',JSON.stringify(SAVE)); } catch(e){}
@@ -1864,7 +1881,35 @@ function shopPreview(i){
   showResident(i); resident.g.position.set(M.x,0,M.z+0.4); resident.g.rotation.set(0,0.4,0);
   doorLight.position.set(M.x+0.9,1.8,M.z+2.4); doorLight.intensity=4.2;
 }
+var shopTab='surv', kPrev=null, kPrevI=-1;
+function shopTabs(){ var t=$('shopTabs'); t.textContent=''; [['surv','Survivor skins'],['kill','Killer skins']].forEach(function(d){ var b=document.createElement('button'); b.type='button'; b.textContent=d[1]; b.setAttribute('aria-pressed',String(shopTab===d[0]));
+  b.addEventListener('click',function(){ if (shopTab!==d[0]){ shopTab=d[0]; renderShop(); } }); t.appendChild(b); }); }
+function killerPreview(i){
+  var M=lamps[2]; resident.g.visible=false; $('shopName').textContent=KSKINS[i].n;
+  if (kPrev && kPrevI!==i){ scene.remove(kPrev.g); kPrev=null; }
+  if (!kPrev && NETTPL.k){ var rig=makeNetRig('k',null,i); if (rig){ kPrev={g:new THREE.Group(),rig:rig}; kPrev.g.add(rig.m); scene.add(kPrev.g); kPrevI=i; } }
+  if (kPrev){ kPrev.g.visible=true; kPrev.g.position.set(M.x,0,M.z+0.4); kPrev.g.rotation.set(0,0.4,0); }
+  doorLight.position.set(M.x+0.9,1.8,M.z+2.4); doorLight.intensity=4.2;
+}
+function hideKillerPreview(){ if (kPrev) kPrev.g.visible=false; }
+var kView=-1;
+function renderKillShop(){
+  var grid=$('shopGrid'); grid.innerHTML=''; if (kView<0) kView=SAVE.kskin|0; killerPreview(kView);
+  $('shopTimer').textContent='Killer skins show online when you play as a killer';
+  KSKINS.forEach(function(K,i){ var owned=SAVE.kowned.indexOf(i)>=0||!K.p, on=(SAVE.kskin|0)===i;
+    var el=document.createElement('div'); el.className='skin'+(on?' on':'')+(kView===i?' view':'');
+    el.addEventListener('click',function(){ if (kView!==i){ kView=i; renderShop(); } });
+    var sw=document.createElement('div'); sw.className='sw'; var a=document.createElement('i'); a.style.background=css(K.top); var b=document.createElement('b');
+    b.style.background={pale:'#e8e4dc',red:'#8a1612',sack:'#8a6a3e',skull:'#e6e0cc',doll:'#fbf6ee',shadow:'#0a0a0c'}[K.mask]; if (K.mask==='shadow') b.style.boxShadow='inset 0 0 0 4px #0a0a0c, inset 0 0 0 6px #ff2a1a';
+    sw.appendChild(a); sw.appendChild(b);
+    var nm=document.createElement('span'); nm.textContent=K.n; var bt=document.createElement('button'); bt.type='button';
+    if (on){ bt.textContent='Equipped'; bt.disabled=true; }
+    else if (owned){ bt.textContent='Equip'; bt.addEventListener('click',function(e){ e.stopPropagation(); SAVE.kskin=i; save(); renderShop(); }); }
+    else { bt.textContent='Buy · '+K.p; bt.disabled=SAVE.tokens<K.p; bt.addEventListener('click',function(e){ e.stopPropagation(); if (SAVE.tokens<K.p) return; SAVE.tokens-=K.p; SAVE.kowned.push(i); SAVE.kskin=i; kView=i; save(); renderShop(); }); }
+    el.appendChild(sw); el.appendChild(nm); el.appendChild(bt); grid.appendChild(el); });
+}
 function renderShop(){
+  shopTabs(); if (shopTab==='kill') return renderKillShop(); hideKillerPreview();
   var grid=$('shopGrid'); grid.innerHTML=''; var stock=shopStock();
   if (shopView===-2 || (shopView>=0 && stock.indexOf(shopView)<0 && SAVE.owned.indexOf(shopView)<0)) shopView = SAVE.equipped>=0 ? SAVE.equipped : stock[0];
   shopPreview(shopView);
@@ -1883,7 +1928,7 @@ function renderShop(){
   });
   shopTimer();
 }
-setInterval(function(){ if ($('shop').hidden) return; if (Math.floor(Date.now()/SHOP_MS)!==shopSlot) renderShop(); else shopTimer(); },1000);
+setInterval(function(){ if ($('shop').hidden || shopTab!=='surv') return; if (Math.floor(Date.now()/SHOP_MS)!==shopSlot) renderShop(); else shopTimer(); },1000);
 
 /* ---------- menus ---------- */
 
@@ -1910,7 +1955,7 @@ $('mStory').addEventListener('click',function(){ show('story'); });
 $('mOnline').addEventListener('click',function(){ show('online'); });
 $('mSettings').addEventListener('click',function(){ openSettings('menu'); });
 $('mShop').addEventListener('click',function(){ game.mode='shop'; stalker.g.visible=false; renderShop(); show('shop'); });
-$('shop').querySelector('.back').addEventListener('click',function(){ game.mode='menu'; backdrop(); });
+$('shop').querySelector('.back').addEventListener('click',function(){ game.mode='menu'; hideKillerPreview(); backdrop(); });
 $('sVictim').addEventListener('click',function(){ openStory('victim'); });
 $('sKiller').addEventListener('click',function(){ openStory('killer'); });
 Array.prototype.forEach.call(document.querySelectorAll('.back'),function(b){ b.addEventListener('click',function(){ show(b.dataset.to); }); });
@@ -2693,6 +2738,41 @@ function scareAhead(){
   S.state='away'; S.timer=Math.max(S.timer,8); S.scare=0.42; scareSound(); shake(); return true;
 }
 
+/* ---------- killer skins ---------- */
+var KSKINS=[
+  {n:'Elias',p:0,top:0x1c2533,bot:0x1c2533,mask:'pale',hat:0x30261e},
+  {n:'The Butcher',p:150,top:0x6a1410,bot:0x2a1a14,mask:'red',hat:null},
+  {n:'Scarecrow',p:200,top:0x5a4a2a,bot:0x3a3020,mask:'sack',hat:0x3a2e1a},
+  {n:'Bone Man',p:250,top:0x18181a,bot:0x18181a,mask:'skull',hat:null},
+  {n:'Porcelain',p:300,top:0xd8d2c4,bot:0x8a8478,mask:'doll',hat:null},
+  {n:'Night Shift',p:400,top:0x0c0c0e,bot:0x0c0c0e,mask:'shadow',hat:0x0c0c0e}];
+var kMaskMats={};
+function kMaskMat(type){
+  if (type==='pale') return maskM; if (kMaskMats[type]) return kMaskMats[type];
+  var t=canvasTex(128,128,function(g,w,h){ var i;
+    if (type==='sack'){ g.fillStyle='#8a6a3e'; g.fillRect(0,0,w,h); g.strokeStyle='rgba(60,40,20,.5)'; g.lineWidth=1; for (i=0;i<128;i+=3){ g.beginPath(); g.moveTo(i,0); g.lineTo(i,h); g.stroke(); g.beginPath(); g.moveTo(0,i); g.lineTo(w,i); g.stroke(); }
+      g.fillStyle='#050403'; g.beginPath(); g.ellipse(46,60,9,8,0,0,7); g.ellipse(82,60,9,8,0,0,7); g.fill(); g.strokeStyle='#2a1a0e'; g.lineWidth=3; g.beginPath(); g.moveTo(40,92); for (i=0;i<6;i++){ g.lineTo(46+i*8,i%2?88:96); } g.stroke(); }
+    else if (type==='skull'){ g.fillStyle='#e6e0cc'; g.fillRect(0,0,w,h); g.fillStyle='#060505'; g.beginPath(); g.ellipse(45,58,14,13,0,0,7); g.ellipse(83,58,14,13,0,0,7); g.fill();
+      g.beginPath(); g.moveTo(64,72); g.lineTo(57,86); g.lineTo(71,86); g.fill(); for (i=0;i<7;i++) g.fillRect(42+i*7,100,4,12); }
+    else if (type==='doll'){ var gr=g.createRadialGradient(64,56,8,64,64,74); gr.addColorStop(0,'#fbf6ee'); gr.addColorStop(1,'#d8cfc2'); g.fillStyle=gr; g.fillRect(0,0,w,h);
+      g.fillStyle='rgba(230,110,120,.45)'; g.beginPath(); g.ellipse(36,80,10,6,0,0,7); g.ellipse(92,80,10,6,0,0,7); g.fill();
+      g.fillStyle='#0a0808'; g.beginPath(); g.ellipse(46,58,8,9,0,0,7); g.ellipse(82,58,8,9,0,0,7); g.fill(); g.fillStyle='#8a1a2a'; g.beginPath(); g.ellipse(64,96,7,4,0,0,7); g.fill();
+      g.strokeStyle='#3a3430'; g.lineWidth=1.5; g.beginPath(); g.moveTo(80,10); g.lineTo(74,34); g.lineTo(84,44); g.lineTo(78,58); g.stroke(); }
+    else if (type==='red'){ g.fillStyle='#8a1612'; g.fillRect(0,0,w,h); g.fillStyle='rgba(0,0,0,.25)'; for (i=0;i<40;i++) g.fillRect(Math.random()*128,Math.random()*128,2,6);
+      g.fillStyle='#050303'; g.beginPath(); g.moveTo(30,56); g.quadraticCurveTo(46,44,58,60); g.quadraticCurveTo(44,66,30,56); g.fill(); g.beginPath(); g.moveTo(98,56); g.quadraticCurveTo(82,44,70,60); g.quadraticCurveTo(84,66,98,56); g.fill();
+      g.fillRect(52,96,24,3); }
+    else { g.fillStyle='#0a0a0c'; g.fillRect(0,0,w,h); g.fillStyle='#ff2a1a'; g.beginPath(); g.ellipse(46,60,7,4,0,0,7); g.ellipse(82,60,7,4,0,0,7); g.fill(); } });
+  var m=new THREE.MeshStandardMaterial({map:t,roughness:type==='doll'?.3:.75,side:THREE.DoubleSide,emissive:type==='shadow'?new THREE.Color(1,1,1):lin(0x1c1c18),emissiveMap:type==='shadow'?t:null,emissiveIntensity:type==='shadow'?0.9:1});
+  return kMaskMats[type]=m;
+}
+function kSkin(i){ i=num(i,0)|0; return KSKINS[i]||KSKINS[0]; }
+function skinKiller(m,ks){
+  var K=kSkin(ks);
+  m.traverse(function(o){ if (!o.isMesh) return; var n=o.material.name||''; if (/Wolf3D_(Outfit|Headwear)/.test(n) || /Wolf3D_(Outfit|Headwear)/.test(o.userData.mn||'')){ o.userData.mn=o.userData.mn||n; o.material=o.material.clone(); o.material.name=o.userData.mn; var mn=o.userData.mn;
+      if (/Top/.test(mn)) o.material.color.copy(lin(K.top)); else if (/Bottom/.test(mn)) o.material.color.copy(lin(K.bot)); else if (/Headwear/.test(mn)){ o.visible=K.hat!==null; if (K.hat!==null) o.material.color.copy(lin(K.hat)); } } });
+  return K;
+}
+
 /* ---------- online: co-op stories and survival ---------- */
 var net=null, NR=null, NP={}, netMe='me', netCap=null, lobby=null, avatars={};
 var NIGHT=480, CARNEED=42, GENNEED=15, SGENS=[1,4,9,6];
@@ -2738,7 +2818,7 @@ function cloneSkinned(src){
     n.skeleton.bones=s.skeleton.bones.map(function(b){ return map.get(b); }); n.bind(n.skeleton,n.bindMatrix); });
   return c;
 }
-function makeNetRig(kind,sp){
+function makeNetRig(kind,sp,ks){
   var man=kind==='k' || sp.rig==='m', tpl=kind==='k'?NETTPL.k:(man?NETTPL.m:NETTPL.w), clips=man?NETTPL.mc:NETTPL.wc; if (!tpl || !clips) return null;
   var m=cloneSkinned(tpl), mats=[], beards=[], hats=[]; m.visible=true;
   m.traverse(function(o){ if (o.isMesh){ o.frustumCulled=false; o.castShadow=true; if (kind!=='k'){ o.material=o.material.clone(); var n=man?(o.material.name||''):'';
@@ -2746,7 +2826,7 @@ function makeNetRig(kind,sp){
   var rig={m:m,mixer:new THREE.AnimationMixer(m),actions:{},cur:'',mats:mats,beards:beards,hats:hats};
   Object.keys(clips).forEach(function(k){ rig.actions[k]=rig.mixer.clipAction(clips[k]); });
   if (kind==='k'){ m.updateMatrixWorld(true); var ws=new THREE.Vector3(), hd=m.getObjectByName('Head'), ha=m.getObjectByName('RightHand');
-    if (hd){ hd.getWorldScale(ws); var hm=new THREE.Group(); hm.scale.setScalar(1/ws.x); hm.add(makeMask()); hm.position.set(MASK_POS[0]/ws.x,MASK_POS[1]/ws.x,MASK_POS[2]/ws.x); hd.add(hm); }
+    var K=skinKiller(m,ks); if (hd){ hd.getWorldScale(ws); var hm=new THREE.Group(); hm.scale.setScalar(1/ws.x); var mk=makeMask(); mk.material=kMaskMat(K.mask); hm.add(mk); hm.position.set(MASK_POS[0]/ws.x,MASK_POS[1]/ws.x,MASK_POS[2]/ws.x); hd.add(hm); }
     if (ha){ ha.getWorldScale(ws); var kh=new THREE.Group(); kh.scale.setScalar(1/ws.x); kh.add(makeKnife()); kh.position.set(KNIFE_POS[0]/ws.x,KNIFE_POS[1]/ws.x,KNIFE_POS[2]/ws.x); kh.rotation.set(KNIFE_ROT[0],KNIFE_ROT[1],KNIFE_ROT[2]); ha.add(kh); }
   } else { if (!man) rig.baseMap=NETTPL.wmap; styleResident(sp,rig); }
   anim(rig,'Idle'); return rig;
@@ -2755,11 +2835,11 @@ function nameSprite(text){
   var t=canvasTex(256,64,function(g){ g.clearRect(0,0,256,64); g.font='bold 30px Georgia,serif'; g.textAlign='center'; g.textBaseline='middle'; g.lineWidth=6; g.strokeStyle='rgba(0,0,0,.85)'; g.strokeText(text,128,34); g.fillStyle='#ffd9a8'; g.fillText(text,128,34); });
   var s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false,fog:true})); s.scale.set(1.5,0.375,1); s.position.y=2.15; return s;
 }
-function avatarFor(id,kind,sp,label){
-  var key=kind+':'+(sp?sp.n:'')+':'+(label||''), a=avatars[id];
+function avatarFor(id,kind,sp,label,ks){
+  var key=kind+':'+(sp?sp.n:'')+':'+(label||'')+':'+(ks|0), a=avatars[id];
   if (a && a.key===key && (a.rig || !NETTPL.m)) return a;
   if (a) dropAvatar(id);
-  a={key:key,g:new THREE.Group(),rig:makeNetRig(kind,sp),x:0,z:0,ry:0,first:true,dead:false}; avatars[id]=a; scene.add(a.g);
+  a={key:key,g:new THREE.Group(),rig:makeNetRig(kind,sp,ks),x:0,z:0,ry:0,first:true,dead:false}; avatars[id]=a; scene.add(a.g);
   if (a.rig) a.g.add(a.rig.m); else { var b=cyl(0.2,0.24,1.25,10,mat(kind==='k'?0x1c2533:0x6a4a3a),0,0.85,0,a.g); var hd=new THREE.Mesh(new THREE.SphereGeometry(0.17,14,10),mat(0xb09a86)); hd.position.y=1.66; a.g.add(hd); }
   if (label){ a.tag=nameSprite(label); a.g.add(a.tag); }
   return a;
@@ -2974,7 +3054,7 @@ function netBegin(go){
   else { var C=COOP[mode]; sp=C.spawn[role]; P.yaw=-Math.PI/2; C.gens.forEach(function(h){ setPower(houses[h],false); }); }
   P.x=sp[0]; P.z=sp[1]; net.sx=sp[0]; net.sz=sp[1]; moonLight.shadow.needsUpdate=true;
   show(null); if (master) master.gain.value=0.9; if (game.role==='killer') setupKiller();
-  netSend({gi:go.id,go:go,r:role,a:1,st:0,f:0,hp:null,o:null,k:null,ek:null,e:null,pv:null,el:0,p:[P.x,P.z,P.yaw,0]});
+  netSend({ks:SAVE.kskin|0,gi:go.id,go:go,r:role,a:1,st:0,f:0,hp:null,o:null,k:null,ek:null,e:null,pv:null,el:0,p:[P.x,P.z,P.yaw,0]});
   var shots = mode==='s' ? [
     {cam:[-80,9,10],to:[-70,6,8],look:[-64,1,2.6],text:role==='k'?'Five strangers broke down on Hollow Lane tonight. None of them leaves.':'Your car died on Hollow Lane. The gate is locked until someone powers it.'},
     {cam:[20,10,0],to:[30,7,0],look:[73,2,0],text:role==='k'?'Stop them before the car runs, or before the sun comes up.':'Find gas and a battery, fix the car, start three generators. Or just stay alive until morning.'}] : COOP[mode].intro();
@@ -3039,7 +3119,7 @@ function netTick(dt){
     var kind=(o2.role==='k'||o2.role==='killer')?'k':'p', sp=null;
     if (kind==='p'){ if (o2.role==='boy') sp=BOY; else if (o2.role==='girl') sp=N.mode==='k'?WREN:GIRL; else { var si=num(o2.pr.sk,-1)|0; if (si<0||si>=NEIGHBOURS.length){ si=0; for (var c=0;c<o2.id.length;c++) si=(si*31+o2.id.charCodeAt(c))%NEIGHBOURS.length; } sp=NEIGHBOURS[si]; } }
     var mate=(kind==='k')===(game.role==='killer') || N.mode!=='s';
-    var av=avatarFor(o2.id,kind,sp,mate?nick(o2.pr):''); av.g.visible=o2.a!==2;
+    var av=avatarFor(o2.id,kind,sp,mate?nick(o2.pr):'',kind==='k'?Math.max(0,Math.min(KSKINS.length-1,num(o2.bot?o2.bot.ks:o2.pr.ks,0)|0)):0); av.g.visible=o2.a!==2;
     av.scared=kind==='p' && !(N.mode==='k'); var dz=kind==='k' && num(o2.pr.sn,0)>0; avatarStep(av,dt,o2.x,o2.z,o2.yaw+Math.PI,dz?0:o2.an,o2.a===0);
     if (kind==='p' && N.mode==='s'){ var loud=game.role==='killer' && o2.a===1 && (N.sense>0 || (o2.bot?o2.bot.nz:num(o2.pr.nz,0)));
       if (loud && !av.ping) av.ping=halo(0xff2020,1.4,0,2.75,0,av.g,0.9);
@@ -3106,7 +3186,7 @@ function netElias(dt,tg){
   if (d<1.2){ N.ek[T.id]=(N.ek[T.id]||0)+1; E.vis=0; E.cool=N.mode==='s'?16:10; if (!T.me) bloodBurst(T.x,1.2,T.z,dx,dz,40); }
 }
 function botsInit(N,nk,ns){
-  var i; for (i=0;i<nk;i++) N.bots.push({id:'botk'+i,role:'k',name:'Killer bot',x:60-i*4,z:i%2?4:-4,ry:-Math.PI/2,an:0,a:1,hp:9,cd:4+i*2,slow:0,stuck:0});
+  var i; for (i=0;i<nk;i++) N.bots.push({ks:(N.gid+i*3)%KSKINS.length,id:'botk'+i,role:'k',name:'Killer bot',x:60-i*4,z:i%2?4:-4,ry:-Math.PI/2,an:0,a:1,hp:9,cd:4+i*2,slow:0,stuck:0});
   for (i=0;i<ns;i++){ var sk=(i*5+3)%NEIGHBOURS.length; N.bots.push({id:'bots'+i,role:'s',name:NEIGHBOURS[sk].n+' bot',sk:sk,x:-57+i*1.6,z:(i%2?-3.2:3.4),ry:Math.PI/2,an:0,a:1,hp:3,st:1,tired:0,jink:0,jinkT:0,acc:0,lx:0,lz:0,inv:0,hits:0,esc:0,ti:i}); }
 }
 // Bots are driven by one player's game and shown to everyone else.
@@ -3584,7 +3664,7 @@ function frame(){
     var SM=lamps[2], tall=camera.aspect<0.9;
     if (tall){ camera.position.set(SM.x,1.7,SM.z+5.6); camera.rotation.set(-0.36,0,0); }
     else { camera.position.set(SM.x,1.15,SM.z+3.4); camera.rotation.set(-0.03,-0.34,0); }
-    resident.g.rotation.y+=dt*0.6;
+    resident.g.rotation.y+=dt*0.6; if (kPrev && kPrev.g.visible){ kPrev.g.rotation.y+=dt*0.6; kPrev.rig.mixer.update(dt); }
   } else if (game.mode==='menu'){
     game.menuT+=dt;
     camera.position.set(-50+(reduced?0:Math.sin(game.menuT*0.07)*3),1.7,1.6);
