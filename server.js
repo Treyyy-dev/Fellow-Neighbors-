@@ -28,7 +28,7 @@ const server = http.createServer((req, res) => {
   let f;
   try { f = load(file); } catch (e) { res.writeHead(404, { 'content-type': 'text/plain' }); return res.end('Not found'); }
   const gz = f.gz && /\bgzip\b/.test(req.headers['accept-encoding'] || '');
-  const head = { 'content-type': f.type, 'cache-control': (url === '/index.html' || url === '/sw.js') ? 'no-cache' : 'public, max-age=3600', 'vary': 'accept-encoding' };
+  const head = { 'content-type': f.type, 'cache-control': (url === '/index.html' || url === '/sw.js' || url === '/version.json') ? 'no-store' : 'public, max-age=3600', 'vary': 'accept-encoding' };
   if (gz) head['content-encoding'] = 'gzip';
   res.writeHead(200, head);
   res.end(gz ? f.gz : f.raw);

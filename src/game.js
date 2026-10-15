@@ -1565,7 +1565,7 @@ var PARTS={
     {name:'Last One Standing',desc:'They only need 4 fuses, and they are quick.',fuses:4,run:5.8,walk:3.4,reward:100}]
 };
 var cfg=PARTS.victim[1], lastFrame=0, qLeaves=true, settingsBack='menu';
-var SCREENS=['start','menu','story','parts','online','netFind','lobby','netEnd','settings','shop','pause','dead','win'];
+var SCREENS=['start','menu','news','story','parts','online','netFind','lobby','netEnd','settings','shop','pause','dead','win'];
 function show(id){ SCREENS.forEach(function(s){ $(s).hidden = s!==id; }); }
 function setLeaves(v){ leafPts.p.visible = v && qLeaves; }
 
@@ -1801,7 +1801,7 @@ function pause(){
   if (document.exitPointerLock) try { document.exitPointerLock(); } catch(e){}
 }
 function resume(){ game.paused=false; if (master) master.gain.value=0.9; show(null); if (!isTouch) lock(); }
-$('play').addEventListener('click',function(){ initAudio(); save(); show('menu'); });
+$('play').addEventListener('click',function(){ initAudio(); save(); if ((SAVE.seenVer||0)<GAME_VER) openNews(); else show('menu'); $('mNews').classList.remove('dot'); });
 $('mStory').addEventListener('click',function(){ show('story'); });
 $('mOnline').addEventListener('click',function(){ show('online'); });
 $('mSettings').addEventListener('click',function(){ openSettings('menu'); });
@@ -3656,6 +3656,40 @@ function teamTick(pl){
     if (r.st){ var s=document.createElement('em'); s.textContent=r.st; info.appendChild(s); }
     card.appendChild(info); el.appendChild(card); });
 }
+
+/* ---------- update notes and new-update alerts ---------- */
+var GAME_VER=42;
+var UPDATES=[
+  {v:42,t:'Update notifications',n:['The game now tells you when there is a new update, and this screen shows what changed.','Turn on “Notify me” to get a phone or desktop alert when an update lands while the game is open in the background.']},
+  {v:41,t:'Bloodier, and no more rain',n:['Rain and thunder are gone.','Every survivor has their own build and gear: backpacks, satchels, scarves, hoods and glasses.','Kills are gorier: the knife connects, victims flinch, the last blow is in slow motion and they bleed out.']},
+  {v:40,t:'Doors, hands and speed',n:['Killers smash doors down in a 5-second cinematic.','Survivors carry one item in their left hand. Click or press R to use it.','Runs smoother on phones and older computers.']},
+  {v:39,t:'Houses and police',n:['Walk into houses, go upstairs, hide in closets, wardrobes, bathtubs and dumpsters.','Chat with neighbours: ask them to hide, ask for supplies, or call the police.','Police arrest killers and lock them up for 30 seconds.']}];
+function renderNews(){ var box=$('newsList'); box.textContent='';
+  UPDATES.slice(0,3).forEach(function(u,i){ var d=document.createElement('div'); d.className='upd'+(i===0?' new':''); var h=document.createElement('b'); h.textContent=(i===0?'New · ':'')+u.t; d.appendChild(h);
+    var ul=document.createElement('ul'); u.n.forEach(function(x){ var li=document.createElement('li'); li.textContent=x; ul.appendChild(li); }); d.appendChild(ul); box.appendChild(d); });
+  var nb=$('newsNotify'), can='Notification' in window && /^https?:$/.test(location.protocol) && !(window.claude && window.claude.use);
+  nb.hidden=!can; if (can) nb.textContent=Notification.permission==='granted'?'Notifications are on':(Notification.permission==='denied'?'Notifications are blocked in your browser':'Notify me about updates'); nb.disabled=!can || Notification.permission!=='default';
+}
+function openNews(){ renderNews(); show('news'); SAVE.seenVer=GAME_VER; save(); }
+function updAlert(v){
+  if (updAlert.done===v) return; updAlert.done=v; $('updBar').hidden=false;
+  if (document.hidden && 'Notification' in window && Notification.permission==='granted'){
+    var opt={body:'A new update is out. Open the game to get it.',icon:'/icon-192.png',tag:'fn-update'};
+    try { if (navigator.serviceWorker && navigator.serviceWorker.ready) navigator.serviceWorker.ready.then(function(r){ r.showNotification('Fellow Neighbors updated',opt); }).catch(function(){ new Notification('Fellow Neighbors updated',opt); }); else new Notification('Fellow Neighbors updated',opt); } catch(e){}
+  }
+}
+function checkVersion(){ if (!/^https?:$/.test(location.protocol) || (window.claude && window.claude.use)) return;
+  try { fetch('/version.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }).then(function(j){ if (j && num(j.v,0)>GAME_VER) updAlert(j.v); }).catch(function(){}); } catch(e){} }
+(function(){
+  $('mNews').addEventListener('click',openNews);
+  $('newsClose').addEventListener('click',function(){ show('menu'); });
+  $('newsNotify').addEventListener('click',function(){ try { var p=Notification.requestPermission(); if (p && p.then) p.then(renderNews); } catch(e){} });
+  $('updReload').addEventListener('click',function(){ location.reload(); });
+  $('updLater').addEventListener('click',function(){ $('updBar').hidden=true; });
+  $('mNews').classList.toggle('dot',(SAVE.seenVer||0)<GAME_VER);
+  setTimeout(checkVersion,8000); setInterval(checkVersion,60000);
+  document.addEventListener('visibilitychange',function(){ if (!document.hidden) checkVersion(); });
+})();
 
 /* ---------- main loop ---------- */
 var clock=new THREE.Clock(), DYN={acc:0,n:0,pr:1,base:1,good:0};

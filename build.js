@@ -14,4 +14,7 @@ const html = '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
   '</body></html>\n';
 fs.mkdirSync(path.join(__dirname, 'public'), { recursive: true });
 fs.writeFileSync(path.join(__dirname, 'public/index.html'), html);
+// The game checks this file to spot a newer version while it is open.
+const ver = (game.match(/var GAME_VER=(\d+)/) || [0, '0'])[1];
+fs.writeFileSync(path.join(__dirname, 'public/version.json'), JSON.stringify({ v: Number(ver), built: new Date().toISOString() }) + '\n');
 console.log('public/index.html', html.length, 'bytes');

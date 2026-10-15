@@ -54,6 +54,15 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
 #chatBox p{margin:0 0 8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}#chatBox b{color:var(--pumpkin);font-weight:400}
 .chatOpts{display:flex;flex-direction:column;gap:6px}.chatOpts button{font:inherit;font-size:14px;color:var(--bone);background:rgba(13,17,27,.8);border:1px solid rgba(231,226,210,.35);border-radius:2px;padding:8px 10px;cursor:pointer;text-align:left}
 .chatOpts button:hover{border-color:var(--pumpkin)}
+#newsList{display:flex;flex-direction:column;gap:10px;width:min(100%,460px);text-align:left}
+.upd{border:1px solid rgba(154,150,138,.45);background:rgba(13,17,27,.72);border-radius:2px;padding:10px 14px}
+.upd.new{border-color:var(--pumpkin)}
+.upd b{display:block;font-family:var(--display);font-weight:400;font-size:19px;letter-spacing:.04em;color:var(--pumpkin);margin-bottom:4px}
+.upd ul{margin:0;padding-left:18px;font-size:13px;line-height:1.5;color:var(--bone)}
+.mbtn.dot::after{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--pumpkin);margin-left:8px;vertical-align:middle}
+#updBar{position:absolute;top:10px;right:12px;z-index:30;display:flex;align-items:center;gap:8px;background:rgba(7,9,15,.9);border:1px solid var(--pumpkin);border-radius:3px;padding:8px 10px;font-size:13px;color:var(--bone);max-width:calc(100% - 24px);flex-wrap:wrap}
+#updBar button{font:inherit;font-size:12px;letter-spacing:.06em;text-transform:uppercase;border-radius:2px;padding:5px 9px;cursor:pointer;border:1px solid var(--pumpkin)}
+#updReload{background:var(--pumpkin);color:var(--night)} #updLater{background:none;color:var(--bone)}
 #team{position:absolute;left:12px;bottom:14px;display:flex;flex-direction:column;gap:6px;pointer-events:none;max-width:min(46vw,220px)}
 .mate{display:flex;align-items:center;gap:8px;background:rgba(7,9,15,.72);border:1px solid rgba(231,226,210,.22);border-radius:3px;padding:4px 8px 4px 4px}
 .mate img{width:38px;height:38px;border-radius:2px;flex:none;display:block}
@@ -151,6 +160,7 @@ body.touch #team{bottom:auto;top:96px}
   <div class="hud" id="hpBar" hidden aria-label="Health"><b></b><b></b><b></b></div>
   <button type="button" id="senseBtn" hidden>Sense</button>
   <div id="chatBox" hidden><p class="lab">Talking to <b id="chatName"></b></p><div class="chatOpts"><button type="button" data-c="1">1 · Get to safety</button><button type="button" data-c="2">2 · Do you have anything?</button><button type="button" data-c="3">3 · Call the police</button><button type="button" data-c="0">Close</button></div></div>
+  <div id="updBar" hidden><span>A new update is out.</span><button type="button" id="updReload">Update now</button><button type="button" id="updLater">Later</button></div>
   <div id="team" hidden aria-label="Teammates"></div>
   <div id="items" hidden></div>
   <div class="hud" id="toast"></div>
@@ -172,6 +182,12 @@ body.touch #team{bottom:auto;top:96px}
     <button class="btn" id="play" type="button">Start</button>
   </div></div>
 
+  <div class="card" id="news" hidden><div class="col">
+    <h2>What&rsquo;s new</h2>
+    <div id="newsList"></div>
+    <div class="list"><button class="mbtn" id="newsNotify" type="button" hidden>Notify me about updates</button><button class="btn" id="newsClose" type="button">Play</button></div>
+  </div></div>
+
   <div class="card" id="menu" hidden><div class="col">
     <h2>Fellow Neighbors</h2>
     <p class="tok"><span class="tokN">0</span> tokens</p>
@@ -180,6 +196,7 @@ body.touch #team{bottom:auto;top:96px}
       <button class="mbtn" id="mOnline" type="button">Online</button>
       <button class="mbtn" id="mSettings" type="button">Settings</button>
       <button class="mbtn" id="mShop" type="button">Shop</button>
+      <button class="mbtn" id="mNews" type="button">What&rsquo;s new</button>
     </div>
   </div></div>
 

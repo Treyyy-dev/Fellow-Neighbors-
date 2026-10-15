@@ -55,6 +55,15 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
 #chatBox p{margin:0 0 8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}#chatBox b{color:var(--pumpkin);font-weight:400}
 .chatOpts{display:flex;flex-direction:column;gap:6px}.chatOpts button{font:inherit;font-size:14px;color:var(--bone);background:rgba(13,17,27,.8);border:1px solid rgba(231,226,210,.35);border-radius:2px;padding:8px 10px;cursor:pointer;text-align:left}
 .chatOpts button:hover{border-color:var(--pumpkin)}
+#newsList{display:flex;flex-direction:column;gap:10px;width:min(100%,460px);text-align:left}
+.upd{border:1px solid rgba(154,150,138,.45);background:rgba(13,17,27,.72);border-radius:2px;padding:10px 14px}
+.upd.new{border-color:var(--pumpkin)}
+.upd b{display:block;font-family:var(--display);font-weight:400;font-size:19px;letter-spacing:.04em;color:var(--pumpkin);margin-bottom:4px}
+.upd ul{margin:0;padding-left:18px;font-size:13px;line-height:1.5;color:var(--bone)}
+.mbtn.dot::after{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--pumpkin);margin-left:8px;vertical-align:middle}
+#updBar{position:absolute;top:10px;right:12px;z-index:30;display:flex;align-items:center;gap:8px;background:rgba(7,9,15,.9);border:1px solid var(--pumpkin);border-radius:3px;padding:8px 10px;font-size:13px;color:var(--bone);max-width:calc(100% - 24px);flex-wrap:wrap}
+#updBar button{font:inherit;font-size:12px;letter-spacing:.06em;text-transform:uppercase;border-radius:2px;padding:5px 9px;cursor:pointer;border:1px solid var(--pumpkin)}
+#updReload{background:var(--pumpkin);color:var(--night)} #updLater{background:none;color:var(--bone)}
 #team{position:absolute;left:12px;bottom:14px;display:flex;flex-direction:column;gap:6px;pointer-events:none;max-width:min(46vw,220px)}
 .mate{display:flex;align-items:center;gap:8px;background:rgba(7,9,15,.72);border:1px solid rgba(231,226,210,.22);border-radius:3px;padding:4px 8px 4px 4px}
 .mate img{width:38px;height:38px;border-radius:2px;flex:none;display:block}
@@ -152,6 +161,7 @@ body.touch #team{bottom:auto;top:96px}
   <div class="hud" id="hpBar" hidden aria-label="Health"><b></b><b></b><b></b></div>
   <button type="button" id="senseBtn" hidden>Sense</button>
   <div id="chatBox" hidden><p class="lab">Talking to <b id="chatName"></b></p><div class="chatOpts"><button type="button" data-c="1">1 · Get to safety</button><button type="button" data-c="2">2 · Do you have anything?</button><button type="button" data-c="3">3 · Call the police</button><button type="button" data-c="0">Close</button></div></div>
+  <div id="updBar" hidden><span>A new update is out.</span><button type="button" id="updReload">Update now</button><button type="button" id="updLater">Later</button></div>
   <div id="team" hidden aria-label="Teammates"></div>
   <div id="items" hidden></div>
   <div class="hud" id="toast"></div>
@@ -173,6 +183,12 @@ body.touch #team{bottom:auto;top:96px}
     <button class="btn" id="play" type="button">Start</button>
   </div></div>
 
+  <div class="card" id="news" hidden><div class="col">
+    <h2>What&rsquo;s new</h2>
+    <div id="newsList"></div>
+    <div class="list"><button class="mbtn" id="newsNotify" type="button" hidden>Notify me about updates</button><button class="btn" id="newsClose" type="button">Play</button></div>
+  </div></div>
+
   <div class="card" id="menu" hidden><div class="col">
     <h2>Fellow Neighbors</h2>
     <p class="tok"><span class="tokN">0</span> tokens</p>
@@ -181,6 +197,7 @@ body.touch #team{bottom:auto;top:96px}
       <button class="mbtn" id="mOnline" type="button">Online</button>
       <button class="mbtn" id="mSettings" type="button">Settings</button>
       <button class="mbtn" id="mShop" type="button">Shop</button>
+      <button class="mbtn" id="mNews" type="button">What&rsquo;s new</button>
     </div>
   </div></div>
 
@@ -1856,7 +1873,7 @@ var PARTS={
     {name:'Last One Standing',desc:'They only need 4 fuses, and they are quick.',fuses:4,run:5.8,walk:3.4,reward:100}]
 };
 var cfg=PARTS.victim[1], lastFrame=0, qLeaves=true, settingsBack='menu';
-var SCREENS=['start','menu','story','parts','online','netFind','lobby','netEnd','settings','shop','pause','dead','win'];
+var SCREENS=['start','menu','news','story','parts','online','netFind','lobby','netEnd','settings','shop','pause','dead','win'];
 function show(id){ SCREENS.forEach(function(s){ $(s).hidden = s!==id; }); }
 function setLeaves(v){ leafPts.p.visible = v && qLeaves; }
 
@@ -2092,7 +2109,7 @@ function pause(){
   if (document.exitPointerLock) try { document.exitPointerLock(); } catch(e){}
 }
 function resume(){ game.paused=false; if (master) master.gain.value=0.9; show(null); if (!isTouch) lock(); }
-$('play').addEventListener('click',function(){ initAudio(); save(); show('menu'); });
+$('play').addEventListener('click',function(){ initAudio(); save(); if ((SAVE.seenVer||0)<GAME_VER) openNews(); else show('menu'); $('mNews').classList.remove('dot'); });
 $('mStory').addEventListener('click',function(){ show('story'); });
 $('mOnline').addEventListener('click',function(){ show('online'); });
 $('mSettings').addEventListener('click',function(){ openSettings('menu'); });
@@ -3947,6 +3964,40 @@ function teamTick(pl){
     if (r.st){ var s=document.createElement('em'); s.textContent=r.st; info.appendChild(s); }
     card.appendChild(info); el.appendChild(card); });
 }
+
+/* ---------- update notes and new-update alerts ---------- */
+var GAME_VER=42;
+var UPDATES=[
+  {v:42,t:'Update notifications',n:['The game now tells you when there is a new update, and this screen shows what changed.','Turn on “Notify me” to get a phone or desktop alert when an update lands while the game is open in the background.']},
+  {v:41,t:'Bloodier, and no more rain',n:['Rain and thunder are gone.','Every survivor has their own build and gear: backpacks, satchels, scarves, hoods and glasses.','Kills are gorier: the knife connects, victims flinch, the last blow is in slow motion and they bleed out.']},
+  {v:40,t:'Doors, hands and speed',n:['Killers smash doors down in a 5-second cinematic.','Survivors carry one item in their left hand. Click or press R to use it.','Runs smoother on phones and older computers.']},
+  {v:39,t:'Houses and police',n:['Walk into houses, go upstairs, hide in closets, wardrobes, bathtubs and dumpsters.','Chat with neighbours: ask them to hide, ask for supplies, or call the police.','Police arrest killers and lock them up for 30 seconds.']}];
+function renderNews(){ var box=$('newsList'); box.textContent='';
+  UPDATES.slice(0,3).forEach(function(u,i){ var d=document.createElement('div'); d.className='upd'+(i===0?' new':''); var h=document.createElement('b'); h.textContent=(i===0?'New · ':'')+u.t; d.appendChild(h);
+    var ul=document.createElement('ul'); u.n.forEach(function(x){ var li=document.createElement('li'); li.textContent=x; ul.appendChild(li); }); d.appendChild(ul); box.appendChild(d); });
+  var nb=$('newsNotify'), can='Notification' in window && /^https?:$/.test(location.protocol) && !(window.claude && window.claude.use);
+  nb.hidden=!can; if (can) nb.textContent=Notification.permission==='granted'?'Notifications are on':(Notification.permission==='denied'?'Notifications are blocked in your browser':'Notify me about updates'); nb.disabled=!can || Notification.permission!=='default';
+}
+function openNews(){ renderNews(); show('news'); SAVE.seenVer=GAME_VER; save(); }
+function updAlert(v){
+  if (updAlert.done===v) return; updAlert.done=v; $('updBar').hidden=false;
+  if (document.hidden && 'Notification' in window && Notification.permission==='granted'){
+    var opt={body:'A new update is out. Open the game to get it.',icon:'/icon-192.png',tag:'fn-update'};
+    try { if (navigator.serviceWorker && navigator.serviceWorker.ready) navigator.serviceWorker.ready.then(function(r){ r.showNotification('Fellow Neighbors updated',opt); }).catch(function(){ new Notification('Fellow Neighbors updated',opt); }); else new Notification('Fellow Neighbors updated',opt); } catch(e){}
+  }
+}
+function checkVersion(){ if (!/^https?:$/.test(location.protocol) || (window.claude && window.claude.use)) return;
+  try { fetch('/version.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }).then(function(j){ if (j && num(j.v,0)>GAME_VER) updAlert(j.v); }).catch(function(){}); } catch(e){} }
+(function(){
+  $('mNews').addEventListener('click',openNews);
+  $('newsClose').addEventListener('click',function(){ show('menu'); });
+  $('newsNotify').addEventListener('click',function(){ try { var p=Notification.requestPermission(); if (p && p.then) p.then(renderNews); } catch(e){} });
+  $('updReload').addEventListener('click',function(){ location.reload(); });
+  $('updLater').addEventListener('click',function(){ $('updBar').hidden=true; });
+  $('mNews').classList.toggle('dot',(SAVE.seenVer||0)<GAME_VER);
+  setTimeout(checkVersion,8000); setInterval(checkVersion,60000);
+  document.addEventListener('visibilitychange',function(){ if (!document.hidden) checkVersion(); });
+})();
 
 /* ---------- main loop ---------- */
 var clock=new THREE.Clock(), DYN={acc:0,n:0,pr:1,base:1,good:0};
