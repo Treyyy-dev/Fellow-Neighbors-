@@ -1596,7 +1596,7 @@ function shopPreview(i){
   doorLight.position.set(M.x+0.9,1.8,M.z+2.4); doorLight.intensity=4.2;
 }
 var shopTab='surv', kPrev=null, kPrevI=-1;
-function shopTabs(){ var t=$('shopTabs'); t.textContent=''; [['surv','Survivor skins'],['kill','Killer skins']].forEach(function(d){ var b=document.createElement('button'); b.type='button'; b.textContent=d[1]; b.setAttribute('aria-pressed',String(shopTab===d[0]));
+function shopTabs(){ var t=$('shopTabs'); t.textContent=''; [['surv','Survivor skins'],['kill','Killer skins'],['kills','Kill animations']].forEach(function(d){ var b=document.createElement('button'); b.type='button'; b.textContent=d[1]; b.setAttribute('aria-pressed',String(shopTab===d[0]));
   b.addEventListener('click',function(){ if (shopTab!==d[0]){ shopTab=d[0]; renderShop(); } }); t.appendChild(b); }); }
 function killerPreview(i){
   var M=lamps[2]; resident.g.visible=false; $('shopName').textContent=KSKINS[i].n;
@@ -1605,7 +1605,31 @@ function killerPreview(i){
   if (kPrev){ kPrev.g.visible=true; kPrev.g.position.set(M.x,0,M.z+0.4); kPrev.g.rotation.set(0,0.4,0); }
   doorLight.position.set(M.x+0.9,1.8,M.z+2.4); doorLight.intensity=4.2;
 }
-function hideKillerPreview(){ if (kPrev) kPrev.g.visible=false; }
+function hideKillerPreview(){ if (kPrev) kPrev.g.visible=false; stopFinPreview(); }
+var finPV=null;
+function stopFinPreview(){ if (!finPV) return; finPV.fin.K.g.visible=false; resident.g.visible=false; resident.dead=false; doorLight.intensity=0; finPV=null; }
+function startFinPreview(type){
+  stopFinPreview(); var K=finRig(SAVE.kskin); if (!K) return; var M=lamps[2], x=M.x+0.6, z=M.z+0.6, ux=-1, uz=0, gy=0;
+  finPV={fin:{t:0,type:type,q:{id:'pv'},x:x,z:z,ux:ux,uz:uz,gy:gy,K:K,hit:0,pool:false,side:1,yaw:Math.atan2(-ux,-uz)}};
+  if (kPrev) kPrev.g.visible=false;
+  showResident(3); resident.dead=false; resident.g.position.set(x,gy,z); resident.g.rotation.set(0,finPV.fin.yaw,0); residentAnim('Idle');
+  K.g.visible=true; K.g.rotation.set(0,Math.atan2(ux,uz),0); doorLight.intensity=2.4; doorLight.position.set(x,2.4,z);
+}
+var killView=-1;
+function renderKillsShop(){
+  var grid=$('shopGrid'); grid.innerHTML=''; if (killView<0) killView=SAVE.kill|0; if (kPrev) kPrev.g.visible=false; resident.g.visible=false;
+  $('shopName').textContent=KILLS[killView].n; $('shopTimer').textContent='Kill animations play when you finish a survivor in Kill Feast';
+  if (!finPV || finPV.fin.type!==killView) startFinPreview(killView);
+  KILLS.forEach(function(Kd,i){ var owned=SAVE.kowned2.indexOf(i)>=0||!Kd.p, on=(SAVE.kill|0)===i;
+    var el=document.createElement('div'); el.className='skin'+(on?' on':'')+(killView===i?' view':'');
+    el.addEventListener('click',function(){ if (killView!==i){ killView=i; renderShop(); } });
+    var ic=document.createElement('div'); ic.className='kicon'; ic.textContent=['I','II','III','IV','V'][i];
+    var nm=document.createElement('span'); nm.textContent=Kd.n; var bt=document.createElement('button'); bt.type='button';
+    if (on){ bt.textContent='Equipped'; bt.disabled=true; }
+    else if (owned){ bt.textContent='Equip'; bt.addEventListener('click',function(e){ e.stopPropagation(); SAVE.kill=i; save(); renderShop(); }); }
+    else { bt.textContent='Buy · '+Kd.p; bt.disabled=SAVE.tokens<Kd.p; bt.addEventListener('click',function(e){ e.stopPropagation(); if (SAVE.tokens<Kd.p) return; SAVE.tokens-=Kd.p; SAVE.kowned2.push(i); SAVE.kill=i; killView=i; save(); renderShop(); }); }
+    el.appendChild(ic); el.appendChild(nm); el.appendChild(bt); grid.appendChild(el); });
+}
 var kView=-1;
 function renderKillShop(){
   var grid=$('shopGrid'); grid.innerHTML=''; if (kView<0) kView=SAVE.kskin|0; killerPreview(kView);
@@ -1623,7 +1647,7 @@ function renderKillShop(){
     el.appendChild(sw); el.appendChild(nm); el.appendChild(bt); grid.appendChild(el); });
 }
 function renderShop(){
-  shopTabs(); if (shopTab==='kill') return renderKillShop(); hideKillerPreview();
+  shopTabs(); if (shopTab==='kills') return renderKillsShop(); stopFinPreview(); if (shopTab==='kill') return renderKillShop(); hideKillerPreview();
   var grid=$('shopGrid'); grid.innerHTML=''; var stock=shopStock();
   if (shopView===-2 || (shopView>=0 && stock.indexOf(shopView)<0 && SAVE.owned.indexOf(shopView)<0)) shopView = SAVE.equipped>=0 ? SAVE.equipped : stock[0];
   shopPreview(shopView);
@@ -2504,13 +2528,14 @@ function startNetFinisher(q){
   $('cine').hidden=false; $('cineText').textContent=KILLS[type].n; $('cineSkip').hidden=true; $('grain').hidden=true;
   doorLight.intensity=2.4; doorLight.position.set(q.x,gy+2.4,q.z); sting(0.3,true); scream(NEIGHBOURS[sk].rig==='w'?1.25:0.8);
 }
-function netFinFrame(dt){
-  var N=net, f=N.fin, K=f.K, R=resident.g, t=(f.t+=dt), ux=f.ux, uz=f.uz, i;
-  ['safe','items','senseBtn','btnSwing','team','objective'].forEach(function(id){ $(id).hidden=true; }); vmKnife.visible=false; vmL.visible=false;
+function netFinFrame(dt,PV){
+  var N=PV||net, f=N.fin, K=f.K, R=resident.g, t=(f.t+=dt), ux=f.ux, uz=f.uz, i;
+  if (!PV){ ['safe','items','senseBtn','btnSwing','team','objective'].forEach(function(id){ $(id).hidden=true; }); vmKnife.visible=false; vmL.visible=false; }
   // camera: wide slow orbit, then in close for the kill, then low over the body
   var orbit=f.side*(0.6+t*0.16), rad=t<2.2?4.2-t*0.35:(t<5.2?2.9:2.9-(t-5.2)*0.35), hy=t<5.2?1.45:1.45-(t-5.2)*0.22;
+  if (PV){ orbit=1.9+Math.sin(t*0.4)*0.35; rad=Math.max(rad,3.4); hy=Math.max(hy,1.2); }
   var cx=f.x-ux*0.5, cz=f.z-uz*0.5;
-  camera.position.set(cx+Math.cos(orbit)*rad, f.gy+hy, cz+Math.sin(orbit)*rad); cineLook.set(cx,f.gy+(t<5.2?1.15:0.5),cz); camera.lookAt(cineLook);
+  camera.position.set(cx+Math.cos(orbit)*rad, f.gy+hy, cz+Math.sin(orbit)*rad); cineLook.set(cx,f.gy+(t<5.2?1.15:0.5),cz); camera.lookAt(cineLook); if (PV && camera.aspect>=0.9) camera.rotateY(-0.42);
   torch.position.copy(camera.position); torch.target.position.copy(cineLook);
   function hit(n,h,amt){ if (f.hit<n){ f.hit=n; bloodBurst(f.x,f.gy+h,f.z,ux,uz,amt||44); bloodBurst(f.x,f.gy+h,f.z,-ux*0.4,-uz*0.4,14); stabSound(); gore(); shake(); } }
   // 0-2.2 s: he closes in while they back away
@@ -2531,6 +2556,7 @@ function netFinFrame(dt){
   R.rotation.set(-Math.PI/2*fall+kneel*0.25*(1-fall),f.yaw,0); R.position.y=f.gy+lift*(1-fall)+0.14*fall-kneel*0.42*(1-fall);
   K.rig.mixer.update(dt); if (K.arm && raise>0) K.arm.rotateX(RAISE[0]*raise);
   if (t>5.4 && K.head) K.head.rotateZ(0.3*clamp01((t-5.4)/0.8));        // he tilts his head over the body
+  if (t>=8 && PV){ f.t=0; f.hit=0; f.pool=false; f.yaw=Math.atan2(-ux,-uz); resident.dead=false; residentAnim('Idle'); return; }
   if (t>=8){ N.fin=null; K.g.visible=false; resident.g.visible=false; resident.dead=false; doorLight.intensity=0;
     $('cine').hidden=true; $('cineSkip').hidden=false; $('grain').hidden=false; setHud(true); vmKnife.visible=true; P.x=f.sx; P.z=f.sz; }
 }
@@ -3429,6 +3455,7 @@ function frame(){
     if (tall){ camera.position.set(SM.x,1.7,SM.z+5.6); camera.rotation.set(-0.36,0,0); }
     else { camera.position.set(SM.x,1.15,SM.z+3.4); camera.rotation.set(-0.03,-0.34,0); }
     resident.g.rotation.y+=dt*0.6; if (kPrev && kPrev.g.visible){ kPrev.g.rotation.y+=dt*0.6; kPrev.rig.mixer.update(dt); }
+    if (finPV){ resident.g.rotation.y-=dt*0.6; netFinFrame(dt,finPV); }
   } else if (game.mode==='menu'){
     game.menuT+=dt;
     camera.position.set(-50+(reduced?0:Math.sin(game.menuT*0.07)*3),1.7,1.6);
