@@ -49,6 +49,8 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
 #stamina{left:50%;bottom:18px;transform:translateX(-50%);width:min(40vw,220px);height:5px;background:rgba(231,226,210,.15)}
 #stamina i{display:block;height:100%;width:100%;background:var(--bone)}
 #stamina.low i{background:var(--blood)}
+#senseBtn{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);font:inherit;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone);background:rgba(90,10,10,.6);border:1px solid rgba(255,80,60,.6);border-radius:2px;padding:7px 14px;cursor:pointer}
+#senseBtn:disabled{opacity:.45;cursor:default}
 #team{position:absolute;left:12px;bottom:14px;display:flex;flex-direction:column;gap:6px;pointer-events:none;max-width:min(46vw,220px)}
 .mate{display:flex;align-items:center;gap:8px;background:rgba(7,9,15,.72);border:1px solid rgba(231,226,210,.22);border-radius:3px;padding:4px 8px 4px 4px}
 .mate img{width:38px;height:38px;border-radius:2px;flex:none;display:block}
@@ -143,6 +145,7 @@ body.touch #team{bottom:auto;top:96px}
   <button class="chip" id="pauseBtn" type="button" hidden>Pause</button>
   <div class="hud" id="stamina" hidden><i></i></div>
   <div class="hud" id="hpBar" hidden aria-label="Health"><b></b><b></b><b></b></div>
+  <button type="button" id="senseBtn" hidden>Sense</button>
   <div id="team" hidden aria-label="Teammates"></div>
   <div id="items" hidden><button type="button" data-it="heal"></button><button type="button" data-it="trap"></button><button type="button" data-it="knife"></button></div>
   <div class="hud" id="toast"></div>
@@ -189,7 +192,7 @@ body.touch #team{bottom:auto;top:96px}
 
   <div class="card" id="online" hidden><div class="col">
     <h2>Online</h2>
-    <p>Kill Feast: up to 2 killers and 5 survivors. Create a room, or find one someone else has opened. Everyone waits in the lobby until someone presses Start.</p>
+    <p>Kill Feast: up to 2 killers and 5 survivors. Survivors fix the car and four generators, or last until morning. At 2:00 AM the Blood Moon rises. Create a room, or find one someone else has opened. Everyone waits in the lobby until someone presses Start.</p>
     <p class="lab">Your name</p>
     <input class="inp" id="netName" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Player" aria-label="Your name">
     <div class="list">
@@ -2686,7 +2689,7 @@ function scareAhead(){
 
 /* ---------- online: co-op stories and survival ---------- */
 var net=null, NR=null, NP={}, netMe='me', netCap=null, lobby=null, avatars={};
-var NIGHT=480, CARNEED=30, GENNEED=10, SGENS=[1,4,9];
+var NIGHT=480, CARNEED=42, GENNEED=15, SGENS=[1,4,9,6];
 var BOY={n:'Boy',rig:'m',top:0xb3261c,bottom:0x2a3550,hair:0x4a3020,beard:false,skin:0xffffff,s:0.9,look:{hd:'cap',hatc:0x2a4a8a,w:0.92}};
 var GIRL={n:'Girl',rig:'w',s:0.9,look:{sk:0xd8a888,hair:0x6a3a1a,top:0xe8e0d0,pants:0x4a6a9a,acc:0xd0a030,pat:0,w:0.94}};
 var WREN={n:'Wren',rig:'w',s:0.9,look:{sk:0xcfd4dc,hair:0xe8e8ee,top:0x8a8a9a,pants:0x2a2a34,acc:0x8a8a9a,pat:0,w:0.92}};
@@ -2882,7 +2885,7 @@ function netLeave(){
   if (lobby && lobby.timer) clearInterval(lobby.timer); lobby=null; dirSend({rm:null});
   for (var id in avatars) dropAvatar(id);
   if (net){ FX.hemi=scene.environment?0.36:0.42; scene.fog.color.copy(lin(FOG)); resident.g.visible=false; resident.dead=false; beacon.visible=false; $('safe').hidden=true; }
-  net=null; game.net=null; hpBar(false); clearItems(); $('team').hidden=true;
+  net=null; game.net=null; hpBar(false); clearItems(); $('team').hidden=true; $('senseBtn').hidden=true;
   if (NR){ try { var p=NR.leave(); if (p && p.catch) p.catch(function(){}); } catch(e){} } NR=null; NP={};
 }
 function netToLobby(){
@@ -2965,7 +2968,7 @@ function netBegin(go){
 function netResume(){ if (!net) return; game.mode='play'; game.paused=false; setHud(true); vm.visible=game.role!=='killer' && net.alive===1; vmKnife.visible=game.role==='killer'; setLight(P.light); net.objT=0; net.lastObj=''; if (!isTouch && !document.pointerLockElement) lock(); }
 function netOver(title,text,win){
   if (!net || net.over) return; net.over=true; var first=win && !SAVE['net_'+net.mode], gain=(win?40:10)+(first?60:0); if (win) SAVE['net_'+net.mode]=true; SAVE.tokens+=gain; save();
-  var fin=function(){ game.mode='over'; setHud(false); hpBar(false); $('items').hidden=true; $('team').hidden=true; setPrompt(null); setPrompt(null); $('safe').hidden=true; $('fear').style.opacity=0; beacon.visible=false; keys={}; touchMove.x=touchMove.y=0; moveId=lookId=null;
+  var fin=function(){ game.mode='over'; setHud(false); hpBar(false); $('items').hidden=true; $('team').hidden=true; $('senseBtn').hidden=true; setPrompt(null); setPrompt(null); $('safe').hidden=true; $('fear').style.opacity=0; beacon.visible=false; keys={}; touchMove.x=touchMove.y=0; moveId=lookId=null;
     wasLocked=false; if (document.exitPointerLock) try { document.exitPointerLock(); } catch(e){}
     $('neTitle').textContent=title; $('neText').textContent=text; $('neReward').textContent='+'+gain+' tokens · you have '+SAVE.tokens+' tokens'; show('netEnd'); };
   if (net.mode!=='s' && win) playCut(COOP[net.mode].outro(),fin); else fin();
@@ -2992,6 +2995,7 @@ function netTick(dt){
     var role=p.me?N.role:(N.roles[p.id]||pr.r), q={id:p.id,me:p.me,role:role,pr:pr,alive:p.me?N.alive===1:pr.a===1,a:p.me?N.alive:num(pr.a,1)};
     if (p.me){ q.x=P.x; q.z=P.z; me=q; } else { var pp=pr.p; if (!pp || !pp.length) continue; q.x=Math.max(-160,Math.min(112,num(pp[0],0))); q.z=Math.max(-40,Math.min(40,num(pp[1],0))); q.yaw=num(pp[2],0); q.an=num(pp[3],0)|0; }
     if (hostId===null) hostId=p.id; pl.push(q); seen[p.id]=1;
+    if (!p.me && pr.bl===1 && N.el>NIGHT*0.45) N.el=Math.max(N.el,NIGHT*0.5+0.01);
     if (!p.me){ maxSt=Math.max(maxSt,Math.min(99,num(pr.st,0)|0)); maxF=Math.max(maxF,num(pr.f,0)|0); maxEl=Math.max(maxEl,num(pr.el,0)); }
     var A=N.acc[p.id]||(N.acc[p.id]={g:0,b:0,c:0,gn:{},k:0,ek:0,hold:[0,0],kb:{},cs:[],tp:[],tt:[],kh:{},khb:{}});
     if (N.mode==='s'){ var cs=p.me?N.cs:pr.cs, tp=p.me?N.traps:pr.tp, tt=p.me?N.tt:pr.tt, kh=p.me?N.kh:pr.kh;
@@ -3008,7 +3012,7 @@ function netTick(dt){
   if (!me){ me={id:netMe,me:true,role:N.role,pr:NP,alive:N.alive===1,a:N.alive,x:P.x,z:P.z}; pl.push(me); }
   var host=hostId===null || hostId===netMe;
   if (N.bots.length){
-    if (!host){ var bz=null; for (i=0;i<pl.length;i++) if (pl[i].id===hostId) bz=pl[i].pr.bz; if (bz && bz.length===N.bots.length) for (i=0;i<bz.length;i++){ var z=bz[i], bb=N.bots[i]; if (!z || z.length<6) continue; bb.x=num(z[0],bb.x); bb.z=num(z[1],bb.z); bb.ry=num(z[2],bb.ry); bb.an=num(z[3],0)|0; bb.a=num(z[4],1)|0; bb.hp=num(z[5],bb.hp); bb.sn=num(z[6],0); bb.hc=num(z[7],0); } }
+    if (!host){ var bz=null; for (i=0;i<pl.length;i++) if (pl[i].id===hostId) bz=pl[i].pr.bz; if (bz && bz.length===N.bots.length) for (i=0;i<bz.length;i++){ var z=bz[i], bb=N.bots[i]; if (!z || z.length<6) continue; bb.x=num(z[0],bb.x); bb.z=num(z[1],bb.z); bb.ry=num(z[2],bb.ry); bb.an=num(z[3],0)|0; bb.a=num(z[4],1)|0; bb.hp=num(z[5],bb.hp); bb.sn=num(z[6],0); bb.hc=num(z[7],0); bb.nz=num(z[8],0); } }
     N.bots.forEach(function(bb){ seen[bb.id]=1; pl.push({id:bb.id,me:false,bot:bb,role:bb.role,pr:{n:bb.name,sk:bb.sk,sn:host?(bb.stun>0?1:0):bb.sn,hc:bb.hc},alive:bb.a===1,a:bb.a,x:bb.x,z:bb.z,yaw:bb.ry-Math.PI,an:bb.an}); });
   }
   N.isHost=host;
@@ -3021,13 +3025,18 @@ function netTick(dt){
     var mate=(kind==='k')===(game.role==='killer') || N.mode!=='s';
     var av=avatarFor(o2.id,kind,sp,mate?nick(o2.pr):''); av.g.visible=o2.a!==2;
     av.scared=kind==='p' && !(N.mode==='k'); var dz=kind==='k' && num(o2.pr.sn,0)>0; avatarStep(av,dt,o2.x,o2.z,o2.yaw+Math.PI,dz?0:o2.an,o2.a===0);
+    if (kind==='p' && N.mode==='s'){ var loud=game.role==='killer' && o2.a===1 && (N.sense>0 || (o2.bot?o2.bot.nz:num(o2.pr.nz,0)));
+      if (loud && !av.ping) av.ping=halo(0xff2020,1.4,0,2.75,0,av.g,0.9);
+      if (av.ping){ av.ping.visible=!!loud; if (loud){ av.ping.material.opacity=0.45+Math.sin(clock.elapsedTime*7)*0.35; av.ping.material.depthTest=false; } } }
     if (dz){ av.g.rotation.x=0.28+Math.sin(clock.elapsedTime*2.2)*0.06; av.g.rotation.z=Math.sin(clock.elapsedTime*1.7)*0.12; } else av.g.rotation.z=0; o2.av=av; }
   for (var aid in avatars) if (!seen[aid]) dropAvatar(aid);
   // my own motion
   var mvd=Math.hypot(P.x-N.lx,P.z-N.lz)/Math.max(dt,0.001); N.lx=P.x; N.lz=P.z; N.an=N.alive!==1?0:(mvd>5.4?2:(mvd>0.6?1:0));
-  N.cd-=dt; N.slow-=dt; N.boost-=dt; N.inv-=dt; N.stun-=dt;
+  N.cd-=dt; N.slow-=dt; N.boost-=dt; N.inv-=dt; N.stun-=dt; N.sense=(N.sense||0)-dt; N.senseCd=(N.senseCd||0)-dt;
   var surv=pl.filter(function(q){ return !(q.role==='k'||q.role==='killer'); }), killers=pl.filter(function(q){ return q.role==='k'||q.role==='killer'; });
-  var eliasOn = N.mode==='b' || (N.mode==='s' && !killers.length);
+  if (N.mode==='s' && !N.blood && N.el>NIGHT*0.5){ N.blood=true; sting(0.4,true); thud(1.2); shake();
+    toast(game.role==='killer'?'Blood Moon. You are faster now, and Elias is hunting with you.':'Blood Moon. The killers are faster, and Elias has come out to hunt.',5000); }
+  var eliasOn = N.mode==='b' || (N.mode==='s' && (!killers.length || (N.blood && killers.length<2)));
   // Elias, run by one player and shown to everyone
   var E=N.E, S=stalker;
   if (eliasOn){
@@ -3049,7 +3058,7 @@ function netTick(dt){
       else { N.f=maxF=Math.max(maxF,N.f)+1; N.failMine=true; } } }
   if (N.mode==='s') netSurvival(dt,pl,surv,killers,me); else netCoop(dt,pl,maxSt,maxF,me,host);
   if (!net || net.over) return;
-  N.spd = (N.alive!==1 || N.stun>0) ? 0 : (N.slow>0 ? 0.45 : (N.boost>0 ? 1.15 : (N.mode==='s' && N.hp<3 && game.role!=='killer' ? (N.hp<2?0.86:0.94) : 1)));
+  N.spd = (N.alive!==1 || N.stun>0) ? 0 : (game.role==='killer' && N.blood && N.slow<=0) ? 1.12 : (N.slow>0 ? 0.45 : (N.boost>0 ? 1.15 : (N.mode==='s' && N.hp<3 && game.role!=='killer' ? (N.hp<2?0.86:0.94) : 1)));
   // spectating
   if (N.alive!==1){ var cands=surv.filter(function(q){ return !q.me && q.alive && q.av; }); if (!cands.length) cands=pl.filter(function(q){ return !q.me && q.av; });
     if (cands.length){ var w=cands[N.spec%cands.length], a=w.av, bx=Math.sin(a.ry), bz=Math.cos(a.ry); camera.position.set(a.x-bx*3.2,2.4,a.z-bz*3.2); camera.lookAt(a.x,1.4,a.z); }
@@ -3059,8 +3068,8 @@ function netTick(dt){
   N.sendT-=dt; if (N.sendT<=0){ N.sendT=0.08;
     var patch={p:[Math.round(P.x*100)/100,Math.round(P.z*100)/100,Math.round(P.yaw*100)/100,N.an],a:N.alive,h:N.hp,el:Math.round(N.el),st:N.st,f:N.f,hp:[N.hold[0],Math.round(N.hold[1]*10)/10]};
     if (N.mode==='s'){ if (game.role==='killer') patch.k=N.k; patch.o={g:N.o.g,b:N.o.b,c:Math.round(N.o.c*10)/10,gn:N.o.gn};
-      patch.cs=N.cs; patch.tp=N.traps; patch.tt=N.tt; patch.kh=N.kh; if (N.kd) patch.kd=N.kd; if (game.role==='killer'){ patch.sn=N.stun>0?Math.ceil(N.stun):0; patch.hc=N.hc; }
-      if (host && N.bots.length){ patch.bz=N.bots.map(function(b){ return [Math.round(b.x*100)/100,Math.round(b.z*100)/100,Math.round(b.ry*100)/100,b.an,b.a,b.hp,b.stun>0?Math.ceil(b.stun):0,b.hc||0]; }); patch.ek=N.ek; } }
+      patch.nz=game.role==='killer'?0:(N.nz||0); patch.bl=N.blood?1:0; patch.cs=N.cs; patch.tp=N.traps; patch.tt=N.tt; patch.kh=N.kh; if (N.kd) patch.kd=N.kd; if (game.role==='killer'){ patch.sn=N.stun>0?Math.ceil(N.stun):0; patch.hc=N.hc; }
+      if (host && N.bots.length){ patch.bz=N.bots.map(function(b){ return [Math.round(b.x*100)/100,Math.round(b.z*100)/100,Math.round(b.ry*100)/100,b.an,b.a,b.hp,b.stun>0?Math.ceil(b.stun):0,b.hc||0,b.nz||0]; }); patch.ek=N.ek; } }
     if (eliasOn && host){ patch.e=[Math.round(E.x*100)/100,Math.round(E.z*100)/100,Math.round(E.ry*100)/100,E.vis,E.mv]; patch.ek=N.ek; }
     if (N.prey) patch.pv=[Math.round(N.prey.x*100)/100,Math.round(N.prey.z*100)/100,Math.round(N.prey.ry*100)/100,N.prey.an,N.prey.who,N.prey.dead?1:0,N.st];
     netSend(patch); }
@@ -3089,16 +3098,16 @@ function botsHost(dt,pl,W){
   function hurt(b,dx,dz){ if (b.a!==1 || b.inv>0) return; b.inv=2.5; b.hp--; bloodBurst(b.x,1.2,b.z,dx,dz,45); if (b.hp<=0){ b.a=0; b.an=0; bloodPool(b.x,groundY(b.x,b.z),b.z,0.9); toast(b.name+' is dead.',2600); } }
   N.bots.forEach(function(b){
     if (b.role==='k'){ b.cd-=dt; b.slow-=dt; b.an=0; b.stun=(b.stun||0)-dt; if (b.stun>0) return;
-      var T=null, d=1e9; targets.forEach(function(q){ if (q.bot && q.bot.a!==1) return; var dd=Math.hypot(q.x-b.x,q.z-b.z); if (dd<d){ d=dd; T=q; } });
+      var T=null, d=1e9, best=1e9; targets.forEach(function(q){ if (q.bot && q.bot.a!==1) return; var dd=Math.hypot(q.x-b.x,q.z-b.z), loud=q.bot?q.bot.nz:num(q.pr.nz,0), sc=dd*(loud?0.55:1); if (sc<best){ best=sc; d=dd; T=q; } });
       if (!T) return;
-      var sp=b.slow>0?1.6:4.5, dx=(T.x-b.x)/(d||1), dz=(T.z-b.z)/(d||1), p={x:b.x+dx*sp*dt,z:b.z+dz*sp*dt};
+      var sp=b.slow>0?1.6:(N.blood?5.1:4.5), dx=(T.x-b.x)/(d||1), dz=(T.z-b.z)/(d||1), p={x:b.x+dx*sp*dt,z:b.z+dz*sp*dt};
       if (b.stuck<2.5) resolve(p,0.45);
       var mv=Math.hypot(p.x-b.x,p.z-b.z); b.stuck=mv<sp*dt*0.35?b.stuck+dt:(b.stuck>=2.5?(b.stuck+dt>4.5?0:b.stuck+dt):0);
       b.x=Math.min(72.2,p.x); b.z=p.z; b.ry=Math.atan2(dx,dz); b.an=sp>4?2:1;
       if (d<1.3 && b.cd<=0){ b.cd=3.2; b.slow=1.3; if (T.bot) hurt(T.bot,dx,dz); else { N.ek[T.id]=(N.ek[T.id]||0)+1; if (!T.me) bloodBurst(T.x,1.2,T.z,dx,dz,40); } }
       return; }
     if (b.a!==1){ b.an=0; return; }
-    b.inv-=dt; var tot=0; for (var id in N.acc) tot+=(N.acc[id].kb[b.id]||0);
+    b.inv-=dt; var tot=N.ek[b.id]||0; for (var id in N.acc) tot+=(N.acc[id].kb[b.id]||0);
     if (tot>b.hits){ b.hits=tot; hurt(b,0,0); if (b.a!==1) return; }
     var K=null, kd=1e9; killers.forEach(function(q){ var dd=Math.hypot(q.x-b.x,q.z-b.z); if (dd<kd){ kd=dd; K=q; } });
     var vx=0, vz=0, sp=0, run=false, work=null;
@@ -3114,6 +3123,7 @@ function botsHost(dt,pl,W){
       if (opts.length){ var O=opts[b.ti%opts.length], gx=O.pt.x-b.x, gz=O.pt.z-b.z, gd=Math.hypot(gx,gz)||1;
         if (gd<O.r*0.8){ work=O; b.ry=Math.atan2(gx,gz); } else { vx=gx/gd; vz=gz/gd; sp=4.3; } } }
     if (run){ b.st-=dt/7; if (b.st<=0) b.tired=3; } else { b.st=Math.min(1,b.st+dt/8); b.tired-=dt; }
+    b.nz=(work||run)?1:0;
     if (work){ work.f(); b.an=0; return; }
     if (!sp){ b.an=0; return; }
     var n=Math.hypot(vx,vz)||1; vx/=n; vz/=n;
@@ -3139,7 +3149,7 @@ function netSurvival(dt,pl,surv,killers,me){
   if (carOK && !W.car){ W.car=true; toast('The car is fixed.',3000); tone(90,0.9,'sawtooth',0.12,140); }
   if (done && !game.gateOpening){ openGate(); toast(game.role==='killer'?'The gate is opening. Stop them at the car.':'The gate is opening. Get to the car and go.',4500); }
   var left=NIGHT-N.el, hr=22+N.el/NIGHT*8, h12=((Math.floor(hr)+11)%12)+1, mn=Math.floor((hr%1)*60), clockT=h12+':'+('0'+mn).slice(-2)+(hr>=24||hr<12?' AM':' PM');
-  var dawn=Math.max(0,Math.min(1,1-left/80)); FX.hemi=(scene.environment?0.36:0.42)+dawn*0.9; scene.fog.color.copy(lin(FOG)).lerp(lin(0x5a6680),dawn*0.8);
+  var dawn=Math.max(0,Math.min(1,1-left/80)); FX.hemi=(scene.environment?0.36:0.42)+dawn*0.9; scene.fog.color.copy(lin(N.blood?0x2a0709:FOG)).lerp(lin(0x5a6680),dawn*0.8);
   var alive=surv.filter(function(q){ return q.alive; }).length, out=surv.filter(function(q){ return q.a===2; }).length, lab=null, tgt=null;
   if (game.role==='killer'){
     if (N.cd<=0) for (i=0;i<surv.length;i++){ var s=surv[i]; if (!s.alive || s.me) continue; var d=Math.hypot(s.x-P.x,s.z-P.z);
@@ -3157,6 +3167,8 @@ function netSurvival(dt,pl,surv,killers,me){
     if (done && car){ N.esc+=dt; work=true; lab='Getting in the car · '+mmss(3-N.esc); if (N.esc>=3){ N.alive=2; vm.visible=false; toast('You are out. Watching the others.',3500); } } else N.esc=0;
     if (!done && G===2 && B===2 && !carOK && car){ o.c=Math.min(CARNEED,o.c+dt); work=true; lab='Fixing the car · '+Math.round(Math.min(1,C/CARNEED)*100)+'%'; }
     if (!work) for (i=0;i<SGENS.length;i++){ var h=SGENS[i]; if (gens[h]>=GENNEED) continue; if (Math.hypot(P.x-houses[h].gen.x,P.z-houses[h].gen.z)<2.6){ o.gn[h]=Math.round(Math.min(GENNEED,(o.gn[h]||0)+dt)*100)/100; work=true; lab='Fixing generator · '+Math.round(Math.min(1,gens[h]/GENNEED)*100)+'%'; break; } }
+    N.nz=(work || P.sprinting || N.hp===1)?1:0;
+    if (N.hp===1){ N.drip=(N.drip||0)-dt; if (N.drip<=0){ N.drip=2.2; bloodPool(P.x,P.gy,P.z,0.35); } }
     N.working=work; if (work){ N.tk=(N.tk||0)+dt; if (N.tk>0.8){ N.tk=0; tone(300+Math.random()*80,0.05,'square',0.07); } }
     var txt;
     if (done){ txt='The gate is open. Get in the car.'; tgt=CARSIDE; }
@@ -3239,7 +3251,9 @@ function preyTick(dt,others){
   $('neLobby').addEventListener('click',netToLobby);
   $('neLeave').addEventListener('click',leaveToMenu);
   window.addEventListener('keydown',function(e){ if (!net || game.mode!=='play') return; if (net.alive!==1 && e.code==='Space') net.spec++;
+    if (e.code==='KeyQ') useSense();
     if (e.code==='Digit1') useItem('heal'); else if (e.code==='Digit2') useItem('trap'); else if (e.code==='Digit3') useItem('knife'); });
+  $('senseBtn').addEventListener('click',useSense);
   Array.prototype.forEach.call(document.querySelectorAll('#items [data-it]'),function(b){ b.addEventListener('click',function(){ useItem(b.dataset.it); }); });
 })();
 
@@ -3269,12 +3283,15 @@ function trapMesh(id){
 function clearItems(){ chests.forEach(function(c){ c.open=false; c.lid.rotation.x=0; c.glow.visible=true; c.g.visible=false; });
   for (var id in trapMeshes){ scene.remove(trapMeshes[id].g); } trapMeshes={}; $('items').hidden=true; }
 function itemsUI(){
-  var N=net, el=$('items'), show=N && N.mode==='s' && game.role!=='killer' && N.alive===1 && game.mode==='play';
+  var N=net, el=$('items'), show=N && N.mode==='s' && game.role!=='killer' && N.alive===1 && game.mode==='play', sb=$('senseBtn'), ks=N && N.mode==='s' && game.role==='killer' && game.mode==='play';
+  if (sb.hidden!==!ks) sb.hidden=!ks; if (ks){ var lab=(isTouch?'':'Q · ')+(N.senseCd>0?'Sense '+Math.ceil(N.senseCd)+'s':'Sense'); if (sb.textContent!==lab) sb.textContent=lab; sb.disabled=N.senseCd>0; }
   if (el.hidden!==!show) el.hidden=!show; if (!show) return;
   var key=JSON.stringify(N.bag)+N.kn; if (el.dataset.k===key) return; el.dataset.k=key;
   [['heal',1],['trap',2],['knife',3]].forEach(function(d){ var b=el.querySelector('[data-it="'+d[0]+'"]'), n=d[0]==='knife'?N.kn:N.bag[d[0]];
     b.textContent=(isTouch?'':d[1]+' · ')+ITEMN[d[0]]+(d[0]==='knife'?' · '+n+' stabs':' ×'+n); b.disabled=!n; });
 }
+function useSense(){ var N=net; if (!N || N.mode!=='s' || game.role!=='killer' || game.mode!=='play' || N.stun>0) return;
+  if (N.senseCd>0){ toast('Sense is ready in '+Math.ceil(N.senseCd)+' s.',1400); return; } N.sense=5; N.senseCd=40; tone(90,1.2,'sawtooth',0.12,45); heartbeat(0.4); toast('You can sense every one of them.',2200); }
 function useItem(k){
   var N=net; if (!N || N.mode!=='s' || game.role==='killer' || N.alive!==1 || game.mode!=='play') return;
   if (k==='heal'){ if (!N.bag.heal) return; if (N.hp>=3){ toast('You are not hurt.',1600); return; } N.bag.heal--; N.hp=Math.min(3,N.hp+1); tone(520,0.2,'sine',0.15,780); toast('Patched up. +1 health.',2000); }
