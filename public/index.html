@@ -144,6 +144,60 @@ body.touch #team{bottom:auto;top:96px}
 #vhsOsd span{font-size:22px;opacity:.92}
 #vhsOsd.blink #vhsPlay{opacity:.25}
 @media (max-width:640px){#vhsOsd{font-size:22px}#vhsOsd span{font-size:17px}}
+/* ===== VHS: the whole game reads like a tape and a VCR's on-screen display ===== */
+:root{--display:"VT323",ui-monospace,monospace;--body:"VT323",ui-monospace,monospace;--osd:#f3f3ec;--vcr:#1f33c8;--vcrDeep:#0c1a78;--osdDim:#aeb6dc;
+  --chroma:2px 0 rgba(255,30,70,.6),-2px 0 rgba(30,170,255,.6)}
+body{font-size:20px}
+#vhsUi{position:absolute;inset:0;z-index:40;pointer-events:none;overflow:hidden;background:repeating-linear-gradient(to bottom,rgba(0,0,0,.16) 0 1px,transparent 1px 3px)}
+#vhsUi::after{content:"";position:absolute;left:0;right:0;top:-20%;height:14%;background:linear-gradient(to bottom,transparent,rgba(255,255,255,.045) 45%,rgba(255,255,255,.08) 50%,rgba(255,255,255,.045) 55%,transparent);animation:vhsRoll 11s linear infinite}
+@keyframes vhsRoll{0%{transform:translateY(0)}100%{transform:translateY(900%)}}
+#game.tapejump .card:not([hidden]) .col{animation:tapeJump .32s steps(5,end)}
+@keyframes tapeJump{0%{transform:translate(-14px,6px) skewX(-6deg);filter:blur(1.5px) saturate(1.8)}25%{transform:translate(10px,-3px) skewX(4deg)}50%{transform:translate(-6px,2px)}75%{transform:translate(3px,0) skewX(-1deg)}100%{transform:none;filter:none}}
+@keyframes osdJit{0%,92%,100%{transform:none}93%{transform:translateX(-3px)}95%{transform:translateX(4px)}97%{transform:translateX(-1px)}}
+@media (prefers-reduced-motion:reduce){#vhsUi::after,#game.tapejump .card .col,.card h1{animation:none!important}}
+.hud,.card,.chip,#cineText,#chatBox,#team,#items,#updBar{text-shadow:var(--chroma)}
+.hud{font-size:19px;letter-spacing:.06em}
+#objective{font-size:20px;line-height:1.1;max-width:min(44vw,360px)} #objective b{font-size:18px;color:var(--pumpkin)}
+#safe{font-size:22px} #prompt{font-size:22px;bottom:88px} #prompt b{border-radius:0;background:var(--osd);color:#000;text-shadow:none;border:0}
+#toast{font-size:24px;bottom:54px}
+.chip{font-size:18px;border-radius:0;background:rgba(0,0,0,.45);border-color:rgba(243,243,236,.55)}
+#stamina{height:6px} #hpBar b{border-radius:0;height:10px} #hpBar b.on{background:#58d26c}
+#senseBtn{font-size:18px;border-radius:0}
+#chatBox{border-radius:0;background:rgba(10,18,90,.88);border-color:var(--osd)} #chatBox p{font-size:18px}
+.chatOpts button{font-size:20px;border-radius:0;background:rgba(0,0,0,.35);border-color:rgba(243,243,236,.4)} .chatOpts button:hover{background:var(--vcr);border-color:var(--osd)}
+.mate{border-radius:0} .mate b{font-size:17px} .mate em{font-size:14px}
+#items{font-size:17px} #items button{font-size:16px;border-radius:0}
+#pad button{font-size:16px}
+#updBar{font-size:18px;border-radius:0;background:rgba(10,18,90,.92)} #updBar button{font-size:17px;border-radius:0}
+#cineText{font-size:clamp(21px,2.9vw,30px);line-height:1.2}
+.card{background:linear-gradient(rgba(6,12,60,.58),rgba(3,5,24,.78))}
+.card h1{color:var(--osd);font-size:clamp(58px,14vw,128px);line-height:.85;letter-spacing:.05em;text-transform:uppercase;text-shadow:4px 0 rgba(255,30,70,.75),-4px 0 rgba(30,170,255,.75),0 0 24px rgba(255,255,255,.22);animation:osdJit 5s infinite}
+.card h2{color:var(--osd);font-size:clamp(40px,9vw,64px);line-height:.9;letter-spacing:.06em;text-transform:uppercase;text-shadow:3px 0 rgba(255,30,70,.7),-3px 0 rgba(30,170,255,.7)}
+.card p{font-size:21px;line-height:1.2}
+.card p.lab{font-size:18px;color:var(--osdDim)}
+.card p.tok{font-size:20px}
+.btn{font-size:32px;line-height:1;color:#000;background:var(--osd);padding:8px 30px;border-radius:0;text-transform:uppercase;text-shadow:none}
+.btn:hover,.btn:focus-visible{background:var(--vcr);color:var(--osd);outline:none}
+.mbtn{font-size:28px;line-height:1;text-transform:uppercase;letter-spacing:.06em;color:var(--osd);background:transparent;border:0;border-radius:0;padding:6px 14px 6px 34px;text-align:left;position:relative}
+.mbtn::before{content:"\25B6";position:absolute;left:10px;opacity:0}
+.mbtn:hover:not(:disabled),.mbtn:focus-visible{background:var(--vcr);color:var(--osd);outline:none}
+.mbtn:hover:not(:disabled)::before,.mbtn:focus-visible::before{opacity:1}
+.mbtn small{font-size:17px;color:var(--osdDim);text-transform:uppercase;margin-top:3px}
+.mbtn.back{font-size:22px;color:var(--osdDim)}
+.mbtn.dot::after{border-radius:0}
+.inp{font-size:24px;border-radius:0;background:rgba(0,0,0,.5);border-color:var(--osd)}
+.plist li{border-radius:0;font-size:20px;background:rgba(0,0,0,.35)}
+.plist.rooms .mbtn{font-size:20px}
+.seg button{font-size:20px;border-radius:0;background:rgba(0,0,0,.35);border-color:rgba(243,243,236,.4);text-transform:uppercase}
+.seg button[aria-pressed="true"]{background:var(--vcr);border-color:var(--osd);color:var(--osd)}
+.upd{border-radius:0;background:rgba(0,0,0,.35)} .upd b{font-size:26px;color:var(--osd)} .upd.new b{color:var(--pumpkin)} .upd ul{font-size:19px;line-height:1.2}
+.skin{border-radius:0;background:rgba(0,0,0,.4)} .skin span{font-size:24px} .skin button{font-size:17px;border-radius:0}
+.kicon{border-radius:0}
+#dead h1{color:var(--osd);text-shadow:4px 0 rgba(255,30,70,.85),-4px 0 rgba(30,170,255,.6),0 0 30px rgba(179,18,29,.7)}
+/* the blue screen before the tape starts */
+#start{background:repeating-linear-gradient(to bottom,rgba(0,0,0,.08) 0 1px,transparent 1px 3px),linear-gradient(#2238c8,#14249a)}
+#start .tag{font-size:20px;letter-spacing:.3em;color:var(--osdDim);text-transform:uppercase}
+#start .rew{font-size:18px;letter-spacing:.2em;color:var(--osd);opacity:.8;text-transform:uppercase;margin-top:8px}
 </style>
 
 <div id="game">
@@ -155,6 +209,7 @@ body.touch #team{bottom:auto;top:96px}
   <div id="jump" hidden></div>
   <div id="inside" hidden></div>
   <div id="peep" hidden></div>
+  <div id="vhsUi" aria-hidden="true"></div>
   <div id="vhsOsd" aria-hidden="true"><b id="vhsPlay">PLAY &#9654;</b><span id="vhsCount">SP 0:00:00</span><span id="vhsDate">OCT. 31 1987</span></div>
 
   <div class="hud" id="safe" hidden></div>
@@ -184,8 +239,10 @@ body.touch #team{bottom:auto;top:96px}
   <div id="cine" hidden><div class="bar t"></div><div class="bar b"><p id="cineText"></p></div><button class="chip" id="cineSkip" type="button">Skip</button></div>
 
   <div class="card" id="start"><div class="col">
+    <p class="tag">Hollow Lane Home Video</p>
     <h1>Fellow Neighbors</h1>
-    <button class="btn" id="play" type="button">Start</button>
+    <button class="btn" id="play" type="button">Play &#9654;</button>
+    <p class="rew">Be kind &middot; rewind</p>
   </div></div>
 
   <div class="card" id="news" hidden><div class="col">
@@ -1883,7 +1940,7 @@ var PARTS={
 };
 var cfg=PARTS.victim[1], lastFrame=0, qLeaves=true, settingsBack='menu';
 var SCREENS=['start','menu','news','story','parts','online','netFind','lobby','netEnd','settings','shop','pause','dead','win'];
-function show(id){ SCREENS.forEach(function(s){ $(s).hidden = s!==id; }); }
+var tjT=0; function show(id){ var was=null; SCREENS.forEach(function(s){ if (!$(s).hidden) was=s; $(s).hidden = s!==id; }); if (id && id!==was && !reduced){ wrap.classList.remove('tapejump'); void wrap.offsetWidth; wrap.classList.add('tapejump'); clearTimeout(tjT); tjT=setTimeout(function(){ wrap.classList.remove('tapejump'); },360); } }
 function setLeaves(v){ leafPts.p.visible = v && qLeaves; }
 
 /* ---------- weather, wind, reflections, body language ---------- */
@@ -4357,8 +4414,9 @@ function teamTick(pl){
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=46;
+var GAME_VER=47;
 var UPDATES=[
+  {v:47,t:'The whole tape',n:['Every screen is VHS now: VCR-style lettering, blue-screen menus with a ▶ cursor, scanlines and a tracking band over everything.','The game opens on a blue screen like a tape waiting to play. Press PLAY ▶ to start.','Switching screens makes the picture jump like a tape. The corner shows STOP ■ on the blue screen and when a run ends.']},
   {v:46,t:'Found footage',n:['The whole game now looks like an old VHS tape: soft picture, colour bleeding off the edges, scanlines, a wobbling image and a tracking band that rolls through now and then.','PLAY, a tape counter and the date sit in the corner like a camcorder.','It also draws the 3D picture at tape resolution, so it can run smoother on weaker phones. Don’t like it? Settings → VHS tape look → Off.']},
   {v:45,t:'Past the gate: a hospital and a supermarket',n:['In Kill Feast the gate at the end of the lane is open, and there is a whole new side of town behind it.','Hollow Lane General is a three-storey hospital with stairs, an ER, a morgue, wards and an operating room. There are 9 hiding spots across the 3 floors.','Fresh Mart is a big supermarket with aisles, checkouts, a deli, restrooms, an office, a storeroom and a walk-in freezer. There are 6 more hiding spots.','There are new chests out there too. Bots and killers know how to find their way in, up the stairs and through every room.']},
   {v:44,t:'Kicked-in doors and smarter bots',n:['Killers now walk right up to the door and kick it in: three kicks, splinters fly, and the third one bursts it open.','Killers can murder the neighbour inside a house. One stab goes straight into the kill animation, and that house has no one left to help.','Bots play like people now: they open chests, heal, set traps, stab back, run into houses and hide. Killer bots hunt by sight and sound, kick doors in and search hiding spots.','The little gate at the bottom of the stairs is gone.']},
@@ -4429,14 +4487,14 @@ var VHS=(function(){
   var q=new THREE.Mesh(new THREE.PlaneGeometry(2,2),mat); q.frustumCulled=false; var sc=new THREE.Scene(); sc.add(q);
   var cam=new THREE.OrthographicCamera(-1,1,1,-1,0,1), sz=new THREE.Vector2(), osd=$('vhsOsd'), cnt=$('vhsCount'), play=$('vhsPlay'), lastS=-1, lastMode='';
   return function(t){
-    var on=SAVE.vhs!==false; if (osd.hidden===on) osd.hidden=!on;
+    var on=SAVE.vhs!==false; if (osd.hidden===on) osd.hidden=!on; var ui=$('vhsUi'); if (ui.hidden===on) ui.hidden=!on;
     if (!on){ renderer.render(scene,camera); return; }
     renderer.getDrawingBufferSize(sz); var hh=Math.round(Math.min(sz.y*0.75,LOWEND?400:480)), ww=Math.round(hh*sz.x/Math.max(1,sz.y));
     if (rt.width!==ww || rt.height!==hh){ rt.setSize(ww,hh); mat.uniforms.px.value.set(1/ww,1/hh); }
     mat.uniforms.t.value=t; mat.uniforms.sl.value=sz.y/3.2; mat.uniforms.tr.value=reduced?0:1;
     renderer.setRenderTarget(rt); renderer.render(scene,camera); renderer.setRenderTarget(null); renderer.render(sc,cam);
-    var paused=game.paused && game.mode==='play', mode=paused?'p':'r';
-    if (mode!==lastMode){ lastMode=mode; play.innerHTML=paused?'PAUSE &#10074;&#10074;':'PLAY &#9654;'; }
+    var paused=game.paused && game.mode==='play', stop=!$('start').hidden || !$('dead').hidden || !$('win').hidden || !$('netEnd').hidden, mode=stop?'s':(paused?'p':'r');
+    if (mode!==lastMode){ lastMode=mode; play.innerHTML=stop?'STOP &#9632;':(paused?'PAUSE &#10074;&#10074;':'PLAY &#9654;'); }
     osd.classList.toggle('blink',paused && Math.floor(t*2)%2===0);
     var secs=Math.floor(game.mode==='play'?game.time:t); if (secs!==lastS){ lastS=secs; cnt.textContent='SP '+Math.floor(secs/3600)+':'+('0'+(Math.floor(secs/60)%60)).slice(-2)+':'+('0'+secs%60).slice(-2); }
   };

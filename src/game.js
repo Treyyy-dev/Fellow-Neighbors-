@@ -1567,7 +1567,7 @@ var PARTS={
 };
 var cfg=PARTS.victim[1], lastFrame=0, qLeaves=true, settingsBack='menu';
 var SCREENS=['start','menu','news','story','parts','online','netFind','lobby','netEnd','settings','shop','pause','dead','win'];
-function show(id){ SCREENS.forEach(function(s){ $(s).hidden = s!==id; }); }
+var tjT=0; function show(id){ var was=null; SCREENS.forEach(function(s){ if (!$(s).hidden) was=s; $(s).hidden = s!==id; }); if (id && id!==was && !reduced){ wrap.classList.remove('tapejump'); void wrap.offsetWidth; wrap.classList.add('tapejump'); clearTimeout(tjT); tjT=setTimeout(function(){ wrap.classList.remove('tapejump'); },360); } }
 function setLeaves(v){ leafPts.p.visible = v && qLeaves; }
 
 /* ---------- weather, wind, reflections, body language ---------- */
@@ -4041,8 +4041,9 @@ function teamTick(pl){
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=46;
+var GAME_VER=47;
 var UPDATES=[
+  {v:47,t:'The whole tape',n:['Every screen is VHS now: VCR-style lettering, blue-screen menus with a ▶ cursor, scanlines and a tracking band over everything.','The game opens on a blue screen like a tape waiting to play. Press PLAY ▶ to start.','Switching screens makes the picture jump like a tape. The corner shows STOP ■ on the blue screen and when a run ends.']},
   {v:46,t:'Found footage',n:['The whole game now looks like an old VHS tape: soft picture, colour bleeding off the edges, scanlines, a wobbling image and a tracking band that rolls through now and then.','PLAY, a tape counter and the date sit in the corner like a camcorder.','It also draws the 3D picture at tape resolution, so it can run smoother on weaker phones. Don’t like it? Settings → VHS tape look → Off.']},
   {v:45,t:'Past the gate: a hospital and a supermarket',n:['In Kill Feast the gate at the end of the lane is open, and there is a whole new side of town behind it.','Hollow Lane General is a three-storey hospital with stairs, an ER, a morgue, wards and an operating room. There are 9 hiding spots across the 3 floors.','Fresh Mart is a big supermarket with aisles, checkouts, a deli, restrooms, an office, a storeroom and a walk-in freezer. There are 6 more hiding spots.','There are new chests out there too. Bots and killers know how to find their way in, up the stairs and through every room.']},
   {v:44,t:'Kicked-in doors and smarter bots',n:['Killers now walk right up to the door and kick it in: three kicks, splinters fly, and the third one bursts it open.','Killers can murder the neighbour inside a house. One stab goes straight into the kill animation, and that house has no one left to help.','Bots play like people now: they open chests, heal, set traps, stab back, run into houses and hide. Killer bots hunt by sight and sound, kick doors in and search hiding spots.','The little gate at the bottom of the stairs is gone.']},
@@ -4113,14 +4114,14 @@ var VHS=(function(){
   var q=new THREE.Mesh(new THREE.PlaneGeometry(2,2),mat); q.frustumCulled=false; var sc=new THREE.Scene(); sc.add(q);
   var cam=new THREE.OrthographicCamera(-1,1,1,-1,0,1), sz=new THREE.Vector2(), osd=$('vhsOsd'), cnt=$('vhsCount'), play=$('vhsPlay'), lastS=-1, lastMode='';
   return function(t){
-    var on=SAVE.vhs!==false; if (osd.hidden===on) osd.hidden=!on;
+    var on=SAVE.vhs!==false; if (osd.hidden===on) osd.hidden=!on; var ui=$('vhsUi'); if (ui.hidden===on) ui.hidden=!on;
     if (!on){ renderer.render(scene,camera); return; }
     renderer.getDrawingBufferSize(sz); var hh=Math.round(Math.min(sz.y*0.75,LOWEND?400:480)), ww=Math.round(hh*sz.x/Math.max(1,sz.y));
     if (rt.width!==ww || rt.height!==hh){ rt.setSize(ww,hh); mat.uniforms.px.value.set(1/ww,1/hh); }
     mat.uniforms.t.value=t; mat.uniforms.sl.value=sz.y/3.2; mat.uniforms.tr.value=reduced?0:1;
     renderer.setRenderTarget(rt); renderer.render(scene,camera); renderer.setRenderTarget(null); renderer.render(sc,cam);
-    var paused=game.paused && game.mode==='play', mode=paused?'p':'r';
-    if (mode!==lastMode){ lastMode=mode; play.innerHTML=paused?'PAUSE &#10074;&#10074;':'PLAY &#9654;'; }
+    var paused=game.paused && game.mode==='play', stop=!$('start').hidden || !$('dead').hidden || !$('win').hidden || !$('netEnd').hidden, mode=stop?'s':(paused?'p':'r');
+    if (mode!==lastMode){ lastMode=mode; play.innerHTML=stop?'STOP &#9632;':(paused?'PAUSE &#10074;&#10074;':'PLAY &#9654;'); }
     osd.classList.toggle('blink',paused && Math.floor(t*2)%2===0);
     var secs=Math.floor(game.mode==='play'?game.time:t); if (secs!==lastS){ lastS=secs; cnt.textContent='SP '+Math.floor(secs/3600)+':'+('0'+(Math.floor(secs/60)%60)).slice(-2)+':'+('0'+secs%60).slice(-2); }
   };
