@@ -18,7 +18,7 @@ html,body{height:100%}
 body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:hidden}
 #game{position:relative;height:100%;overflow:hidden;background:var(--night);touch-action:none;user-select:none;-webkit-user-select:none}
 #game canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
-#grain{position:absolute;inset:-64px;pointer-events:none;opacity:.09;background-size:128px 128px;animation:grain .5s steps(4) infinite}
+#grain{display:none!important}
 @keyframes grain{0%{transform:translate(0,0)}25%{transform:translate(-31px,17px)}50%{transform:translate(23px,-41px)}75%{transform:translate(-11px,-27px)}100%{transform:translate(37px,29px)}}
 @media (prefers-reduced-motion:reduce){#grain{animation:none}}
 #vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 42%,rgba(0,0,0,.78) 100%)}
@@ -50,6 +50,10 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
 #stamina.low i{background:var(--blood)}
 #senseBtn{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);font:inherit;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone);background:rgba(90,10,10,.6);border:1px solid rgba(255,80,60,.6);border-radius:2px;padding:7px 14px;cursor:pointer}
 #senseBtn:disabled{opacity:.45;cursor:default}
+#chatBox{position:absolute;left:50%;bottom:90px;transform:translateX(-50%);background:rgba(7,9,15,.86);border:1px solid rgba(231,226,210,.3);border-radius:3px;padding:10px 12px;width:min(92%,420px);text-align:center}
+#chatBox p{margin:0 0 8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}#chatBox b{color:var(--pumpkin);font-weight:400}
+.chatOpts{display:flex;flex-direction:column;gap:6px}.chatOpts button{font:inherit;font-size:14px;color:var(--bone);background:rgba(13,17,27,.8);border:1px solid rgba(231,226,210,.35);border-radius:2px;padding:8px 10px;cursor:pointer;text-align:left}
+.chatOpts button:hover{border-color:var(--pumpkin)}
 #team{position:absolute;left:12px;bottom:14px;display:flex;flex-direction:column;gap:6px;pointer-events:none;max-width:min(46vw,220px)}
 .mate{display:flex;align-items:center;gap:8px;background:rgba(7,9,15,.72);border:1px solid rgba(231,226,210,.22);border-radius:3px;padding:4px 8px 4px 4px}
 .mate img{width:38px;height:38px;border-radius:2px;flex:none;display:block}
@@ -146,6 +150,7 @@ body.touch #team{bottom:auto;top:96px}
   <div class="hud" id="stamina" hidden><i></i></div>
   <div class="hud" id="hpBar" hidden aria-label="Health"><b></b><b></b><b></b></div>
   <button type="button" id="senseBtn" hidden>Sense</button>
+  <div id="chatBox" hidden><p class="lab">Talking to <b id="chatName"></b></p><div class="chatOpts"><button type="button" data-c="1">1 · Get to safety</button><button type="button" data-c="2">2 · Do you have anything?</button><button type="button" data-c="3">3 · Call the police</button><button type="button" data-c="0">Close</button></div></div>
   <div id="team" hidden aria-label="Teammates"></div>
   <div id="items" hidden><button type="button" data-it="heal"></button><button type="button" data-it="trap"></button><button type="button" data-it="knife"></button></div>
   <div class="hud" id="toast"></div>
