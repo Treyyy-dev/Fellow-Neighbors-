@@ -1437,7 +1437,7 @@ function nearestLights(t){
 }
 
 /* ---------- save, settings, story parts ---------- */
-var SAVE={kskin:0,kowned:[0],tokens:0,owned:[],equipped:-1,fps:60,q:isTouch?2:3,prog:{victim:0,killer:0}};
+var SAVE={kill:0,kowned2:[0],kskin:0,kowned:[0],tokens:0,owned:[],equipped:-1,fps:60,q:isTouch?2:3,prog:{victim:0,killer:0}};
 try { var sv=localStorage.getItem('hollow-lane-save'); if (sv){ sv=JSON.parse(sv); for (var sk in sv) SAVE[sk]=sv[sk]; } } catch(e){}
 function save(){
   try { localStorage.setItem('hollow-lane-save',JSON.stringify(SAVE)); } catch(e){}
@@ -2487,6 +2487,54 @@ function skinKiller(m,ks){
   return K;
 }
 
+/* ---------- Kill Feast: the 8-second kill ---------- */
+var KILLS=[{n:'Overhand',p:0},{n:'Two Cuts',p:250},{n:'The Lift',p:350},{n:'Frenzy',p:450},{n:'Execution',p:600}];
+var finRigs={};
+function finRig(ks){ ks=ks|0; var r=finRigs[ks]; if (r) return r; if (!NETTPL.k) return null; var rig=makeNetRig('k',null,ks); if (!rig) return null;
+  r={g:new THREE.Group(),rig:rig,arm:rig.m.getObjectByName('RightArm'),head:rig.m.getObjectByName('Head')}; r.g.add(rig.m); r.g.visible=false; scene.add(r.g); return finRigs[ks]=r; }
+function startNetFinisher(q){
+  var N=net, K=finRig(SAVE.kskin); if (!K) return;
+  var dx=q.x-P.x, dz=q.z-P.z, d=Math.hypot(dx,dz)||1, ux=dx/d, uz=dz/d, gy=groundY(q.x,q.z);
+  var type=Math.max(0,Math.min(KILLS.length-1,SAVE.kill|0));
+  N.fin={t:0,type:type,q:q,x:q.x,z:q.z,ux:ux,uz:uz,gy:gy,K:K,hit:0,pool:false,side:Math.random()<.5?1:-1,yaw:Math.atan2(-ux,-uz),raise:0,sx:P.x,sz:P.z};
+  var sk=q.bot?(q.bot.sk|0):skinIdx(q); showResident(sk); resident.dead=false;
+  resident.g.position.set(q.x,gy,q.z); resident.g.rotation.set(0,N.fin.yaw,0); residentAnim('Idle');
+  K.g.visible=true; K.g.position.set(q.x-ux*2.2,groundY(q.x-ux*2.2,q.z-uz*2.2),q.z-uz*2.2); K.g.rotation.set(0,Math.atan2(ux,uz),0); anim(K.rig,'Walk');
+  setHud(false); setPrompt(null); $('safe').hidden=true; $('items').hidden=true; $('senseBtn').hidden=true; $('btnSwing').hidden=true; $('team').hidden=true; vmKnife.visible=false;
+  $('cine').hidden=false; $('cineText').textContent=KILLS[type].n; $('cineSkip').hidden=true; $('grain').hidden=true;
+  doorLight.intensity=2.4; doorLight.position.set(q.x,gy+2.4,q.z); sting(0.3,true); scream(NEIGHBOURS[sk].rig==='w'?1.25:0.8);
+}
+function netFinFrame(dt){
+  var N=net, f=N.fin, K=f.K, R=resident.g, t=(f.t+=dt), ux=f.ux, uz=f.uz, i;
+  ['safe','items','senseBtn','btnSwing','team','objective'].forEach(function(id){ $(id).hidden=true; }); vmKnife.visible=false; vmL.visible=false;
+  // camera: wide slow orbit, then in close for the kill, then low over the body
+  var orbit=f.side*(0.6+t*0.16), rad=t<2.2?4.2-t*0.35:(t<5.2?2.9:2.9-(t-5.2)*0.35), hy=t<5.2?1.45:1.45-(t-5.2)*0.22;
+  var cx=f.x-ux*0.5, cz=f.z-uz*0.5;
+  camera.position.set(cx+Math.cos(orbit)*rad, f.gy+hy, cz+Math.sin(orbit)*rad); cineLook.set(cx,f.gy+(t<5.2?1.15:0.5),cz); camera.lookAt(cineLook);
+  torch.position.copy(camera.position); torch.target.position.copy(cineLook);
+  function hit(n,h,amt){ if (f.hit<n){ f.hit=n; bloodBurst(f.x,f.gy+h,f.z,ux,uz,amt||44); bloodBurst(f.x,f.gy+h,f.z,-ux*0.4,-uz*0.4,14); stabSound(); gore(); shake(); } }
+  // 0-2.2 s: he closes in while they back away
+  var kd=t<2.2 ? 2.2-t*0.55 : 1.0, back=t<2.2 ? t*0.18 : 0.4;
+  var vx=f.x+ux*back, vz=f.z+uz*back; R.position.x=vx; R.position.z=vz;
+  K.g.position.set(vx-ux*kd,groundY(vx-ux*kd,vz-uz*kd),vz-uz*kd); anim(K.rig,t<2.2?'Walk':'Idle'); if (K.rig.actions.Walk) K.rig.actions.Walk.timeScale=0.6;
+  if (t<2.2 && Math.floor(t*1.6)!==Math.floor((t-dt)*1.6)) residentAnim('Walk');
+  // 2.4-5.2 s: the kill itself
+  var a=t-2.4, raise=0, fall=0, lift=0, kneel=0;
+  if (a>0){
+    if (f.type===0){ raise=a<0.8?clamp01(a/0.5):clamp01(1-(a-0.8)/0.09); if (a>0.88) hit(1,1.4,56); fall=clamp01((a-1.1)/0.6); }
+    else if (f.type===1){ raise=a<0.45?a/0.45:a<0.56?1-(a-0.45)/0.11:a<0.95?(a-0.56)/0.39:clamp01(1-(a-0.95)/0.11); if (a>0.55) hit(1,1.55,40); if (a>1.05) hit(2,1.15,50); if (a>0.55 && a<1.15) f.yaw+=dt*6; fall=clamp01((a-1.3)/0.6); }
+    else if (f.type===2){ lift=a<1.5?clamp01((a-0.15)/0.4)*0.5:Math.max(0,0.5-(a-1.5)*3.5); raise=a<0.95?clamp01((a-0.2)/0.4)*0.55:a<1.08?1:0.55*clamp01(1-(a-1.5)/0.2); if (a>1.0) hit(1,1.9,48); if (a>1.7) hit(2,0.5,40); fall=clamp01((a-1.7)/0.45); }
+    else if (f.type===3){ var ph=Math.min(4,Math.floor(a/0.32)), pp=(a%0.32)/0.32; raise=a<1.4?(pp<0.5?pp*2:2-pp*2):0; for (i=1;i<=ph && i<=4;i++) hit(i,1.1+((i*37)%5)*0.12,34); fall=clamp01((a-1.5)/0.5); }
+    else { kneel=clamp01(a/0.5); raise=a<0.6?0:a<1.6?clamp01((a-0.6)/0.7):clamp01(1-(a-1.6)/0.08); if (a>1.66) hit(1,1.0,70); fall=clamp01((a-1.9)/0.5); }
+  }
+  if (fall>0){ resident.dead=true; if (!f.pool){ f.pool=true; bloodPool(vx+ux*0.6,f.gy,vz+uz*0.6,1.25); } }
+  R.rotation.set(-Math.PI/2*fall+kneel*0.25*(1-fall),f.yaw,0); R.position.y=f.gy+lift*(1-fall)+0.14*fall-kneel*0.42*(1-fall);
+  K.rig.mixer.update(dt); if (K.arm && raise>0) K.arm.rotateX(RAISE[0]*raise);
+  if (t>5.4 && K.head) K.head.rotateZ(0.3*clamp01((t-5.4)/0.8));        // he tilts his head over the body
+  if (t>=8){ N.fin=null; K.g.visible=false; resident.g.visible=false; resident.dead=false; doorLight.intensity=0;
+    $('cine').hidden=true; $('cineSkip').hidden=false; $('grain').hidden=false; setHud(true); vmKnife.visible=true; P.x=f.sx; P.z=f.sz; }
+}
+
 /* ---------- online: co-op stories and survival ---------- */
 var net=null, NR=null, NP={}, netMe='me', netCap=null, lobby=null, avatars={};
 var NIGHT=480, CARNEED=42, GENNEED=15, SGENS=[1,4,9,6];
@@ -2834,6 +2882,7 @@ function netTick(dt){
     if (kind==='p'){ if (o2.role==='boy') sp=BOY; else if (o2.role==='girl') sp=N.mode==='k'?WREN:GIRL; else { var si=num(o2.pr.sk,-1)|0; if (si<0||si>=NEIGHBOURS.length){ si=0; for (var c=0;c<o2.id.length;c++) si=(si*31+o2.id.charCodeAt(c))%NEIGHBOURS.length; } sp=NEIGHBOURS[si]; } }
     var mate=(kind==='k')===(game.role==='killer') || N.mode!=='s';
     var av=avatarFor(o2.id,kind,sp,mate?nick(o2.pr):'',kind==='k'?Math.max(0,Math.min(KSKINS.length-1,num(o2.bot?o2.bot.ks:o2.pr.ks,0)|0)):0); av.g.visible=o2.a!==2;
+    if (N.fin && N.fin.q.id===o2.id) av.g.visible=false;
     av.scared=kind==='p' && !(N.mode==='k'); var dz=kind==='k' && num(o2.pr.sn,0)>0; avatarStep(av,dt,o2.x,o2.z,o2.yaw+Math.PI,dz?0:o2.an,o2.a===0);
     if (kind==='p' && N.mode==='s'){ var loud=game.role==='killer' && o2.a===1 && (N.sense>0 || (o2.bot?o2.bot.nz:num(o2.pr.nz,0)));
       if (loud && !av.ping) av.ping=halo(0xff2020,1.4,0,2.75,0,av.g,0.9);
@@ -2966,7 +3015,7 @@ function netSurvival(dt,pl,surv,killers,me){
     if (N.swingHit){ N.swingHit=false; var f=fwd(), tgt=null, td=2.1;
       for (i=0;i<surv.length;i++){ var s=surv[i]; if (!s.alive || s.me) continue; var dx=s.x-P.x, dz=s.z-P.z, d=Math.hypot(dx,dz);
         if (d<td && (dx*f.x+dz*f.z)/(d||1)>0.45){ td=d; tgt=s; } }
-      if (tgt){ var s2=tgt; N.k[s2.id]=(N.k[s2.id]||0)+1; N.kills++; N.cd=2.4; N.slow=1.1; stabSound(); bloodBurst(s2.x,1.2,s2.z,f.x,f.z,50); bloodPool(s2.x,groundY(s2.x,s2.z),s2.z,0.8); shake(); toast('You cut '+nick(s2.pr)+'.',2200); N.lastHit=s2; }
+      if (tgt){ var s2=tgt, last=N.lastHitT&&N.lastHitT[s2.id], lethal=(s2.bot?s2.bot.hp:num(s2.pr.h,3))<=1 && !(last && N.el-last<2.6); N.lastHitT=N.lastHitT||{}; N.lastHitT[s2.id]=N.el; if (lethal) startNetFinisher(s2); N.k[s2.id]=(N.k[s2.id]||0)+1; N.kills++; N.cd=2.4; N.slow=1.1; stabSound(); bloodBurst(s2.x,1.2,s2.z,f.x,f.z,50); bloodPool(s2.x,groundY(s2.x,s2.z),s2.z,0.8); shake(); toast('You cut '+nick(s2.pr)+'.',2200); N.lastHit=s2; }
       else noise(0.12,0.25,900); }
     var near=null, nd=1e9; surv.forEach(function(q){ if (!q.alive) return; var dd=Math.hypot(q.x-P.x,q.z-P.z); if (dd<nd){ nd=dd; near=q; } });
     netObj('Kill Feast · '+clockT,(isTouch?'Tap Swing':'Click or press V')+' to swing your knife. Hunt them down before morning. '+alive+' alive'+(out?', '+out+' escaped':'')+'. Car '+Math.round(Math.min(1,C/CARNEED)*100)+'%, generators '+fixed.length+'/'+SGENS.length+'.', done?CARSIDE:null);
@@ -3249,6 +3298,7 @@ function update(dt){
   game.time+=dt; game.stingCd-=dt;
   stationDoor(dt);
   for (var hi2=0;hi2<houses.length;hi2++){ var hh=houses[hi2], tr=-1.35*hh.open; hh.pivot.rotation.y+=(tr-hh.pivot.rotation.y)*Math.min(1,dt*5); }
+  if (game.net && net.fin){ netTick(dt); if (net && net.fin) netFinFrame(dt); return; }
   var vic=game.role!=='killer';
   if (vic && !game.net){
     if (shelter) return updateShelter(dt);
