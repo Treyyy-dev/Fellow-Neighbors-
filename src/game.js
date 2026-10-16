@@ -900,43 +900,8 @@ function styleResident(sp,rig){
   }
   try { applyBuild(sp,rig); } catch(e){}
 }
-var VOX={f:[],m:[],ok:false};
-var FEMV=/female|samantha|victoria|karen|moira|tessa|fiona|allison|\bava\b|susan|zira|hazel|catherine|serena|jenny|aria|sonia|libby|michelle|emma|joanna|salli|kendra|kimberly|\bivy\b|\bamy\b|nicky|kate|sara|linda|heather|clara|natasha|olivia|martha|nora|shelley|sandy|flo\b|grandma/i;
-var MALV=/\bmale|daniel|alex|fred|\btom\b|oliver|aaron|arthur|gordon|rishi|david|\bmark\b|george|\bguy\b|ryan|brian|matthew|joey|justin|james|eddy|reed|rocko|ralph|bruce|junior|\blee\b|thomas|william|christopher|\beric\b|roger|steffan|andrew|liam|grandpa/i;
-var NOVELV=/bad news|bells|boing|bubbles|cellos|zarvox|whisper|trinoids|organ|jester|good news|bahh|deranged|hysterical|superstar|wobble|albert/i;
-function loadVox(){
-  try {
-    var vs=window.speechSynthesis.getVoices().filter(function(v){ return /^en/i.test(v.lang) && !NOVELV.test(v.name); });
-    var score=function(v){ return (/natural|neural|enhanced|premium|siri|online/i.test(v.name)?4:0)+(/google/i.test(v.name)?2:0)+(/en[-_]US/i.test(v.lang)?1:0); };
-    vs.sort(function(a,b){ return score(b)-score(a); });
-    VOX.f=vs.filter(function(v){ return FEMV.test(v.name); });
-    VOX.m=vs.filter(function(v){ return !FEMV.test(v.name) && MALV.test(v.name); });
-    VOX.gf=VOX.f.length>0; VOX.gm=VOX.m.length>0;
-    if (!VOX.gf) VOX.f=vs; if (!VOX.gm) VOX.m=vs.filter(function(v){ return !FEMV.test(v.name); }); if (!VOX.m.length) VOX.m=vs;
-    VOX.ok=vs.length>0;
-  } catch(e){}
-}
-try { loadVox(); window.speechSynthesis.onvoiceschanged=loadVox; } catch(e){}
-var NARR={n:'Narrator',rig:'m',pitch:1,rate:0.9,vi:0,quiet:true,abs:0.95};
-var ELIAS={n:'Elias',rig:'m',pitch:1,rate:0.6,vi:1,quiet:true,abs:0.05};
-var YOU={n:'You',rig:'m',pitch:1,rate:1.0,vi:2,quiet:true,abs:1.05};
-function voice(sp,text){
-
-  var clean=text.replace(/…/g,',').replace(/[“”—]/g,' '), done=false, w=sp.rig==='w';
-  function babble(){ if (done) return; done=true; if (sp.quiet) return; var n=Math.min(24,Math.ceil(clean.length/4)), base=(w?310:150)*sp.pitch;
-    for (var i=0;i<n;i++) tone(base*(1+((i*7+sp.n.length)%5)*0.09),0.07,'triangle',0.09,null,i*0.085); }
-  try {
-    var ss=window.speechSynthesis; if (!ss || typeof SpeechSynthesisUtterance==='undefined') return babble();
-    if (!VOX.ok) loadVox();
-    ss.cancel(); var u=new SpeechSynthesisUtterance(clean), pool=w?VOX.f:VOX.m, matched=w?VOX.gf:VOX.gm;
-    if (pool && pool.length) u.voice=pool[sp.vi%pool.length];
-    // a real voice of the right gender keeps a natural pitch; otherwise pitch does the work
-    u.pitch = sp.abs!==undefined ? sp.abs : Math.max(0.1,Math.min(2, matched ? 0.8+(sp.pitch-0.8)*1.1 : (w?1.35:0.7)*sp.pitch));
-    u.rate=sp.rate;
-    u.onstart=function(){ done=true; }; u.onerror=babble; ss.speak(u);
-    setTimeout(function(){ if (!done){ try { ss.cancel(); } catch(e){} babble(); } },900);
-  } catch(e){ babble(); }
-}
+var NARR={n:'Narrator'}, ELIAS={n:'Elias'}, YOU={n:'You'};
+function voice(sp,text){}   // no spoken voices: lines show as text only
 function eliasSays(t){ voice(ELIAS,t); }
 function youSay(t){ toast('You: “'+t+'”',2200); voice(YOU,t); }
 function say(idx,text,ms){ var sp=NEIGHBOURS[idx]; if (resident.who===sp) resident.talk=Math.min(4.5,0.6+text.length*0.055); toast(sp.n+': \u201c'+text+'\u201d',ms||3500); voice(sp,text); }
@@ -1138,7 +1103,7 @@ var HIDES=[   // inside spots are in interior-local x; f = floor
 })();
 SPOTS.push({k:'hide',x:-3.8,z:2.6,r:1.0,t:'Hide in the coat closet',cam:[-4.45,1.45,2.6],yaw:-Math.PI/2},{k:'hide',x:3.8,z:2.5,r:1.0,t:'Hide in the pantry',cam:[4.45,1.45,2.5],yaw:Math.PI/2});
 // standing at the foot or the top of the stairs offers a quick way up or down
-function stairNear(){ var lx=P.x-IX; if ((P.y||0)<0.3 && lx>-0.6 && lx<1.1 && P.z>0.3 && P.z<1.9) return {k:'up',t:'Go upstairs'}; if ((P.y||0)>2.5 && lx>-0.6 && lx<2.4 && P.z<-2.5) return {k:'down',t:'Go downstairs'}; return null; }
+function stairNear(){ return null; }   // the stairs are just walked now
 function stairsOpen(on){ STAIRBLK.forEach(function(c){ var k=colliders.indexOf(c); if (on && k>=0) colliders.splice(k,1); if (!on && k<0) colliders.push(c); }); }
 function onStairs(x,z){ var lx=x-IX; return lx>-0.3 && lx<0.82 && z>-3.9 && z<0.55; }
 function stairY(z){ return Math.max(0,Math.min(1,(0.5-z)/3.78))*FLOOR2; }
@@ -1560,7 +1525,7 @@ function nearestLights(t){
     if (up){ lampLights[0].position.set(IX-3.0,FLOOR2+2.3,0.4); lampLights[1].position.set(IX+3.4,FLOOR2+2.3,-1.0); } else { lampLights[0].position.set(IX-2.7,2.3,-0.8); lampLights[1].position.set(IX+2.9,2.3,-1.2); }
     lampLights[0].intensity=lampLights[1].intensity=pw; }
   else if (indoorsView()){ lampLights[0].position.set(IX-2.7,2.3,-0.8); lampLights[1].position.set(IX+2.9,2.3,-1.2); lampLights[0].intensity=lampLights[1].intensity=shelter.h.power?1.25:0; }
-  else if (vanG.visible && Math.hypot(px-vanG.position.x,pz-vanG.position.z)<2.6){ lampLights[0].position.set(vanG.position.x,1.5,vanG.position.z); lampLights[0].intensity=0.5; lampLights[1].position.copy(vanG.localToWorld(tmpV.set(3.6,0.9,0))); lampLights[1].intensity=1.4; }
+  else if (fleetNearLamp(px,pz)){ var FC=fleetNearLamp(px,pz), fl=carLocal(FC,3.6,0); lampLights[0].position.set(FC.x,1.5,FC.z); lampLights[0].intensity=0.5; lampLights[1].position.set(fl.x,0.9,fl.z); lampLights[1].intensity=1.4; }
   else if (bldIn(px,pz)){ var BB=bldIn(px,pz), py=camera.position.y, la=null, lb=null, d1=1e9, d2=1e9; BB.lights.forEach(function(l){ var dd=(l.x-px)*(l.x-px)+(l.z-pz)*(l.z-pz)+(l.y-py)*(l.y-py)*9; if (dd<d1){ lb=la; d2=d1; la=l; d1=dd; } else if (dd<d2){ lb=l; d2=dd; } });
     if (la){ lampLights[0].position.set(la.x,la.y,la.z); lampLights[0].intensity=1.5*(BB.flick && Math.sin(t*23+la.x)>0.93?0.25:1); } if (lb){ lampLights[1].position.set(lb.x,lb.y,lb.z); lampLights[1].intensity=1.3; } }
   else { lampLights[0].position.set(a.x,5,a.z); lampLights[1].position.set(b.x,5,b.z); lampLights[0].intensity=lampLights[1].intensity=2.2; }
@@ -1730,8 +1695,7 @@ function shopPreview(i){
   doorLight.position.set(M.x+0.9,1.8,M.z+2.4); doorLight.intensity=4.2;
 }
 var shopTab='surv', kPrev=null, kPrevI=-1;
-function shopTabs(){ var t=$('shopTabs'); t.textContent=''; [['surv','Survivor skins'],['kill','Killer skins'],['kills','Kill animations']].forEach(function(d){ var b=document.createElement('button'); b.type='button'; b.textContent=d[1]; b.setAttribute('aria-pressed',String(shopTab===d[0]));
-  b.addEventListener('click',function(){ if (shopTab!==d[0]){ shopTab=d[0]; renderShop(); } }); t.appendChild(b); }); }
+function shopTabs(){ var t=$('shopTabs'); t.textContent=''; t.hidden=true; shopTab='surv'; }   // killer skins and kill animations are gone: the killer is the AI
 function killerPreview(i){
   var M=lamps[2]; resident.g.visible=false; $('shopName').textContent=KSKINS[i].n;
   if (kPrev && kPrevI!==i){ scene.remove(kPrev.g); kPrev=null; }
@@ -1782,7 +1746,7 @@ function renderKillShop(){
     el.appendChild(sw); el.appendChild(nm); el.appendChild(bt); grid.appendChild(el); });
 }
 function renderShop(){
-  shopTabs(); if (shopTab==='kills') return renderKillsShop(); stopFinPreview(); if (shopTab==='kill') return renderKillShop(); hideKillerPreview();
+  shopTabs(); stopFinPreview(); hideKillerPreview();
   var grid=$('shopGrid'); grid.innerHTML=''; var stock=shopStock();
   if (shopView===-2 || (shopView>=0 && stock.indexOf(shopView)<0 && SAVE.owned.indexOf(shopView)<0)) shopView = SAVE.equipped>=0 ? SAVE.equipped : stock[0];
   shopPreview(shopView);
@@ -2591,62 +2555,73 @@ function finFrame(dt){
   }
 }
 
-/* ---------- jump scares: a strobe of faces, a scream, the tape tearing ---------- */
-var SCAREFACES=(function(){
-  function base(g,skinA,skinB,edge){ var gr=g.createRadialGradient(240,300,30,240,330,330); gr.addColorStop(0,skinA); gr.addColorStop(.62,skinB); gr.addColorStop(1,edge);
-    g.fillStyle='#000'; g.fillRect(0,0,480,640); g.save(); g.beginPath(); g.moveTo(240,20); g.bezierCurveTo(430,30,450,330,380,480); g.bezierCurveTo(330,610,150,610,100,480); g.bezierCurveTo(30,330,50,30,240,20); g.closePath(); g.fillStyle=gr; g.fill(); g.clip();
-    var sh=g.createLinearGradient(0,0,480,0); sh.addColorStop(0,'rgba(0,0,0,.75)'); sh.addColorStop(.3,'rgba(0,0,0,0)'); sh.addColorStop(.7,'rgba(0,0,0,0)'); sh.addColorStop(1,'rgba(0,0,0,.8)'); g.fillStyle=sh; g.fillRect(0,0,480,640);
-    var sv=g.createLinearGradient(0,0,0,640); sv.addColorStop(0,'rgba(0,0,0,.6)'); sv.addColorStop(.25,'rgba(0,0,0,0)'); sv.addColorStop(.85,'rgba(0,0,0,.2)'); sv.addColorStop(1,'rgba(0,0,0,.9)'); g.fillStyle=sv; g.fillRect(0,0,480,640); }
-  function socket(g,x,y,rx,ry,depth){ var e=g.createRadialGradient(x,y,4,x,y,Math.max(rx,ry)*1.6); e.addColorStop(0,'rgba(0,0,0,1)'); e.addColorStop(.45,'rgba(0,0,0,'+depth+')'); e.addColorStop(1,'rgba(0,0,0,0)'); g.fillStyle=e; g.beginPath(); g.ellipse(x,y,rx*1.6,ry*1.6,0,0,7); g.fill(); }
-  function grain(g,amt){ var n=g.getImageData(0,0,480,640), d=n.data; for (var p=0;p<d.length;p+=4){ var v=(Math.random()-0.5)*amt; d[p]+=v; d[p+1]+=v; d[p+2]+=v; } g.putImageData(n,0,0); }
-  function blood(g,x,y,n,len){ for (var i=0;i<n;i++){ var bx=x+(Math.random()-0.5)*50, w=3+Math.random()*7, l=len*(0.4+Math.random()); var bg=g.createLinearGradient(0,y,0,y+l); bg.addColorStop(0,'rgba(120,0,0,.95)'); bg.addColorStop(1,'rgba(60,0,0,.6)'); g.fillStyle=bg; g.fillRect(bx,y,w,l); g.beginPath(); g.arc(bx+w/2,y+l,w*0.7,0,7); g.fill(); } }
-  function mask(){ var c=document.createElement('canvas'); c.width=480; c.height=640; var g=c.getContext('2d'), i;
-    base(g,'#efe9d8','#b9b29e','#2a2620');
-    for (i=0;i<26;i++){ g.strokeStyle='rgba(35,25,18,'+(0.2+Math.random()*0.4)+')'; g.lineWidth=0.6+Math.random()*2; g.beginPath(); var x=90+Math.random()*300, y=60+Math.random()*480; g.moveTo(x,y); for (var k=0;k<6;k++){ x+=(Math.random()-.5)*36; y+=Math.random()*26; g.lineTo(x,y); } g.stroke(); }
-    socket(g,160,265,58,44,0.95); socket(g,322,262,62,46,0.95);
-    [[158,270],[326,266]].forEach(function(e){ var gl=g.createRadialGradient(e[0],e[1],0,e[0],e[1],14); gl.addColorStop(0,'#fff'); gl.addColorStop(.3,'rgba(255,220,200,.9)'); gl.addColorStop(1,'rgba(255,0,0,0)'); g.fillStyle=gl; g.beginPath(); g.arc(e[0],e[1],14,0,7); g.fill(); blood(g,e[0],300,4,150); });
-    g.fillStyle='rgba(0,0,0,.85)'; g.beginPath(); g.ellipse(228,365,7,12,0.2,0,7); g.ellipse(252,365,7,12,-0.2,0,7); g.fill();
-    var mg=g.createRadialGradient(240,470,10,240,470,150); mg.addColorStop(0,'#000'); mg.addColorStop(.8,'#1a0000'); mg.addColorStop(1,'rgba(40,0,0,0)'); g.fillStyle=mg;
-    g.beginPath(); g.moveTo(105,430); g.quadraticCurveTo(150,470,240,468); g.quadraticCurveTo(330,470,378,425); g.quadraticCurveTo(330,600,240,598); g.quadraticCurveTo(150,600,105,430); g.fill();
-    g.fillStyle='#c8bf9a'; for (i=0;i<14;i++){ var tx=118+i*18+(Math.random()-0.5)*5, top=440+Math.abs(7-i)*3; g.beginPath(); g.moveTo(tx,top); g.lineTo(tx+7,top+28+Math.random()*30); g.lineTo(tx+15,top+2); g.fill(); }
-    for (i=0;i<11;i++){ var bx2=128+i*21, bot=585-Math.abs(5-i)*5; g.beginPath(); g.moveTo(bx2,bot); g.lineTo(bx2+8,bot-24-Math.random()*22); g.lineTo(bx2+16,bot); g.fill(); }
-    blood(g,240,560,9,70); g.restore(); grain(g,46); return c; }
-  function corpse(){ var c=document.createElement('canvas'); c.width=480; c.height=640; var g=c.getContext('2d'), i;
-    base(g,'#b8c2b0','#6c7a68','#0c120c');
-    socket(g,160,250,62,50,0.85); socket(g,320,250,62,50,0.85);
-    [[160,252,-6],[320,252,9]].forEach(function(e){ g.fillStyle='#e9e7d6'; g.beginPath(); g.ellipse(e[0],e[1],34,22,0,0,7); g.fill(); g.strokeStyle='rgba(140,20,20,.8)'; g.lineWidth=1.2; for (var v=0;v<9;v++){ g.beginPath(); g.moveTo(e[0]-30+Math.random()*60,e[1]-18+Math.random()*36); g.lineTo(e[0]+(Math.random()-0.5)*20,e[1]+(Math.random()-0.5)*14); g.stroke(); } g.fillStyle='#0a0000'; g.beginPath(); g.arc(e[0]+e[2],e[1]-4,5,0,7); g.fill(); });
-    g.strokeStyle='rgba(30,10,40,.55)'; g.lineWidth=1.6; for (i=0;i<30;i++){ g.beginPath(); var vx=90+Math.random()*300, vy=80+Math.random()*460; g.moveTo(vx,vy); g.bezierCurveTo(vx+30,vy-20,vx-20,vy+40,vx+Math.random()*60-30,vy+70); g.stroke(); }
-    var mg=g.createRadialGradient(240,470,10,240,470,170); mg.addColorStop(0,'#000'); mg.addColorStop(.75,'#050000'); mg.addColorStop(1,'rgba(0,0,0,0)'); g.fillStyle=mg; g.beginPath(); g.ellipse(240,470,92,175,0,0,7); g.fill();
-    g.fillStyle='rgba(80,0,0,.8)'; g.beginPath(); g.ellipse(240,400,60,26,0,0,7); g.fill(); g.restore(); grain(g,56); return c; }
-  function torn(src){ var c=document.createElement('canvas'); c.width=480; c.height=640; var g=c.getContext('2d'); g.drawImage(src,0,0);
-    g.globalCompositeOperation='multiply'; g.fillStyle='#ff2a10'; g.fillRect(0,0,480,640); g.globalCompositeOperation='source-over';
-    for (var y=0;y<640;){ var h=4+Math.random()*26, off=(Math.random()<0.5?-1:1)*(Math.random()*70); g.drawImage(c,0,y,480,h,off,y,480,h); y+=h; }
-    g.globalCompositeOperation='screen'; g.fillStyle='rgba(255,40,20,.15)'; g.fillRect(0,0,480,640); g.globalCompositeOperation='source-over'; return c; }
-  try { var a=mask(), b=corpse(), t=torn(a); return [a,b,t].map(function(c){ return c.toDataURL('image/jpeg',0.82); }); } catch(e){ return []; }
-})();
+/* ---------- jump scares: the killer's face lunges into the lens ---------- */
 var VHSGLITCH=0;
 function shake(){ if (reduced) return; wrap.classList.remove('shake'); void wrap.offsetWidth; wrap.classList.add('shake'); }
+var SCARE3D=(function(){
+  var sc=new THREE.Scene(), head=new THREE.Group(), jaw=new THREE.Group(), hands=[], on=false, t=0, seed=0;
+  sc.add(new THREE.AmbientLight(0x6a5050,0.9)); var key=new THREE.DirectionalLight(0xbfd0ff,0.5); key.position.set(0.4,1,0.6); sc.add(key);
+  var red=new THREE.PointLight(0xff2a14,4,2.6,1.6); sc.add(red);
+  var flash=new THREE.PointLight(0xfff4e0,0,3,1.4); sc.add(flash);
+  // a cracked, stained mask
+  var mt=canvasTex(128,160,function(g){ var gr=g.createRadialGradient(64,70,8,64,80,90); gr.addColorStop(0,'#f2ece0'); gr.addColorStop(.7,'#c9c1ad'); gr.addColorStop(1,'#6a6252'); g.fillStyle=gr; g.fillRect(0,0,128,160);
+    for (var i=0;i<26;i++){ g.strokeStyle='rgba(30,20,14,'+(0.3+Math.random()*0.4)+')'; g.lineWidth=0.6+Math.random()*1.4; g.beginPath(); var x=Math.random()*128, y=Math.random()*160; g.moveTo(x,y); for (var k=0;k<6;k++){ x+=(Math.random()-.5)*22; y+=Math.random()*16; g.lineTo(x,y); } g.stroke(); }
+    for (i=0;i<9;i++){ g.fillStyle='rgba(110,0,0,'+(0.4+Math.random()*0.5)+')'; g.fillRect(20+Math.random()*90,60+Math.random()*60,2+Math.random()*3,20+Math.random()*60); }
+    for (i=0;i<400;i++){ g.fillStyle='rgba(0,0,0,'+Math.random()*0.2+')'; g.fillRect(Math.random()*128,Math.random()*160,1,1); } });
+  var skin=new THREE.MeshStandardMaterial({map:mt,roughness:.85}), black=new THREE.MeshBasicMaterial({color:0x000000}), gum=new THREE.MeshStandardMaterial({color:lin(0x3a0606),roughness:.6}),
+      tooth=new THREE.MeshStandardMaterial({color:lin(0xd8cfa8),roughness:.4}), cloth=new THREE.MeshStandardMaterial({color:lin(0x0c0c10),roughness:1}), blood=new THREE.MeshStandardMaterial({color:lin(0x6a0000),roughness:.2}),
+      eye=new THREE.MeshBasicMaterial({color:0xfff6e8}), hand=new THREE.MeshStandardMaterial({color:lin(0x9a948a),roughness:.8});
+  var sk=new THREE.SphereGeometry(0.16,16,14), pos=sk.attributes.position, v=new THREE.Vector3();
+  for (var i=0;i<pos.count;i++){ v.fromBufferAttribute(pos,i); var n=1+Math.sin(v.x*41)*0.03+Math.sin(v.y*33+1)*0.04+Math.cos(v.z*29)*0.02; if (v.z>0.05 && v.y<-0.02) n*=0.93; pos.setXYZ(i,v.x*n,v.y*n*1.22,v.z*n*1.05); } sk.computeVertexNormals();
+  var skull=new THREE.Mesh(sk,skin); head.add(skull);
+  cloth.side=THREE.DoubleSide; var hood=new THREE.Mesh(new THREE.SphereGeometry(0.215,14,12,Math.PI/2+1.15,Math.PI*2-2.3,0,Math.PI*0.8),cloth); hood.rotation.x=-0.25; hood.position.set(0,0.03,-0.05); hood.scale.set(1,1.15,1); head.add(hood);
+  [-1,1].forEach(function(sd){ var so=new THREE.Mesh(new THREE.SphereGeometry(0.048,10,8),black); so.scale.set(1.1,0.8,0.6); so.position.set(sd*0.058,0.035,0.138); head.add(so);
+    var pu=new THREE.Mesh(new THREE.SphereGeometry(0.0085,6,5),eye); pu.position.set(sd*0.055,0.03,0.168); head.add(pu);
+    for (var d=0;d<3;d++){ var dr=new THREE.Mesh(new THREE.BoxGeometry(0.009,0.05+d*0.03,0.006),blood); dr.position.set(sd*0.058+(d-1)*0.014,-0.02-d*0.015,0.158); head.add(dr); } });
+  // the mouth: a black hole that opens, ringed with teeth
+  jaw.position.set(0,-0.085,0.12); head.add(jaw);
+  var hole=new THREE.Mesh(new THREE.SphereGeometry(0.06,12,8),black); hole.scale.set(1,0.55,0.45); jaw.add(hole);
+  var lip=new THREE.Mesh(new THREE.TorusGeometry(0.058,0.012,6,14),gum); lip.scale.set(1,0.55,1); lip.position.z=0.012; jaw.add(lip);
+  var teeth=[]; for (var k=0;k<12;k++){ var a=(k/12)*Math.PI*2, tt=new THREE.Mesh(new THREE.ConeGeometry(0.007,0.028+(k%3)*0.01,4),tooth); tt.position.set(Math.cos(a)*0.05,Math.sin(a)*0.05*0.55,0.02); tt.rotation.z=a+Math.PI/2; jaw.add(tt); teeth.push({m:tt,a:a}); }
+  // hands reaching in from the bottom corners
+  [-1,1].forEach(function(sd){ var g=new THREE.Group(); var palm=new THREE.Mesh(new THREE.BoxGeometry(0.09,0.03,0.1),hand); g.add(palm);
+    for (var f=0;f<4;f++){ var fg=new THREE.Group(); fg.position.set(-0.033+f*0.022,0,0.05); g.add(fg); var p1=new THREE.Mesh(new THREE.BoxGeometry(0.015,0.015,0.06),hand); p1.position.z=0.03; fg.add(p1); var p2=new THREE.Mesh(new THREE.BoxGeometry(0.013,0.013,0.05),hand); p2.position.set(0,-0.012,0.07); p2.rotation.x=0.8; fg.add(p2); var nl=new THREE.Mesh(new THREE.BoxGeometry(0.012,0.004,0.014),blood); nl.position.set(0,-0.03,0.09); fg.add(nl); fg.rotation.x=0.5; }
+    var arm=new THREE.Mesh(new THREE.BoxGeometry(0.07,0.07,0.5),cloth); arm.position.z=-0.29; g.add(arm); sc.add(g); hands.push({g:g,sd:sd}); });
+  sc.add(head);
+  head.traverse(function(o){ if (o.isMesh) o.frustumCulled=false; }); hands.forEach(function(hh){ hh.g.traverse(function(o){ if (o.isMesh) o.frustumCulled=false; }); });
+  head.visible=false; hands.forEach(function(hh){ hh.g.visible=false; });
+  var q=new THREE.Quaternion(), fw=new THREE.Vector3(), up=new THREE.Vector3(), rt2=new THREE.Vector3(), tmp=new THREE.Vector3(), eul=new THREE.Euler();
+  function place(obj,dist,ox,oy){ camera.getWorldDirection(fw); up.set(0,1,0).applyQuaternion(camera.quaternion); rt2.set(1,0,0).applyQuaternion(camera.quaternion);
+    obj.position.copy(camera.position).addScaledVector(fw,dist).addScaledVector(rt2,ox).addScaledVector(up,oy); obj.quaternion.copy(camera.quaternion); }
+  function start(){ on=true; t=0; seed=Math.random()*10; head.visible=true; hands.forEach(function(hh){ hh.g.visible=true; }); }
+  function tick(dt){ if (!on) return; t+=dt; var D=1.45;
+    if (t>D){ on=false; head.visible=false; hands.forEach(function(hh){ hh.g.visible=false; }); red.intensity=0; flash.intensity=0; return; }
+    // lunge, a jerk back, then a second lunge right into the lens
+    var dist = t<0.1 ? 1.7-1.32*(1-Math.pow(1-t/0.1,3)) : (t<0.42 ? 0.38+Math.sin((t-0.1)*30)*0.012 : (t<0.52 ? 0.38+(t-0.42)*1.5 : Math.max(0.27,0.53-(t-0.52)*3)));
+    var sh=reduced?0:(t<0.08?0:0.022), j=Math.sin(t*90+seed)*sh, j2=Math.cos(t*77+seed*2)*sh;
+    place(head,dist,j+Math.sin(t*9)*0.01,-0.03+j2);
+    eul.set(Math.sin(t*31)*0.12*(sh?1:0), Math.sin(t*23+seed)*0.1*(sh?1:0), Math.sin(t*13)*0.35*(sh?1:0)+(t>0.42&&t<0.55?0.6:0)); q.setFromEuler(eul); head.quaternion.multiply(q);
+    var op=Math.min(1,Math.max(0,(t-0.06)/0.25)); jaw.scale.set(1+op*0.3,0.6+op*1.6+Math.sin(t*60)*0.12*op,1); teeth.forEach(function(T){ T.m.position.set(Math.cos(T.a)*0.05*(1+op*0.3),Math.sin(T.a)*0.05*0.55*(0.6+op*1.6),0.02); });
+    hands.forEach(function(hh,i){ var k=Math.min(1,Math.max(0,(t-0.18-i*0.05)/0.22)); k=1-Math.pow(1-k,3); place(hh.g,0.55-k*0.25,hh.sd*(0.42-k*0.2),-0.38+k*0.14); eul.set(-0.3,hh.sd*-0.5,hh.sd*0.4); q.setFromEuler(eul); hh.g.quaternion.multiply(q); });
+    // light: a red glow from below, and a strobe like a dying flashlight
+    tmp.set(0,-0.25,0.18).applyQuaternion(head.quaternion).add(head.position); red.position.copy(tmp); red.intensity=3.5+Math.random()*2;
+    flash.position.copy(camera.position); flash.intensity=(Math.sin(t*70)>0.3 || t<0.1)?2.6:0.15;
+    VHSGLITCH=Math.max(VHSGLITCH,t<0.1?0.5:(t>1.2?1.5:0.8)); }
+  return {scene:sc,start:start,tick:tick,isOn:function(){ return on; }};
+})();
 function scareSound(){
   if (!AC) return;
   noise(0.5,1.0,2600); noise(0.9,0.6,700); tone(38,1.4,'sine',0.9,24); tone(60,0.6,'square',0.25,30);
   [880,1244,1318,1865,1975,2793,3320].forEach(function(f,i){ tone(f,0.9,'sawtooth',0.22/(i+1.2),f*1.35); tone(f*1.012,0.9,'square',0.08/(i+1.5),f*0.7,0.05); });
   [0.18,0.42,0.7].forEach(function(w){ tone(520,0.35,'sawtooth',0.22,1900,w); noise(0.2,0.6,4200,w); });
-  tone(4100,2.6,'sine',0.05,3900,0.9);   // the ringing in your ears afterwards
+  tone(4100,2.6,'sine',0.05,3900,0.9);
 }
 function jumpFace(){
-  var el=$('scareFx'); if (!el || !SCAREFACES.length) return; el.hidden=false; scareSound(); shake(); VHSGLITCH=1.6;
+  if (SCARE3D.isOn()) return; SCARE3D.start(); scareSound(); shake(); VHSGLITCH=1.2;
   try { if (navigator.vibrate) navigator.vibrate([220,60,320,60,160]); } catch(e){}
-  var img=el.firstElementChild, steps=reduced?[[0,0,1.2],[260,-1,0]]:[[0,0,1.35],[45,-2,1.0],[90,1,1.5],[135,-3,1.0],[180,0,1.6],[225,-2,1.0],[265,2,1.75],[310,-4,1.0],[355,0,1.9],[420,1,2.1],[520,2,2.4],[700,-1,1.1],[760,2,2.6],[980,-5,0]];
-  steps.forEach(function(s){ setTimeout(function(){ var k=s[1];
-      if (k===-5 || (reduced && k===-1)){ el.style.background='#000'; img.style.opacity=0; el.style.transition='opacity .9s'; el.style.opacity=0; setTimeout(function(){ el.hidden=true; el.style.opacity=1; el.style.transition='none'; },950); return; }
-      el.style.transition='none'; el.style.opacity=1;
-      if (k===-2){ img.style.opacity=0; el.style.background='#000'; return; }
-      if (k===-3){ img.style.opacity=0; el.style.background='#7a0000'; return; }
-      if (k===-4){ img.style.opacity=0; el.style.background='#fff'; return; }
-      var f=SCAREFACES[k===-1?0:(k%SCAREFACES.length)]; el.style.background='#000'; img.style.opacity=1; img.style.backgroundImage='url('+f+')';
-      var jx=(Math.random()-0.5)*60, jy=(Math.random()-0.5)*40, r=(Math.random()-0.5)*8;
-      img.style.transform='translate('+jx+'px,'+jy+'px) rotate('+r+'deg) scale('+s[2]+')'; img.style.filter=(Math.random()<0.3?'invert(1) ':'')+'contrast(1.7) saturate(1.6)';
-    },s[0]); });
+  // a single white frame as it hits, and black as the tape cuts out
+  var el=$('scareFx'); if (!el) return; var img=el.firstElementChild; if (img) img.style.opacity=0;
+  [[95,'#fff',1],[140,'#fff',0],[1400,'#000',1],[1650,'#000',0]].forEach(function(s){ setTimeout(function(){ el.hidden=false; el.style.transition='none'; el.style.background=s[1]; el.style.opacity=s[2]; if (!s[2]) setTimeout(function(){ if (el.style.opacity==='0') el.hidden=true; },30); },s[0]); });
 }
 function scareAhead(){
   var S=stalker; if (S.mode || shelter || (S.g.visible && S.state!=='away')) return false;
@@ -3053,16 +3028,54 @@ function navStep(e,T,sp,dt,breaker){
 }
 // ---- going in and out of a house
 function styleInterior(h){ var hix=houses.indexOf(h); IM.wall.color.copy(lin(IWALL[hix%12])); IM.sofa.color.copy(lin(ISOFA[hix%12])); IM.rug.color.copy(lin(IRUG[hix%12])); IM.cab.color.copy(lin(ICAB[hix%6])); }
-function netEnterHouse(h){
+/* ---------- walking through a front door: reach for the knob, the door swings, you step through ---------- */
+var doorSeq=null;
+function iDoorPose(a){ var hx=0.56, hz=3.75, c=Math.cos(a), sn=Math.sin(a); iDoor.rotation.y=a; iDoor.position.set(hx-(c*hx+sn*hz),0,hz-(-sn*hx+c*hz)); }
+function creak(v){ if (!AC) return; tone(300,0.85,'sawtooth',0.025*v,170); tone(460,0.6,'triangle',0.02*v,300,0.15); noise(0.7,0.04*v,1400); }
+function knobClick(){ if (!AC) return; tone(1300,0.03,'square',0.05); tone(700,0.05,'square',0.04,null,0.06); noise(0.05,0.12,2500,0.02); }
+function ease(k){ k=Math.max(0,Math.min(1,k)); return k*k*(3-2*k); }
+function netEnterHouse(h){ if (doorSeq || !net) return; var dp=doorPt(h), sd=h.side;
+  doorSeq={dir:'in',h:h,t:0,x0:P.x,z0:P.z,y0:P.yaw,p0:P.pitch,sx:dp.x,sz:dp.z-sd*1.0,tx:dp.x,tz:dp.z+sd*0.9,yaw:sd>0?Math.PI:0,st:0}; setPrompt(null); }
+function netLeaveHouse(){ if (doorSeq || !net) return; var h=houses[net.ih]; if (!h) return;
+  doorSeq={dir:'out',h:h,t:0,x0:P.x,z0:P.z,y0:P.yaw,p0:P.pitch,st:0,broke:!!h.netBroke}; setPrompt(null); }
+function doorSeqTick(dt){
+  var D=doorSeq; if (!D) return; if (!net || game.mode!=='play'){ doorSeq=null; $('fade').style.opacity=0; return; }
+  D.t+=dt; var t=D.t, h=D.h, k;
+  function turn(y,k){ P.yaw=D.y0+angDiff(y,D.y0)*k; P.pitch=D.p0*(1-k); }
+  if (D.dir==='in'){
+    if (t<1.5){ k=ease(t/0.4); var x=D.x0+(D.sx-D.x0)*k, z=D.z0+(D.sz-D.z0)*k; turn(D.yaw,k);
+      if (t>0.22 && D.st<1){ D.st=1; knobClick(); }
+      if (t>0.32 && D.st<2){ D.st=2; h.open=1; h.hall.visible=true; if (!h.netBroke) creak(1); }
+      var m=ease((t-0.75)/0.65); x+=(D.tx-D.sx)*m; z+=(D.tz-D.sz)*m; P.x=x; P.z=z; P.y=0; P.bob+=dt*m*3;
+      if (t>1.08 && D.st<3){ D.st=3; $('fade').style.opacity=1; } }
+    else { if (D.st<4){ D.st=4; enterHouseNow(h); if (!h.netBroke) iDoorPose(-1.3); $('fade').style.opacity=0; D.ix=IX; P.yaw=0; P.pitch=0; }
+      var m2=ease((t-1.5)/0.75); P.x=IX; P.z=3.3-0.6*m2;
+      if (!h.netBroke){ var c=ease((t-1.85)/0.45); iDoorPose(-1.3*(1-c)); if (t>2.3 && D.st<5){ D.st=5; thud(0.5); noise(0.08,0.15,900); h.open=0; } }
+      if (t>2.35){ iDoorPose(0); doorSeq=null; } }
+  } else {
+    if (t<1.35){ k=ease(t/0.35); P.x=D.x0+(IX-D.x0)*k; P.z=D.z0+(2.75-D.z0)*k; turn(Math.PI,k); P.y=0;
+      if (t>0.2 && D.st<1){ D.st=1; if (!D.broke){ knobClick(); } }
+      if (t>0.3 && D.st<2){ D.st=2; if (!D.broke) creak(0.9); }
+      if (!D.broke) iDoorPose(-1.3*ease((t-0.3)/0.45));
+      var m3=ease((t-0.6)/0.6); P.z+=(3.65-2.75)*m3; P.bob+=dt*m3*3;
+      if (t>0.95 && D.st<3){ D.st=3; $('fade').style.opacity=1; } }
+    else { if (D.st<4){ D.st=4; leaveHouseNow(); iDoorPose(0); h.pivot.rotation.y=-1.35; h.open=1; h.hall.visible=true; $('fade').style.opacity=0; var dp=doorPt(h); D.ox=dp.x; D.oz=dp.z; P.yaw=h.side>0?0:Math.PI; P.pitch=0; }
+      var m4=ease((t-1.35)/0.7); P.x=D.ox; P.z=D.oz-h.side*(0.2+1.4*m4); P.y=0;
+      if (t>1.75 && D.st<5){ D.st=5; h.open=0; }
+      if (t>2.15 && D.st<6){ D.st=6; if (!h.netBroke){ thud(0.6); noise(0.08,0.15,900); } h.hall.visible=false; }
+      if (t>2.2) doorSeq=null; }
+  }
+}
+function enterHouseNow(h){
   var N=net; N.ih=houses.indexOf(h); N.outX=P.x; N.outZ=P.z; styleInterior(h); iDoorSet(!!h.netBroke); iPowerSet(h.power);
-  P.x=IX; P.z=2.9; P.fl=0; P.y=0; P.gy=0; P.yaw=0; P.pitch=0; h.open=1; setTimeout(function(){ h.open=0; },1400);
-  moonLight.intensity=0; setLeaves(false); noise(0.12,0.3,400); N.homeShown=false; setPrompt(null);
-  if (game.role!=='killer' && N.mode==='s' && !h.netDead){ var cleaned0=N.cleaned||{}, todo=choresOf(N.ih).filter(function(t){ return !cleaned0[choreId(N.ih,t)]; }).map(function(t){ return CHORE_T[t].n.toLowerCase(); }); if (todo.length) setTimeout(function(){ toast('This house needs: '+todo.join(' and ')+'. Stand at each glowing spot for 30 seconds.',4200); },2700); }
+  P.x=IX; P.z=3.3; P.fl=0; P.y=0; P.gy=0; P.yaw=0; P.pitch=0;
+  moonLight.intensity=0; setLeaves(false); N.homeShown=false; setPrompt(null);
+  if (game.role!=='killer' && N.mode==='s' && !h.netDead){ var cleaned0=N.cleaned||{}, todo=choresOf(N.ih).filter(function(t){ return !cleaned0[choreId(N.ih,t)]; }).map(function(t){ return CHORE_T[t].n.toLowerCase(); }); if (todo.length) setTimeout(function(){ toast('This house needs: '+todo.join(' and ')+'. Walk to a glowing spot and press '+(isTouch?'Clean':'E')+': every chore is a little puzzle.',4200); },2700); }
   if (game.role!=='killer') toast(h.netDead?NEIGHBOURS[h.n].n+' is dead. The killer got here first.':h.netHid?'The house is quiet. The neighbour is hiding upstairs.':NEIGHBOURS[h.n].n+' lives here. Go and talk to them.',2600);
 }
-function netLeaveHouse(){
+function leaveHouseNow(){
   var N=net, h=houses[N.ih]; N.ih=-1; closeChat(); var dp=doorPt(h); P.x=dp.x; P.z=dp.z-h.side*1.1; P.fl=0; P.y=0; P.yaw=h.side>0?0:Math.PI; P.pitch=0;
-  h.open=1; setTimeout(function(){ h.open=0; },1400); moonLight.intensity=0.55; setLeaves(true); resident.g.visible=false; noise(0.12,0.3,400); setPrompt(null);
+  moonLight.intensity=0.55; setLeaves(true); resident.g.visible=false; setPrompt(null);
 }
 function netHome(dt){ // the neighbour inside the house you are in
   var N=net; if (N.ih<0 || N.fin){ return; } var h=houses[N.ih];
@@ -3107,14 +3120,15 @@ function netHideFrame(dt){
 }
 // ---- what you can do where you stand
 function netInteract(dt,pl){
-  var N=net, killer=game.role==='killer'; N.near=null; if (N.alive!==1 || N.fin || N.jailed || N.brk || vanPhase(N) || N.wiring) return;
+  var N=net, killer=game.role==='killer'; N.near=null; if (N.alive!==1 || N.fin || N.jailed || N.brk || vanPhase(N) || N.wiring || doorSeq) return;
   if (N.hide){ N.near={k:'unhide'}; return; }
   if (N.ih>=0){
     var h=houses[N.ih], lx=P.x-IX;
-    if (P.z>3.3 && Math.abs(lx)<0.75 && (P.y||0)<0.3){ netLeaveHouse(); return; }
+    if (P.z>3.12 && Math.abs(lx)<0.75 && (P.y||0)<0.3){ netLeaveHouse(); return; }
     if (!killer){
       var stN=stairNear();
-      if (stN && Math.hypot(P.x-resident.g.position.x,P.z-resident.g.position.z)>1.0) N.near=stN;
+      if (N.choreHere && !(N.cleaned||{})[N.choreHere.cid]) N.near={k:'chore',c:N.choreHere,t:'Clean up: '+CHORE_T[N.choreHere.t].n.toLowerCase()};
+      else if (stN && Math.hypot(P.x-resident.g.position.x,P.z-resident.g.position.z)>1.0) N.near=stN;
       else if (!h.netHid && !h.netDead && (P.y||0)<0.3 && Math.hypot(P.x-resident.g.position.x,P.z-resident.g.position.z)<1.8){ N.near={k:'chat',h:h,t:'Chat with '+NEIGHBOURS[h.n].n}; }
       else if (stairNear()) N.near=stairNear();
       else HIDES.forEach(function(s){ if (N.near || s.f!==(P.y>1.4?1:0) || Math.abs((P.y||0)-s.f*FLOOR2)>0.4) return; if (Math.hypot(P.x-IX-s.x,P.z-s.z)<s.r) N.near={k:'hide',s:s,t:s.t}; });
@@ -3127,8 +3141,8 @@ function netInteract(dt,pl){
     if (!N.near) OUTHIDES.forEach(function(s){ if (N.near || Math.abs((s.y||0)-(P.y||0))>0.8) return; if (Math.hypot(P.x-s.x,P.z-s.z)<s.r) N.near=killer?{k:'search',s:s,t:'Search the dumpster'}:{k:'hide',s:s,t:s.t}; });
   }
   if (N.chat && (!N.near || N.near.k!=='chat')) closeChat();
-  var lab={wire:'Fix',up:'Up',down:'Down',killnb:'Kill',chest:'Open',door:killer&&N.near&&N.near.h&&!N.near.h.netBroke?'Break':'Open',chat:'Chat',hide:'Hide',search:'Search',unhide:'Out'};
-  if (N.near && !N.working) setPrompt(N.near.t,lab[N.near.k]); else if (curPrompt && !N.working && /^(Open the|Break the|Chat with|Hide|Search|Come out|Kill |Go up|Go down|Connect the|Locked)/.test(curPrompt)) setPrompt(null);
+  var lab={chore:'Clean',wire:'Fix',up:'Up',down:'Down',killnb:'Kill',chest:'Open',door:killer&&N.near&&N.near.h&&!N.near.h.netBroke?'Break':'Open',chat:'Chat',hide:'Hide',search:'Search',unhide:'Out'};
+  if (N.near && !N.working) setPrompt(N.near.t,lab[N.near.k]); else if (curPrompt && !N.working && /^(Open the|Break the|Chat with|Hide|Search|Come out|Kill |Go up|Go down|Connect the|Locked|Clean up)/.test(curPrompt)) setPrompt(null);
 }
 // ---- police (run by one player's game, shown to everyone)
 function polTick(dt,pl,killers){
@@ -3190,7 +3204,7 @@ function boneTurnW(bone,axis,ang){ if (!bone || !bone.parent || !ang) return; bo
 // the killer walks up to the door and kicks it in: three kicks, the third one breaks it
 var KICKS=[{s:0.75,w:0.32,p:0.85},{s:1.9,w:0.32,p:1.0},{s:3.05,w:0.42,p:1.35}];
 function startDoorBreak(h){
-  var N=net, K=finRig(SAVE.kskin), d=doorPt(h), side=h.side; if (!K){ breakDoorFx(h); N.bd.push(houses.indexOf(h)); return netEnterHouse(h); }
+  var N=net, K=finRig(SAVE.kskin), d=doorPt(h), side=h.side; if (!K){ breakDoorFx(h); N.bd.push(houses.indexOf(h)); return enterHouseNow(h); }
   if (!K.legs){ var m=K.rig.m; K.legs={ru:m.getObjectByName('RightUpLeg'),rl:m.getObjectByName('RightLeg'),rf:m.getObjectByName('RightFoot'),lu:m.getObjectByName('LeftUpLeg'),sp:m.getObjectByName('Spine'),hips:m.getObjectByName('Hips'),la:m.getObjectByName('LeftArm'),ra:m.getObjectByName('RightArm')}; }
   N.brk={h:h,t:0,K:K,d:d,side:side,hit:0,sh:0}; closeChat(); setPrompt(null);
   K.g.visible=true; K.g.rotation.set(0,h.g.rotation.y+Math.PI,0); anim(K.rig,'Walk');
@@ -3296,6 +3310,18 @@ function nameSprite(text){
   var t=canvasTex(256,64,function(g){ g.clearRect(0,0,256,64); g.font='bold 30px Georgia,serif'; g.textAlign='center'; g.textBaseline='middle'; g.lineWidth=6; g.strokeStyle='rgba(0,0,0,.85)'; g.strokeText(text,128,34); g.fillStyle='#ffd9a8'; g.fillText(text,128,34); });
   var s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false,fog:true})); s.scale.set(1.5,0.375,1); s.position.y=2.15; return s;
 }
+// the killer cannot be seen: only a heat-haze shimmer when it is close, a glimpse when it strikes or is stunned
+function ghostKiller(av,o2,dt){
+  var N=net; if (!av.ghost){ av.ghost=[]; av.g.traverse(function(o){ if (o.isSprite || o.isLight){ o.visible=false; return; } if (!o.isMesh || !o.material) return;
+      var ms=Array.isArray(o.material)?o.material:[o.material]; ms=ms.map(function(m){ var c=m.clone(); c.transparent=true; c.depthWrite=false; av.ghost.push(c); return c; }); o.material=Array.isArray(o.material)?ms:ms[0]; o.castShadow=false; }); av.rev=0; av.br=0; }
+  var d=Math.hypot(o2.x-P.x,o2.z-P.z), b=o2.bot, stun=b?((b.stun||0)>0 || (b.sn||0)>0):false;
+  if (stun || (N.fin) || (N.killRev||0)>0) av.rev=1; else av.rev=Math.max(0,av.rev-dt*1.6);
+  var t=clock.elapsedTime, near=d<7?(1-d/7):0, sh=near*0.2*(0.55+0.45*Math.sin(t*23+Math.sin(t*7)*3));
+  var op=Math.max(av.rev,sh); av.ghost.forEach(function(m){ m.opacity=op; m.depthWrite=op>0.9; });
+  av.g.visible=op>0.01; if (av.tag) av.tag.visible=false;
+  // you can hear it breathing when it is close
+  av.br-=dt; if (d<11 && av.br<=0 && o2.a!==2 && AC){ av.br=1.5+Math.random()*0.6; var v=(1-d/11); noise(0.7,0.09*v,380); noise(0.55,0.06*v,260,0.85); }
+}
 function avatarFor(id,kind,sp,label,ks){
   var key=kind+':'+(sp?sp.n:'')+':'+(label||'')+':'+(ks|0), a=avatars[id];
   if (a && a.key===key && (a.rig || !NETTPL.m)) return a;
@@ -3375,30 +3401,24 @@ function netJoin(code,mode){
   else go(soloRoom(),'Online is not available from here, so you are playing alone.');
 }
 function setLobbyMode(m,t){ lobby.mode=m; lobby.mt=t; if (NETMODES[m].roles.indexOf(lobby.want)<0) lobby.want=NETMODES[m].roles[0]; netSend({md:{m:m,t:t},w:lobby.want}); lobbyUI(); }
-var FEAST_K=2, FEAST_S=5;
+var FEAST_K=1, FEAST_S=4;
 function setMap(m,t,quiet){ lobby.map=m; lobby.mpt=t; netSend({mp:{m:m,t:t}}); if (!quiet){ lobbyUI(); lobbyTick(); } }
 function setFill(f,t,quiet){ lobby.fill=!!f; lobby.bt=t; netSend({bt:{f:f?1:0,t:t}}); if (!quiet){ lobbyUI(); lobbyTick(); } }
-// Seats real players first (at most 2 killers and 5 survivors), then fills the empty seats with bots if bots are on.
+// Every real player is a survivor (at most 4); the killer is always the AI.
 function feastRoles(ps,fill){
-  ps=ps.slice().sort(function(a,b){ return a.id<b.id?-1:(a.id>b.id?1:0); }).slice(0,FEAST_K+FEAST_S);
-  var roles={}, hk=0, hs=0, wantK=ps.filter(function(p){ return p.pr.w==='k'; }), rest=ps.filter(function(p){ return p.pr.w!=='k'; });
-  if (!fill){ var nk=Math.min(FEAST_K,Math.max(wantK.length,ps.length>=2?1:0,ps.length-FEAST_S)); if (ps.length===1) nk=wantK.length?1:0;
-    rest.sort(function(){ return Math.random()-0.5; }); var order=wantK.concat(rest);
-    order.forEach(function(p,i){ if (i<nk){ roles[p.id]='k'; hk++; } else { roles[p.id]='s'; hs++; } }); }
-  else { wantK.forEach(function(p){ if (hk<FEAST_K){ roles[p.id]='k'; hk++; } else rest.push(p); });
-    rest.forEach(function(p){ if (hs<FEAST_S){ roles[p.id]='s'; hs++; } else { roles[p.id]='k'; hk++; } }); }
-  return {roles:roles, bots:fill?{k:FEAST_K-hk,s:FEAST_S-hs}:{k:0,s:0}};
+  // every player is a survivor; the killer is always the AI
+  ps=ps.slice().sort(function(a,b){ return a.id<b.id?-1:(a.id>b.id?1:0); }).slice(0,FEAST_S);
+  var roles={}; ps.forEach(function(p){ roles[p.id]='s'; });
+  return {roles:roles, bots:{k:FEAST_K, s:fill?FEAST_S-ps.length:0}};
 }
 function lobbyUI(){
   var bs=$('lobBots'); bs.textContent=''; bs.hidden=false; $('lobBotLab').hidden=false;
-  [['Fill empty seats with bots',true],['No bots',false]].forEach(function(d){ var b=document.createElement('button'); b.type='button'; b.textContent=d[0]; b.setAttribute('aria-pressed',String(lobby.fill===d[1]));
+  [['Fill empty seats with bots',true],['No survivor bots',false]].forEach(function(d){ var b=document.createElement('button'); b.type='button'; b.textContent=d[0]; b.setAttribute('aria-pressed',String(lobby.fill===d[1]));
     b.addEventListener('click',function(){ if (lobby && lobby.fill!==d[1]) setFill(d[1],Date.now()); }); bs.appendChild(b); });
 
   var M=NETMODES[lobby.mode], seg=$('lobSeg'), ms=$('lobMode'); seg.textContent=''; ms.textContent='';
   ['s'].forEach(function(m){ var b=document.createElement('button'); b.type='button'; b.textContent=NETMODES[m].t; b.setAttribute('aria-pressed',String(lobby.mode===m));
     b.addEventListener('click',function(){ if (lobby && lobby.mode!==m){ setLobbyMode(m,Date.now()); lobbyTick(); } }); ms.appendChild(b); });
-  M.roles.forEach(function(r){ var b=document.createElement('button'); b.type='button'; b.textContent=M.names[r]; b.setAttribute('aria-pressed',String(lobby.want===r));
-    b.addEventListener('click',function(){ lobby.want=r; netSend({w:r}); lobbyUI(); lobbyTick(); }); seg.appendChild(b); });
   $('lobTitle').textContent='Room '+lobby.code.toUpperCase();
 }
 function lobbyTick(){
@@ -3410,17 +3430,17 @@ function lobbyTick(){
   var nmp=null, nmpt=lobby.mpt||0; ps.forEach(function(p){ var d=p.pr.mp; if (!p.me && d && typeof d==='object' && num(d.t,0)>nmpt && MAPS.some(function(x){ return x.id===d.m; })){ nmpt=d.t; nmp=d.m; } });
   if (nmp){ setMap(nmp,nmpt,true); lobbyUI(); }
   var M=NETMODES[lobby.mode]; ul.textContent='';
-  ps.forEach(function(p){ var li=document.createElement('li'), w=M.names[p.pr.w]||M.names[M.roles[0]];
+  ps.forEach(function(p){ var li=document.createElement('li'), w='Survivor';
     li.textContent=nick(p.pr)+(p.me?' (you)':'')+' · '+w+(p.pr.gi?' · in a game':''); ul.appendChild(li);
     if (p.me && p.known===false && !NR.solo) known=false;
     var g=p.pr.go; if (g && typeof g==='object' && num(g.id,0)>lobby.gid && g.roles && typeof g.roles==='object' && (!best || g.id>best.id)) best=g; });
   var pv=feastRoles(ps.filter(function(p){ return !p.pr.gi; }),lobby.fill); lobby.bots=pv.bots;
-  if (ps.length>FEAST_K+FEAST_S){ var full=document.createElement('li'); full.textContent=(ps.length-FEAST_K-FEAST_S)+' waiting: the game holds 7 players'; ul.appendChild(full); }
-  if (lobby.mode==='s'){ var bi; for (bi=0;bi<lobby.bots.k;bi++){ var lk=document.createElement('li'); lk.textContent='Bot · Killer'; ul.appendChild(lk); } for (bi=0;bi<lobby.bots.s;bi++){ var ls=document.createElement('li'); ls.textContent='Bot · Survivor'; ul.appendChild(ls); } }
-  $('lobInfo').textContent=(lobby.note?lobby.note+' ':'')+M.t+' · '+mapName(lobby.map||'lane')+' · '+ps.length+' in the lobby'+' · up to 2 killers and 5 survivors'+'. Friends can find this room under Find Room, or join with the code '+lobby.code.toUpperCase()+'.';
+  if (ps.length>FEAST_K+FEAST_S){ var full=document.createElement('li'); full.textContent=(ps.length-FEAST_K-FEAST_S)+' waiting: the game holds 4 players'; ul.appendChild(full); }
+  if (lobby.mode==='s'){ var bi; for (bi=0;bi<lobby.bots.k;bi++){ var lk=document.createElement('li'); lk.textContent='AI · The Killer'; ul.appendChild(lk); } for (bi=0;bi<lobby.bots.s;bi++){ var ls=document.createElement('li'); ls.textContent='Bot · Survivor'; ul.appendChild(ls); } }
+  $('lobInfo').textContent=(lobby.note?lobby.note+' ':'')+M.t+' · '+mapName(lobby.map||'lane')+' · '+ps.length+' in the lobby'+' · 4 survivors against an AI killer'+'. Friends can find this room under Find Room, or join with the code '+lobby.code.toUpperCase()+'.';
   $('lobStart').disabled=!known;
   lobby.adT-=0.3; if (lobby.adT<=0 && !NR.solo){ lobby.adT=1.5; dirOpen(); dirSend({rm:{c:lobby.code,m:lobby.mode,n:ps.length,h:nick(ps[0].pr),g:0}}); }
-  if (best && (Date.now()-best.id<NIGHT*1000+600000)){ if (best.roles[netMe]) netBegin(best); else { lobby.gid=best.id; lobby.note='That game was full (2 killers, 5 survivors). You are in line for the next one.'; } }
+  if (best && (Date.now()-best.id<NIGHT*1000+600000)){ if (best.roles[netMe]) netBegin(best); else { lobby.gid=best.id; lobby.note='That game was full (4 survivors). You are in line for the next one.'; } }
 }
 function findOpen(){ netName(); dirOpen(); findKey=''; show('netFind'); if (findTimer) clearInterval(findTimer); findTimer=setInterval(findTick,500); findTick(); }
 function findTick(){
@@ -3519,15 +3539,15 @@ function netBegin(go){
   var ids=Object.keys(go.roles).sort(), idx=Math.max(0,ids.indexOf(netMe)), sp;
   if (mode==='s'){ if (role==='k'){ sp=[60-idx*2,idx%2?3:-3]; P.yaw=Math.PI/2; } else { sp=[-60+(idx%3)*1.6,-1.5+((idx/3)|0)*2.6]; P.yaw=-Math.PI/2; } houses.forEach(function(h){ setPower(h,false); }); }
   else { var C=COOP[mode]; sp=C.spawn[role]; P.yaw=-Math.PI/2; C.gens.forEach(function(h){ setPower(houses[h],false); }); }
-  if (mode==='s'){ vanSeats(net); vanG.position.set(CAR0.x,0,CAR0.z); vanG.rotation.y=CAR0.yaw; vanG.updateMatrixWorld(true); vanG.visible=true; carG.visible=false;
-    if (role!=='k'){ var si=net.seats[netMe]||0, vp=vanSeatPos(si,false); sp=[vp.x,vp.z]; P.yaw=CAR0.yaw-Math.PI/2; P.pitch=-0.05; P.crouch=true; crouchUI(); } }
+  if (mode==='s'){ vanSeats(net);
+    if (role!=='k'){ var si=net.seats[netMe]||0, vp=vanSeatPos(si,false); sp=[vp.x,vp.z]; P.yaw=Math.PI/2; P.pitch=-0.05; P.crouch=true; P.y=0.27; P.gy=0.27; P.eye=1.0; crouchUI(); } }
   P.x=sp[0]; P.z=sp[1]; net.sx=sp[0]; net.sz=sp[1]; moonLight.shadow.needsUpdate=true;
   show(null); if (master) master.gain.value=0.9; if (game.role==='killer') setupKiller();
   netSend({ks:SAVE.kskin|0,gi:go.id,go:go,r:role,a:1,st:0,f:0,hp:null,o:null,k:null,ek:null,e:null,pv:null,el:0,p:[P.x,P.z,P.yaw,0]});
   var mn=mapName(curMap), shots = mode==='s' ? [
-    {cam:[134,3.6,7],to:[128,2.8,5.5],look:[146,1.2,-2.2],dur:4.5,text:role==='k'?'A crew of house cleaners is driving to '+mn+' tonight.':'You clean houses for a living. Tonight’s job is every house on '+mn+'.'},
-    {cam:[-30,2.2,9],to:[-36,2.0,8.4],look:[-33,1.6,14],dur:4.5,text:role==='k'?'They think it’s just another job: dishes, floors, trash, beds.':'The neighbours left the doors open for you. Wash the dishes, sweep, mop, take out the trash.'},
-    {cam:[-58,7,-12],to:[-62,5,-8],look:[-64,1,2.6],dur:4,text:role==='k'?'Make sure none of them finishes it.':'Finish the chores, get the car running, and get out before morning. You are not alone out here.'}] : COOP[mode].intro();
+    {cam:[110,1.25,-7],to:[114,1.35,-6],look:[128,0.9,-0.5],dur:4.5,text:'You clean houses for a living. Tonight’s job is every house on '+mn+'.'},
+    {cam:[24,1.6,5.2],to:[-4,1.6,5.2],look:[-18,1.7,15],dur:4.5,text:'The power is out on the whole street. Fix the generators, then wash the dishes, sweep, mop, take out the trash.'},
+    {cam:[-57.5,1.8,14.2],to:[-59.5,1.7,13.4],look:[-67,0.5,8.2],dur:4,text:'Everyone drives their own car. Park in the lot at the end of the lane. You are not alone out here.'}] : COOP[mode].intro();
   playCut(shots,netResume);
   if (mode!=='s') netStageWorld();
 }
@@ -3600,6 +3620,7 @@ function netTick(dt){
     var mate=(kind==='k')===(game.role==='killer') || N.mode!=='s';
     var av=avatarFor(o2.id,kind,sp,mate?nick(o2.pr):'',kind==='k'?Math.max(0,Math.min(KSKINS.length-1,num(o2.bot?o2.bot.ks:o2.pr.ks,0)|0)):0); av.g.visible=o2.a!==2 && o2.ih===N.ih && !o2.hid && !(kind==='k' && game.role!=='killer' && (o2.bot?o2.bot.iv>0:num(o2.pr.iv,0)>0));
     if (N.fin && N.fin.q.id===o2.id) av.g.visible=false;
+    if (kind==='k' && game.role!=='killer' && av.g.visible) ghostKiller(av,o2,dt);
     if (o2.a===0 && !av.pooled && av.g.visible){ av.pooled=true; bloodPool(o2.x,((o2.ih>=0||o2.y>0.3)?o2.y:groundY(o2.x,o2.z)),o2.z,1.5); bloodBurst(o2.x,(o2.y||0)+0.3,o2.z,0,0,40); }
     av.scared=kind==='p' && !(N.mode==='k'); var dz=kind==='k' && num(o2.pr.sn,0)>0; avatarStep(av,dt,o2.x,o2.z,o2.yaw+Math.PI,dz?0:o2.an,o2.a===0,(o2.ih>=0||o2.y>0.3)?o2.y:undefined);
     if (kind==='p' && N.mode==='s'){ var loud=game.role==='killer' && o2.a===1 && (N.sense>0 || (o2.bot?o2.bot.nz:num(o2.pr.nz,0)));
@@ -3610,7 +3631,7 @@ function netTick(dt){
   for (var aid in avatars) if (!seen[aid]) dropAvatar(aid);
   // my own motion
   var mvd=Math.hypot(P.x-N.lx,P.z-N.lz)/Math.max(dt,0.001); N.lx=P.x; N.lz=P.z; N.an=N.alive!==1?0:(mvd>5.4?2:(mvd>0.6?1:0));
-  swingTick(dt); N.scareCd=(N.scareCd||0)-dt; N.vanCd=(N.vanCd||0)-dt; N.iv=(N.iv||0)-dt; N.fright=(N.fright||0)-dt; N.reveal=(N.reveal||0)-dt; wrap.classList.toggle('vanished',game.role==='killer' && N.iv>0); N.cd-=dt; N.slow-=dt; N.boost-=dt; N.inv-=dt; N.stun-=dt; N.sense=(N.sense||0)-dt; N.senseCd=(N.senseCd||0)-dt;
+  swingTick(dt); N.scareCd=(N.scareCd||0)-dt; N.vanCd=(N.vanCd||0)-dt; N.iv=(N.iv||0)-dt; N.killRev=(N.killRev||0)-dt; N.fright=(N.fright||0)-dt; N.reveal=(N.reveal||0)-dt; wrap.classList.toggle('vanished',game.role==='killer' && N.iv>0); N.cd-=dt; N.slow-=dt; N.boost-=dt; N.inv-=dt; N.stun-=dt; N.sense=(N.sense||0)-dt; N.senseCd=(N.senseCd||0)-dt;
   var surv=pl.filter(function(q){ return !(q.role==='k'||q.role==='killer'); }), killers=pl.filter(function(q){ return q.role==='k'||q.role==='killer'; });
   if (N.mode==='s' && !N.blood && N.el>NIGHT*0.5){ N.blood=true; sting(0.4,true); thud(1.2); shake();
     toast(game.role==='killer'?'Blood Moon. You are faster now, and Elias is hunting with you.':'Blood Moon. The killers are faster, and Elias has come out to hunt.',5000); }
@@ -3631,12 +3652,12 @@ function netTick(dt){
   }
   // being hit
   var H=hitsK+hitsE;
-  if (H>N.hits){ N.hits=H; if (N.alive===1 && N.inv<=0 && game.role!=='killer'){ N.inv=2.5; netHurt(); if (N.mode==='s') jumpFace(); wireUI.close(false); if (N.hide){ netUnhide(); toast('He found you!',2000); } closeChat();
+  if (H>N.hits){ N.hits=H; if (N.alive===1 && N.inv<=0 && game.role!=='killer'){ N.inv=2.5; netHurt(); if (N.mode==='s') jumpFace(); N.killRev=1.4; wireUI.close(false); choreUI.close(false); if (N.hide){ netUnhide(); toast('He found you!',2000); } closeChat();
       if (N.mode==='s'){ N.hp--; if (N.hp<=0){ N.alive=0; vm.visible=false; setLight(false); toast('You are dead. You can watch the others.',4000); } else { N.boost=4; toast(N.hp===1?'You are badly hurt. One more hit and you are dead.':'You are hurt. Two more hits and you are dead.',3500); } }
       else { N.f=maxF=Math.max(maxF,N.f)+1; N.failMine=true; } } }
   if (N.mode==='s') netSurvival(dt,pl,surv,killers,me); else netCoop(dt,pl,maxSt,maxF,me,host);
   if (!net || net.over) return;
-  N.spd = (N.alive!==1 || N.stun>0 || N.fright>0 || vanPhase(N) || N.wiring) ? 0 : (game.role==='killer' && N.blood && N.slow<=0) ? 1.12 : (N.slow>0 ? 0.45 : (N.boost>0 ? 1.15 : (N.mode==='s' && N.hp<3 && game.role!=='killer' ? (N.hp<2?0.86:0.94) : 1)));
+  N.spd = (N.alive!==1 || N.stun>0 || N.fright>0 || vanPhase(N) || N.wiring || doorSeq) ? 0 : (game.role==='killer' && N.blood && N.slow<=0) ? 1.12 : (N.slow>0 ? 0.45 : (N.boost>0 ? 1.15 : (N.mode==='s' && N.hp<3 && game.role!=='killer' ? (N.hp<2?0.86:0.94) : 1)));
   // spectating
   if (N.alive!==1){ var cands=surv.filter(function(q){ return !q.me && q.alive && q.av; }); if (!cands.length) cands=pl.filter(function(q){ return !q.me && q.av; });
     if (cands.length){ var w=cands[N.spec%cands.length], a=w.av, bx=Math.sin(a.ry), bz=Math.cos(a.ry); camera.position.set(a.x-bx*3.2,2.4,a.z-bz*3.2); camera.lookAt(a.x,1.4,a.z); }
@@ -3647,7 +3668,7 @@ function netTick(dt){
     var patch={p:[Math.round(P.x*100)/100,Math.round(P.z*100)/100,Math.round(P.yaw*100)/100,N.an],a:N.alive,h:N.hp,cr:P.crouch?1:0,el:Math.round(N.el),st:N.st,f:N.f,hp:[N.hold[0],Math.round(N.hold[1]*10)/10]};
     if (N.mode==='s'){ if (game.role==='killer') patch.k=N.k; patch.o={g:N.o.g,b:N.o.b,c:Math.round(N.o.c*10)/10,gn:N.o.gn};
       patch.bd=N.bd; patch.nd=N.nd; patch.ih=N.ih; patch.fy=Math.round((P.y||0)*100)/100; patch.hid=N.hide?1:0; if (N.pc) patch.pc=N.pc; if (host){ patch.pol=N.polView||[0]; patch.jl=N.jl||[]; }
-      patch.nz=game.role==='killer'?0:(N.nz||0); if (N.drvCtrl && N.car && !N.rideDone){ var Cc=N.car; patch.cv=[Math.round(Cc.x*100)/100,Math.round(Cc.z*100)/100,Math.round(Cc.yaw*1000)/1000,Math.round(Cc.v*10)/10,Cc.arr?Math.round(Cc.arr*100)/100:0,Math.round((Cc.ax||0)*100)/100,Math.round((Cc.az||0)*100)/100,Math.round((Cc.ayaw||0)*1000)/1000]; } if (game.role==='killer'){ patch.sc=N.sc||0; patch.iv=N.iv>0?1:0; } if (host) patch.bsc=N.bsc||0; patch.bl=N.blood?1:0; patch.cs=N.cs; patch.cl=N.cl; patch.pw=N.pw; patch.tp=N.traps; patch.tt=N.tt; patch.kh=N.kh; if (N.kd) patch.kd=N.kd; if (game.role==='killer'){ patch.sn=N.stun>0?Math.ceil(N.stun):0; patch.hc=N.hc; }
+      patch.nz=game.role==='killer'?0:(N.nz||0); fleetPatch(patch,host); if (game.role==='killer'){ patch.sc=N.sc||0; patch.iv=N.iv>0?1:0; } if (host) patch.bsc=N.bsc||0; patch.bl=N.blood?1:0; patch.cs=N.cs; patch.cl=N.cl; patch.pw=N.pw; patch.tp=N.traps; patch.tt=N.tt; patch.kh=N.kh; if (N.kd) patch.kd=N.kd; if (game.role==='killer'){ patch.sn=N.stun>0?Math.ceil(N.stun):0; patch.hc=N.hc; }
       if (host && N.bots.length){ patch.bz=N.bots.map(function(b){ return [Math.round(b.x*100)/100,Math.round(b.z*100)/100,Math.round(b.ry*100)/100,b.an,b.a,b.hp,b.stun>0?Math.ceil(b.stun):0,b.hc||0,b.nz||0,b.ih==null?-1:b.ih,Math.round((b.y||0)*100)/100,b.hid?1:0,b.cr?1:0,b.iv>0?1:0]; }); patch.ek=N.ek; } }
     if (eliasOn && host){ patch.e=[Math.round(E.x*100)/100,Math.round(E.z*100)/100,Math.round(E.ry*100)/100,E.vis,E.mv]; patch.ek=N.ek; }
     if (N.prey) patch.pv=[Math.round(N.prey.x*100)/100,Math.round(N.prey.z*100)/100,Math.round(N.prey.ry*100)/100,N.prey.an,N.prey.who,N.prey.dead?1:0,N.st];
@@ -3676,8 +3697,8 @@ function bwp(e){ var ih=e.ih==null?-1:e.ih; return ih>=0?{x:houses[ih].x,z:house
 function bdist(a,b){ var ia=a.ih==null?-1:a.ih, ib2=b.ih==null?-1:b.ih; if (ia===ib2) return Math.hypot(a.x-b.x,a.z-b.z)+Math.abs((a.y||0)-(b.y||0))*(ia>=0?2:3); var A=bwp(a), B=bwp(b); return Math.hypot(A.x-B.x,A.z-B.z)+6; }
 function spotPos(s,ih){ return {x:(s.in?IX:0)+s.x,z:s.z,ih:s.in?ih:-1,y:s.in?s.f*FLOOR2:(s.y||0)}; }
 function botsHost(dt,pl,W){
-  if (vanPhase(net)){ net.bots.forEach(function(b){ b.an=0; if (b.role!=='s') return; var si=(net.seats&&net.seats[b.id])||0, vp=vanSeatPos(si,false); b.x=vp.x; b.z=vp.z; b.y=0.32; b.cr=1; b.ih=-1; b.ry=(net.car?net.car.yaw:Math.PI)+Math.PI/2; }); return; }
-  if (!net.vanBots){ net.vanBots=true; net.bots.forEach(function(b){ if (b.role!=='s') return; var ep=vanSeatPos((net.seats&&net.seats[b.id])||0,true); b.x=ep.x; b.z=ep.z; b.y=0; b.cr=0; }); }
+  if (!net.allParked){ net.bots.forEach(function(b){ b.an=0; if (b.role!=='s') return; fleetBot(b); }); return; }
+  if (!net.vanBots){ net.vanBots=true; net.bots.forEach(function(b){ if (b.role==='s' && !b.outCar) fleetBot(b); }); }
   var N=net, o=N.o, killers=pl.filter(function(q){ return q.role==='k'; }), targets=pl.filter(function(q){ return q.role==='s' && q.alive; });
   var hunters=killers.filter(function(q){ return !(q.jailUntil>N.el) && !(q.bot?q.bot.stun>0:num(q.pr.sn,0)>0); });
   function hurt(b,dx,dz){ if (b.a!==1 || b.inv>0) return; b.inv=2.5; b.hp--; b.hid=0; b.hide=null; b.scare=6; bloodBurst(b.x,(b.y||0)+1.2,b.z,dx,dz,45); if (b.hp<=0){ b.a=0; b.an=0; bloodPool(b.x,b.ih>=0?(b.y||0):groundY(b.x,b.z),b.z,0.9); toast(b.name+' is dead.',2600); } }
@@ -3784,7 +3805,7 @@ function botsHost(dt,pl,W){
           b.an=0; return; }
         else move({x:IX-1.0+0.9,z:1.9,ih:b.goal.h,y:0},wary?2.2:4.3); }
       if (!goal){ var opts=[];
-        if (W.done) opts.push({k:'esc',pt:CARSIDE,r:3.2,f:function(){ b.esc+=dt; if (b.esc>=3){ b.a=2; b.an=0; toast(b.name+' got out.',2600); } }});
+        if (W.done) opts.push({k:'esc',pt:carDoorPt(b.id),r:2.2,f:function(){ b.esc+=dt; if (b.esc>=3){ b.a=2; b.an=0; fleetLeave(b.id); toast(b.name+' drove away.',2600); } }});
         else { if (W.G===0) opts.push({k:'gas',pt:GAS,r:1.6,f:function(){ o.g=Math.max(o.g,1); }}); if (W.G===1) opts.push({k:'gas2',pt:CARSIDE,r:3.2,f:function(){ o.g=2; }});
           if (W.B===0) opts.push({k:'bat',pt:batPos(),r:1.6,f:function(){ o.b=Math.max(o.b,1); }}); if (W.B===1) opts.push({k:'bat2',pt:CARSIDE,r:3.2,f:function(){ o.b=2; }});
           if (W.G===2 && W.B===2 && !W.carOK) opts.push({k:'car',pt:CARSIDE,r:3.2,f:function(){ o.c=Math.min(CARNEED,o.c+dt); }});
@@ -3831,15 +3852,14 @@ function netSurvival(dt,pl,surv,killers,me){
   if (N.isHost && N.bots.length) botsHost(dt,pl,{G:G,B:B,C:C,gens:gens,carOK:carOK,done:done,cleaned:cleaned,ncl:ncl,powered:powered,npw:npw});
   itemsTick(dt,pl,killers); teamTick(pl);
   if (N.isHost) polTick(dt,pl,killers); polDraw(dt); jailTick(dt,pl); netHome(dt); netInteract(dt,pl);
-  if (N.mode==='s' && !N.vanOut && !vanPhase(N)){ N.vanOut=true;
-    if (game.role!=='killer'){ if (N.alive===1){ var ep=vanSeatPos((N.seats&&N.seats[netMe])||0,true); P.x=ep.x; P.z=ep.z; P.y=0; P.yaw=Math.PI; } P.crouch=false; crouchUI(); toast('Everybody out. Get the generators running and clean those houses.',3000); } else toast('They are out of the car. Hunt them.',3000); }
+  if (N.mode==='s' && !N.vanOut && !vanPhase(N)){ N.vanOut=true; if (game.role!=='killer' && N.alive===1) toast('Out of the car. Get the generators running and clean those houses.',3200); }
   var pv=N.polView||[0]; if (pv[0]===1){ var pl2='Police on the way · '+mmss(num(pv[1],0)-N.el); if (game.role==='killer') netSafe(pl2); else if (!N.working) netSafe(pl2); } else if (pv[0]===3 && game.role==='killer' && !N.jailed) netSafe('The police are after you');
   var W=N.world;
   if (W.G!==G){ if (W.G!==undefined && G===1) toast('Someone has the gas can. Get it to the car.',3000); if (W.G!==undefined && G===2) toast('The gas is in the tank.',3000); W.G=G; gasCan.visible=G===0; }
   if (W.B!==B){ if (W.B!==undefined && B===1) toast('Someone has the battery. Get it to the car.',3000); if (W.B!==undefined && B===2) toast('The battery is at the car.',3000); W.B=B; battery.visible=B===0; }
   if (W.fx!==fixed.length){ houses.forEach(function(hh,hi){ var on=!!powered[hi]; if (hh.power!==on){ setPower(hh,on); if (on && W.fx!==undefined){ var nb=NEIGHBOURS[hh.n].n; if (Math.hypot(P.x-hh.gen.x,P.z-hh.gen.z)<30) toast(nb+': “The lights are back! Thank you, come on in.”',3200); tone(60,0.8,'sawtooth',0.1,95); } } }); moonLight.shadow.needsUpdate=true; W.fx=fixed.length; }
   
-  if (done && !game.gateOpening){ openGate(); toast(game.role==='killer'?'The job is done. Stop them before they drive off.':'Every job is done. Get back in the car and go.',4500); }
+  if (done && !game.gateOpening){ openGate(); toast(game.role==='killer'?'The job is done. Stop them before they drive off.':'Every job is done. Get back to your car and go.',4500); }
   var left=NIGHT-N.el, hr=22+N.el/NIGHT*8, h12=((Math.floor(hr)+11)%12)+1, mn=Math.floor((hr%1)*60), clockT=h12+':'+('0'+mn).slice(-2)+(hr>=24||hr<12?' AM':' PM');
   var dawn=Math.max(0,Math.min(1,1-left/80)); FX.hemi=(scene.environment?0.36:0.42)+dawn*0.9; scene.fog.color.copy(lin(N.blood?0x2a0709:FOG)).lerp(lin(0x5a6680),dawn*0.8);
   var alive=surv.filter(function(q){ return q.alive; }).length, out=surv.filter(function(q){ return q.a===2; }).length, lab=null, tgt=null;
@@ -3854,39 +3874,39 @@ function netSurvival(dt,pl,surv,killers,me){
     netObj('Kill Feast · '+clockT,(isTouch?'Tap Swing':'Click or press V')+' to swing your knife. Hunt them down before morning. '+alive+' alive'+(out?', '+out+' escaped':'')+'. Chores '+Math.min(ncl,CLEAN_NEED)+'/'+CLEAN_NEED+', generators '+Math.min(npw,PW_NEED)+'/'+PW_NEED+'.', done?CARSIDE:null);
     netSafe(vanPhase(N)?'They are driving in…':N.stun>0?(N.stunWhy==='hits'?'Stunned':'Stuck in a trap')+' · '+mmss(N.stun):(N.iv>0?'Unseen · '+Math.ceil(N.iv)+'s':(N.slow>0?'Got one':null)));
   } else if (N.alive===1){
-    var o=N.o, car=nearP(CARSIDE,3.4);
+    var o=N.o, myDoor=carDoorPt(netMe), car=nearP(myDoor,2.4);
     if (G===0 && nearP(GAS,1.7)){ o.g=1; game.grab=0.5; tone(660,0.15,'triangle',0.15); }
     if (G===1 && car) o.g=2;
     if (B===0 && nearP(batPos(),1.7)){ o.b=1; game.grab=0.5; tone(660,0.15,'triangle',0.15); }
     if (B===1 && car) o.b=2;
     var work=false;
-    if (done && car){ N.esc+=dt; work=true; lab='Getting in the car · '+mmss(3-N.esc); if (N.esc>=3){ N.alive=2; vm.visible=false; toast('You are out. Watching the others.',3500); } } else N.esc=0;
+    if (done && car){ N.esc+=dt; work=true; lab='Getting in your car · '+mmss(3-N.esc); if (N.esc>=3){ N.alive=2; vm.visible=false; fleetLeave(netMe); toast('You start the engine and pull out of the lot. Watching the others.',3500); } } else N.esc=0;
     if (!done && G===2 && B===2 && !carOK && car){ o.c=Math.min(CARNEED,o.c+dt); work=true; lab='Fixing the car · '+Math.round(Math.min(1,C/CARNEED)*100)+'%'; }
-    var choring=false;
-    if (!work && N.ih>=0 && !N.hide){ var chs=choresOf(N.ih); for (var ci2=0;ci2<chs.length;ci2++){ var ct=chs[ci2], CT=CHORE_T[ct], cid=choreId(N.ih,ct); if (cleaned[cid]) continue;
-        if (Math.abs((P.y||0)-CT.f*FLOOR2)<0.5 && Math.hypot(P.x-IX-CT.x,P.z-CT.z)<1.25){ choring=true; if (N.chKey!==cid){ N.chKey=cid; N.chT=0; } N.chT+=dt; work=true; lab=CT.v+' · '+Math.round(Math.min(1,N.chT/30)*100)+'%';
-          if (N.chT>=30){ if (N.cl.indexOf(cid)<0) N.cl.push(cid); N.chKey=null; N.chT=0; toast('Done: '+CT.n.toLowerCase()+'. '+Math.min(CLEAN_NEED,ncl+1)+' of '+CLEAN_NEED+' chores finished.',2800); tone(660,0.15,'triangle',0.15); tone(990,0.25,'triangle',0.12,null,0.1); } break; } } }
-    if (!choring && N.chKey!==null){ if (N.chT>2) toast('You stopped. That chore starts over.',1800); N.chKey=null; N.chT=0; }
+    N.choreHere=null;
+    if (N.ih>=0 && !N.hide){ var chs=choresOf(N.ih); for (var ci2=0;ci2<chs.length;ci2++){ var ct=chs[ci2], CT=CHORE_T[ct], cid=choreId(N.ih,ct); if (cleaned[cid]) continue;
+        if (Math.abs((P.y||0)-CT.f*FLOOR2)<0.5 && Math.hypot(P.x-IX-CT.x,P.z-CT.z)<1.25){ N.choreHere={hi:N.ih,t:ct,cid:cid}; break; } } }
+    if (N.wiring){ work=true; lab=N.wiring==='chore'?'Cleaning':'Fixing the generator'; }
     N.nz=(work || P.sprinting || (N.hp===1 && !P.crouch) || N.reveal>0)?1:0;
     if (N.hp===1){ N.drip=(N.drip||0)-dt; if (N.drip<=0){ N.drip=2.2; bloodPool(P.x,P.gy,P.z,0.35); } }
     N.working=work; if (work){ N.tk=(N.tk||0)+dt; if (N.tk>0.8){ N.tk=0; tone(300+Math.random()*80,0.05,'square',0.07); } }
     var txt;
     var chorePt=null; if (ncl<CLEAN_NEED){ var cb=1e9; houses.forEach(function(hh,hi){ if (!(powered[hi] || hh.netBroke) || hh.netDead) return; if (choresOf(hi).every(function(t){ return cleaned[choreId(hi,t)]; })) return; var dp=doorPt(hh), dd=Math.hypot(P.x-dp.x,P.z-dp.z); if (dd<cb){ cb=dd; chorePt=dp; } }); }
     var genP=null, gb=1e9; houses.forEach(function(h2,hi2){ if (powered[hi2]) return; var dd=Math.hypot(P.x-h2.gen.x,P.z-h2.gen.z); if (dd<gb){ gb=dd; genP=genPt(hi2); } });
-    if (done){ txt='Every job is done. Get back in the car and go.'; tgt=CARSIDE; }
-    else if (N.ih>=0 && ncl<CLEAN_NEED && choresOf(N.ih).some(function(t){ return !cleaned[choreId(N.ih,t)]; })){ txt='Do the chores in this house (the glowing spots). Leave one and it starts over.'; tgt=null; }
+    if (done){ txt='Every job is done. Get back in your car in the lot and go.'; tgt=myDoor; }
+    else if (N.ih>=0 && ncl<CLEAN_NEED && choresOf(N.ih).some(function(t){ return !cleaned[choreId(N.ih,t)]; })){ txt='Clean this house: go to a glowing spot and solve its chore puzzle.'; tgt=null; }
     else if (chorePt && (npw>=PW_NEED || !genP || cb<gb)){ txt='Go clean a house that has its lights on.'; tgt=chorePt; }
     else if (npw<PW_NEED || (ncl<CLEAN_NEED && !chorePt)){ txt='Fix a generator behind a dark house: match the coloured wires. Then the neighbour lets you in.'; tgt=genP; }
     else { txt='Finish the chores.'; tgt=chorePt; }
+    if (vanPhase(N) && myCar()){ txt='Drive to the parking lot at the far end of the lane. Pull into your glowing spot.'; tgt={x:myCar().stall.x,z:STALL_Z}; }
     var pvw=N.polView||[0]; if (pvw[0]===1) txt+=' Police in '+mmss(num(pvw[1],0)-N.el)+'.'; if (N.ih>=0) txt='You are inside. '+txt;
     netObj('Kill Feast · '+clockT,txt+' Chores '+Math.min(ncl,CLEAN_NEED)+'/'+CLEAN_NEED+' · generators '+Math.min(npw,PW_NEED)+'/'+PW_NEED+' · '+alive+' alive.',tgt);
-    netSafe(vanPhase(N)?(N.el<VAN_T0?'Get ready':(N.drvId===netMe?(N.car&&N.car.arr?'Pulling over':'Driving · '+(isTouch?'push the stick':'W go · A/D steer')):(N.car&&N.car.arr?'Pulling over':'Riding in'))):lab);
+    var mc=myCar(); netSafe(vanPhase(N)&&mc?(mc.st===0?'Get ready':mc.st===1?(mc.auto?'Autopilot':'Driving · '+(isTouch?'push the stick':'W go · S brake · A/D steer')):mc.st===2?'Parking':'Getting out'):lab);
   } else { netObj('Kill Feast · '+clockT,(N.alive===2?'You escaped. ':'You are dead. ')+alive+' still alive.',null); netSafe(null); }
   if (N.el>6){
     if (left<=0 || (surv.length && alive===0)){
       var lived=surv.filter(function(q){ return q.alive || q.a===2; }).length;
       if (game.role==='killer') netOver(lived?'Morning':'Nobody left',lived?lived+' of them saw the sun come up.':'Hollow Lane is quiet again.',!lived);
-      else if (N.alive===2) netOver('You got out','The car made it through the gate.',true);
+      else if (N.alive===2) netOver('You got out','You drove off before the sun came up.',true);
       else if (N.alive===1) netOver('Morning','You lived to see 6:00 AM on Hollow Lane.',true);
       else netOver('He found you',lived?'But '+lived+' of the others made it.':'Nobody made it to morning.',false);
     }
@@ -4097,6 +4117,7 @@ function netAct(){
   if (N.mode!=='s' || N.fin) return; var n=N.near; if (!n) return;
   if (n.k==='unhide') return netUnhide();
   if (n.k==='wire'){ if (!wireUI.isOpen()) wireUI.open(n.hi); return; }
+  if (n.k==='chore'){ if (!choreUI.isOpen()) choreUI.open(n.c.hi,n.c.t); return; }
   if (n.k==='door'){ if (game.role==='killer' && !n.h.netBroke) return startDoorBreak(n.h); if (game.role!=='killer' && !n.h.power && !n.h.netBroke){ thud(0.4); say(n.h.n,['The power’s out and I can’t see a thing! Fix the generator out back and I’ll let you in.','Who’s there? Get my generator running first, it’s round the back.','I’m not opening up in the dark. Fix the wires on the generator.'][(Math.random()*3)|0],3200); return; } return netEnterHouse(n.h); }
   if (n.k==='chat'){ if (N.chat) closeChat(); else openChat(n.h); return; }
   if (n.k==='killnb') return killNeighbour(n.h);
@@ -4158,8 +4179,9 @@ function teamTick(pl){
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=55;
+var GAME_VER=56;
 var UPDATES=[
+  {v:56,t:'Own cars, an invisible killer, chore puzzles',n:['Everyone drives their own car now. Drive down the lane to the new parking lot at the end and pull into your glowing spot: the car parks itself, the door swings open and you climb out. Bots drive their own cars too.','The cars are rebuilt: steering front wheels, a turning steering wheel, a headlight beam, body roll and a working driver door. No more floating up before you are in your seat.','At the end of the night, walk back to your car to leave and you drive off.','The killer is always the AI now, and you cannot see it. Up close there is a faint shimmer and you can hear it breathing. You only see it clearly when it strikes or gets stunned. Up to 4 survivors.','Chores are puzzles: scrub the plates, the floor or the tub clean, sweep the dust into the pan, put the books back tallest to shortest, sort the trash from the recycling, and match the pillowcases.','Front doors animate: you reach for the knob, the door creaks open, you step through and it shuts behind you.','The jump scare is now a 3D face that lunges right into the lens.','Removed: the Go upstairs and Go downstairs buttons (just walk the stairs), the spoken voices, and the killer skins and kill animations in the shop.']},
   {v:55,t:'New stairs, simpler job',n:['The stairs in every house are rebuilt: 14 even steps with clear edges, a proper handrail and a light over the stairwell, so they look right from the top and the bottom.','The car runs fine now. No more gas can, battery or repairs.','The job is just two things: get 5 generators running and finish 6 chores. Then get back in the car and go.','Only Hollow Lane is left. Camp Pinewood, Blackwater Farm and Frostbite Ridge are gone, and so is the map picker.','On phones the action button (Open, Up, Down, Fix…) now sits beside the others instead of over the tape timer.']},
   {v:54,t:'Power to the people',n:['Every house starts with the power out, and the neighbours won’t open the door in the dark.','Go round the back to their generator and press E: match each coloured wire to the socket of the same colour. Drag it, or tap the wire then the socket.','Get it wrong and it sparks. Get them all and the lights come on, and the neighbour lets you in to do the chores.','You can’t move while your hands are in the wires, and getting hit knocks you out of it. Survivor bots fix generators too.']},
   {v:53,t:'Cleaning crew',n:['The story: you clean houses for a living, and tonight’s job is every house in town.','You ride in by car: 5 seats, and the first survivor drives. W to go, A and D to steer. When you reach the houses the engine dies and the car rolls to a stop.','New job: clean the neighbours’ houses. Each house has two chores: washing the dishes, sweeping, mopping, dusting, taking out the trash, making the bed or scrubbing the tub. Stand at the glowing spot for 30 seconds. If you step away, it starts over. You need 6 chores done to leave.','Jump scares are much nastier now: a strobe of horrible faces, a scream that rings in your ears, and the tape tearing apart. You also get one when a killer hits you.','Stairs are easier: stand at the bottom or the top and press Go upstairs or Go downstairs.']},
@@ -4281,72 +4303,166 @@ function mapName(id){ for (var i=0;i<MAPS.length;i++) if (MAPS[i].id===id) retur
   };
 })();
 
-/* ---------- the ride in: five seats, one of you drives ---------- */
-// The intro plays first. Then the first survivor drives everyone into town; once the car reaches the houses it dies and rolls to where it will be fixed.
-var VAN_T0=13, PARK={x:-64,z:2.6,yaw:Math.PI}, CAR0={x:146,z:-2,yaw:Math.PI};
-var CAR_SEATS=[[0.12,-0.42],[0.12,0.42],[-0.95,-0.5],[-0.95,0],[-0.95,0.5]], CAR_OUT=[[-65,4.7],[-63,4.7],[-64,5.6],[-65.3,0.5],[-62.7,0.5]];
-var vanG=(function(){
-  var g=new THREE.Group(), M=new MB(), paint=mat(0x4a1418,{roughness:.3,metalness:.5}), dk=mat(0x0e0f12,{roughness:.6}), seat=mat(0x2a2220,{roughness:.9}), dash=mat(0x1a1a1c,{roughness:.7}),
-      inner=mat(0x3a302a,{roughness:1,side:THREE.DoubleSide}), glass=new THREE.MeshStandardMaterial({color:lin(0x8aa0b0),transparent:true,opacity:.18,roughness:.05,depthWrite:false});
-  // body panels thin enough to have an inside
-  M.box(4.4,0.08,1.76,dk,0,0.3,0); M.box(1.1,0.55,1.76,paint,1.65,0.62,0); M.box(0.7,0.6,1.76,paint,-1.85,0.62,0);
-  M.box(2.6,0.62,0.06,paint,-0.2,0.66,0.88); M.box(2.6,0.62,0.06,paint,-0.2,0.66,-0.88); M.box(2.4,0.62,0.04,inner,-0.2,0.66,0.84); M.box(2.4,0.62,0.04,inner,-0.2,0.66,-0.84);
-  M.box(2.3,0.06,1.7,paint,-0.3,1.6,0); M.box(2.2,0.02,1.62,inner,-0.3,1.56,0);
-  [[0.85,0.88],[0.85,-0.88],[-1.45,0.88],[-1.45,-0.88],[-0.3,0.88],[-0.3,-0.88]].forEach(function(p){ M.box(0.08,0.66,0.06,paint,p[0],1.28,p[1]); });
-  M.box(0.06,0.6,1.7,glass,0.95,1.28,0); M.box(0.06,0.6,1.7,glass,-1.5,1.28,0); M.box(2.3,0.6,0.03,glass,-0.3,1.28,0.88); M.box(2.3,0.6,0.03,glass,-0.3,1.28,-0.88);
-  // seats, dash, wheel
-  [[0.12,-0.42],[0.12,0.42]].forEach(function(s){ M.box(0.5,0.12,0.5,seat,s[0],0.5,s[1]); M.box(0.12,0.6,0.5,seat,s[0]-0.28,0.85,s[1]); });
-  M.box(0.55,0.12,1.5,seat,-0.95,0.5,0); M.box(0.12,0.6,1.5,seat,-1.24,0.85,0);
-  M.box(0.35,0.3,1.7,dash,0.85,0.95,0);
-  M.box(0.05,0.18,0.3,glow(0xfff2c8),2.2,0.72,0.6); M.box(0.05,0.18,0.3,glow(0xfff2c8),2.2,0.72,-0.6); M.box(0.05,0.14,0.3,glow(0xff2020),-2.2,0.78,0.6); M.box(0.05,0.14,0.3,glow(0xff2020),-2.2,0.78,-0.6);
-  M.flush(g);
-  var wheel=new THREE.Mesh(new THREE.TorusGeometry(0.17,0.022,5,12),dk); wheel.position.set(0.55,1.0,-0.42); wheel.rotation.y=Math.PI/2; wheel.rotation.x=0.4; g.add(wheel);
-  var wheels=[]; [[-1.4,.9],[1.4,.9],[-1.4,-.9],[1.4,-.9]].forEach(function(w){ var t=new THREE.Mesh(new THREE.CylinderGeometry(0.34,0.34,0.24,10),dk); t.rotation.x=Math.PI/2; t.position.set(w[0],0.34,w[1]); g.add(t); wheels.push(t); });
-  halo(0xfff0c0,4,2.6,0.75,0,g,.45);
-  g.visible=false; g.traverse(function(o){ if (o.isMesh && !o.material.transparent){ o.castShadow=true; o.receiveShadow=true; } }); scene.add(g);
-  g.userData={wheels:wheels,wheel:wheel}; return g;
+/* ---------- everyone drives their own car in and parks in the lot at the end of the lane ---------- */
+// Players' cars line up in the right-hand lane, bots' cars in the left. You drive; when you reach your
+// glowing spot the car parks itself, the door opens and you climb out. At the end you come back to it to leave.
+var VAN_T0=13, STALLS=[-72.2,-68.6,-65.0,-61.4], STALL_Z=9.0, STALL_YAW=-Math.PI/2, CAR_COLS=[0x7a1c1c,0x1e3460,0x2a4a2a,0x8a6a1e];
+var CAR_SEAT=[0.02,-0.4], CAR_EXIT=[0.1,-1.6], CAR_DOOR=[0.0,-1.5];
+var FLEET={cars:{},ids:[],lamp:null,mark:null,beacon:null,cols:[]};
+(function(){
+  // the lot: dark asphalt, painted bays, curb stops, a lamp and a sign
+  var g=new THREE.Group(); world.add(g); var M=new MB(), asph=mat(0x1c1d20,{roughness:.95}), paintW=mat(0xd8d4c4,{roughness:.8}), conc=mat(0x8a8780,{roughness:.9}), pole=mat(0x2a2c30,{roughness:.6,metalness:.5});
+  var a=new THREE.Mesh(new THREE.PlaneGeometry(15.4,8.4),asph); a.rotation.x=-Math.PI/2; a.position.set(-67,0.016,8.8); a.receiveShadow=true; a.userData.noSnap=1; g.add(a);
+  [-74.0,-70.4,-66.8,-63.2,-59.6].forEach(function(x){ M.box(0.1,0.01,4.8,paintW,x,0.025,9.0); });
+  M.box(14.4,0.01,0.1,paintW,-66.8,0.025,6.6);
+  STALLS.forEach(function(x){ M.box(1.5,0.12,0.22,conc,x,0.06,11.75); });
+  M.box(0.16,4.6,0.16,pole,-74.4,2.3,12.6); M.box(1.1,0.1,0.22,pole,-73.9,4.55,12.6); M.box(0.5,0.06,0.3,glow(0xffe2b0),-73.5,4.48,12.6);
+  M.flush(g); halo(0xffc070,3.2,-73.5,4.4,12.6,g,.75); lamps.push({x:-73.5,z:12.6,sx:-73.5,sz:12.6}); addBox(-74.4,12.6,0.12,0.12);
+  var sm=new THREE.MeshBasicMaterial({map:canvasTex(256,96,function(c){ c.fillStyle='#1d3a7a'; c.fillRect(0,0,256,96); c.strokeStyle='#e8e4d8'; c.lineWidth=6; c.strokeRect(5,5,246,86); c.fillStyle='#e8e4d8'; c.font='bold 40px monospace'; c.fillText('P',22,64); c.font='bold 22px monospace'; c.fillText('RESIDENTS',70,44); c.fillText('& GUESTS',74,74); })});
+  box(0.08,2.2,0.08,pole,-59.4,1.1,12.6,g); var sg=new THREE.Mesh(new THREE.PlaneGeometry(1.4,0.52),sm); sg.position.set(-59.4,2.3,12.55); sg.rotation.y=Math.PI; g.add(sg); addBox(-59.4,12.6,0.08,0.08);
+  // your spot glows until you are parked in it
+  FLEET.mark=new THREE.Mesh(new THREE.PlaneGeometry(2.6,4.6),new THREE.MeshBasicMaterial({color:lin(0xffd040),transparent:true,opacity:.35,depthWrite:false,blending:THREE.AdditiveBlending})); FLEET.mark.rotation.x=-Math.PI/2; FLEET.mark.position.y=0.035; FLEET.mark.visible=false; scene.add(FLEET.mark);
+  FLEET.beacon=halo(0xffd040,1.6,0,3,0,scene,.9); FLEET.beacon.visible=false;
+  // one headlight beam, for whichever car is yours
+  var L=new THREE.SpotLight(0xfff0d0,0,34,0.48,0.55,1.2); L.castShadow=false; scene.add(L); scene.add(L.target); FLEET.lamp=L;
 })();
-function vanPhase(N){ return !!(N && N.mode==='s' && !N.rideDone); }
-function carPose(){ var C=net && net.car; return C||CAR0; }
-function vanSeatPos(i,out){ i=Math.max(0,Math.min(4,i|0)); if (out){ var o=CAR_OUT[i]; return {x:o[0],z:o[1]}; } var C=carPose(), s=CAR_SEATS[i], c=Math.cos(C.yaw), sn=Math.sin(C.yaw);
-  return {x:C.x+s[0]*c+s[1]*sn, z:C.z-s[0]*sn+s[1]*c}; }
-function angDiff(a,b){ var d=a-b; return Math.atan2(Math.sin(d),Math.cos(d)); }
-function vanTick(dt){
-  var N=net, on=!!(N && N.mode==='s'); if (!on){ vanG.visible=false; return; } var C=N.car; if (!C) return;
-  var el=(performance.now()-N.t0)/1000, ud=vanG.userData;
-  if (N.rideDone){ vanG.visible=false; carG.visible=true; return; } vanG.visible=true; carG.visible=false;
-  var ctrl=N.drvCtrl=(N.drvId===netMe && game.role!=='killer' && N.alive===1) || (N.drvBot && N.isHost), v0=C.v;
-  if (!C.arr){
-    if (el<VAN_T0){ C.v=0; }
-    else if (ctrl){
-      var thr=0, st=0;
-      if (N.drvId===netMe){ thr=((keys.KeyW||keys.ArrowUp)?1:0)-((keys.KeyS||keys.ArrowDown)?1:0)-touchMove.y; st=((keys.KeyA||keys.ArrowLeft)?1:0)-((keys.KeyD||keys.ArrowRight)?1:0)-touchMove.x; }
-      else { var dy=Math.atan2(-((-2)-C.z),-12); st=Math.max(-1,Math.min(1,angDiff(dy,C.yaw)*2.5)); thr=C.v<13?1:0; }
-      thr=Math.max(-1,Math.min(1,thr)); st=Math.max(-1,Math.min(1,st));
-      C.v+=thr*(thr*C.v<0?16:(thr>0?7:5))*dt; if (!thr) C.v*=1-Math.min(1,0.7*dt); C.v=Math.max(-5,Math.min(16,C.v));
-      C.yaw+=st*C.v*0.1*dt;
-      var p={x:C.x+Math.cos(C.yaw)*C.v*dt, z:C.z-Math.sin(C.yaw)*C.v*dt}; resolve(p,1.05); var want=Math.abs(C.v*dt), got=Math.hypot(p.x-C.x,p.z-C.z); if (want>0.01 && got<want*0.6){ C.v*=0.5; if (Math.abs(v0)>6){ thud(0.8); shake(); } }
-      C.x=Math.max(-150,Math.min(147,p.x)); C.z=Math.max(-38,Math.min(38,p.z));
-      if (C.x<-44 || el>VAN_T0+50){ C.arr=el; C.ax=C.x; C.az=C.z; C.ayaw=C.yaw; }
-    }
-    if (!ctrl && el>VAN_T0+62){ C.arr=el; C.ax=C.x; C.az=C.z; C.ayaw=C.yaw; }   // nobody is driving: the car gets there anyway
-  }
-  if (C.arr){ var k=Math.max(0,Math.min(1,(el-C.arr)/3)); k=k*k*(3-2*k); C.x=C.ax+(PARK.x-C.ax)*k; C.z=C.az+(PARK.z-C.az)*k; C.yaw=C.ayaw+angDiff(PARK.yaw,C.ayaw)*k; C.v=(1-k)*6;
-    if (!N.carDied){ N.carDied=true; tone(70,0.8,'sawtooth',0.1,30); noise(0.5,0.3,400); setTimeout(function(){ tone(55,0.5,'square',0.06,30); },500); toast(N.drvId===netMe?'The engine dies. You coast to a stop.':'The engine coughs and dies. The car rolls to a stop.',2800); }
-    if (el>=C.arr+3.6){ N.rideDone=true; moveCar(PARK.x,PARK.z); carG.rotation.y=PARK.yaw; vanG.visible=false; carG.visible=true; } }
-  vanG.position.set(C.x,(Math.abs(C.v)>1?Math.sin(el*17)*0.01:0),C.z); vanG.rotation.y=C.yaw; vanG.updateMatrixWorld(true);
-  ud.wheels.forEach(function(w){ w.rotation.y-=C.v*dt/0.34; }); ud.wheel.rotation.z=0;
-  if (Math.abs(C.v)>0.5 && !C.arr){ N.vanEng=(N.vanEng||0)-dt; if (N.vanEng<=0){ N.vanEng=0.14; var near=Math.hypot(P.x-C.x,P.z-C.z); if (near<40) tone(55+Math.abs(C.v)*4,0.16,'sawtooth',0.04*(1-near/40),45+Math.abs(C.v)*3.5); } }
+function makeCar(col){
+  var g=new THREE.Group(), b=new THREE.Group(); g.add(b); var M=new MB();
+  var paint=mat(col,{roughness:.32,metalness:.45}), chrome=mat(0xc8ccd0,{roughness:.2,metalness:.9}), dk=mat(0x0e0f12,{roughness:.7}), seatM=mat(0x3a2a22,{roughness:.95}), plate=mat(0xe8e4d0,{roughness:.6}),
+      glass=new THREE.MeshStandardMaterial({color:lin(0x8aa0b0),transparent:true,opacity:.22,roughness:.05,metalness:.2,depthWrite:false,side:THREE.DoubleSide}), dash=mat(0x16161a,{roughness:.8}), head=glow(0xfff2c8), tail=glow(0xff1a10);
+  M.box(4.2,0.18,1.62,dk,0,0.34,0);                         // underbody
+  M.box(4.36,0.42,1.76,paint,0,0.62,0);                     // body
+  M.box(1.25,0.1,1.72,paint,1.52,0.86,0); M.box(0.9,0.12,1.72,paint,-1.72,0.88,0);   // hood, trunk
+  M.box(4.38,0.035,1.78,chrome,0,0.7,0);                    // trim line
+  M.box(1.9,0.07,1.52,paint,-0.3,1.5,0);                    // roof
+  [-1,1].forEach(function(s){ M.box(0.08,0.62,0.06,paint,-0.22,1.17,s*0.75); M.box(0.12,0.1,0.18,paint,0.66,1.0,s*0.95); });   // B pillars, mirrors
+  M.box(0.06,0.26,1.0,dk,2.19,0.66,0); for (var i=0;i<4;i++) M.box(0.065,0.025,0.96,chrome,2.2,0.57+i*0.06,0);   // grille
+  M.box(0.14,0.16,1.82,chrome,2.24,0.46,0); M.box(0.14,0.16,1.82,chrome,-2.24,0.46,0);                              // bumpers
+  M.box(0.05,0.14,0.36,tail,-2.2,0.76,0.6); M.box(0.05,0.14,0.36,tail,-2.2,0.76,-0.6); M.box(0.03,0.14,0.42,plate,-2.25,0.6,0);
+  M.box(0.42,0.16,1.5,dash,0.66,0.9,0); M.box(0.02,0.03,0.16,glow(0x5adf7a),0.44,0.95,CAR_SEAT[1]);                // dash and its glow
+  [-1,1].forEach(function(s){ M.box(0.5,0.12,0.52,seatM,0.0,0.92,s*0.4); M.box(0.12,0.6,0.5,seatM,-0.28,1.18,s*0.4); M.box(0.08,0.16,0.3,seatM,-0.3,1.42,s*0.4); });
+  M.box(0.5,0.12,1.42,seatM,-0.95,0.92,0); M.box(0.12,0.55,1.42,seatM,-1.2,1.16,0);
+  M.flush(b);
+  function slab(w,h,d,m,x,y,z,rz){ var o=box(w,h,d,m,x,y,z,b); o.rotation.z=rz; return o; }
+  slab(0.04,0.76,1.48,glass,0.81,1.18,0,0.535); slab(0.04,0.7,1.48,glass,-1.11,1.2,0,-0.49);                       // windscreen, back glass
+  [-1,1].forEach(function(s){ slab(0.07,0.76,0.06,paint,0.81,1.18,s*0.74,0.535); slab(0.07,0.7,0.06,paint,-1.11,1.2,s*0.74,-0.49);
+    box(1.0,0.48,0.02,glass,-0.75,1.18,s*0.78,b); if (s>0) box(0.85,0.48,0.02,glass,0.15,1.18,0.78,b); });
+  // round headlights with a warm halo, and a soft beam on the road
+  [-0.62,0.62].forEach(function(z){ var c=new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.11,0.05,10),head); c.rotation.z=Math.PI/2; c.position.set(2.2,0.7,z); b.add(c);
+    var r=new THREE.Mesh(new THREE.TorusGeometry(0.12,0.02,5,10),chrome); r.rotation.y=Math.PI/2; r.position.set(2.22,0.7,z); b.add(r); halo(0xfff0c0,0.9,2.32,0.7,z,b,.7); });
+  var beam=halo(0xfff0c0,5.5,5.2,0.35,0,b,.18); halo(0xff2a10,0.5,-2.3,0.76,0.6,b,.6); halo(0xff2a10,0.5,-2.3,0.76,-0.6,b,.6);
+  // wheels: front ones steer, all of them roll
+  var wheels=[], fronts=[]; [[1.38,1],[1.38,-1],[-1.38,1],[-1.38,-1]].forEach(function(w){ var piv=new THREE.Group(); piv.position.set(w[0],0.34,w[1]*0.84); g.add(piv); var spin=new THREE.Group(); piv.add(spin);
+    var t=new THREE.Mesh(new THREE.CylinderGeometry(0.34,0.34,0.24,12),dk); t.rotation.x=Math.PI/2; spin.add(t); var hc=new THREE.Mesh(new THREE.CylinderGeometry(0.19,0.19,0.25,8),chrome); hc.rotation.x=Math.PI/2; spin.add(hc);
+    var sp=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.05,0.26),dk); spin.add(sp); wheels.push(spin); if (w[0]>0) fronts.push(piv); });
+  // the driver's door swings on its front edge
+  var door=new THREE.Group(); door.position.set(0.55,0,-0.885); b.add(door); box(1.12,0.4,0.06,paint,-0.56,0.63,0,door); box(1.12,0.035,0.065,chrome,-0.56,0.7,0,door); box(1.0,0.46,0.02,glass,-0.56,1.1,0,door); box(0.06,0.5,0.04,paint,-1.08,1.1,0,door); box(0.14,0.03,0.04,chrome,-0.9,0.78,-0.04,door);
+  // steering wheel
+  var swp=new THREE.Group(); swp.position.set(0.5,0.93,CAR_SEAT[1]); swp.rotation.z=0.6; b.add(swp); var sw=new THREE.Group(); swp.add(sw); var rim=new THREE.Mesh(new THREE.TorusGeometry(0.15,0.018,5,14),dk); rim.rotation.y=Math.PI/2; sw.add(rim); box(0.02,0.26,0.025,dk,0,0,0,sw); box(0.02,0.025,0.26,dk,0,0,0,sw);
+  g.traverse(function(o){ if (o.isMesh && !o.material.transparent && !o.material.isMeshBasicMaterial){ o.castShadow=true; o.receiveShadow=true; } });
+  g.visible=false; scene.add(g);
+  return {g:g,b:b,wheels:wheels,fronts:fronts,door:door,sw:sw,beam:beam,doorA:0};
 }
-// everyone else follows whoever is driving
-function vanRead(pl,hostId){ var N=net; if (!N || N.mode!=='s' || N.rideDone || !N.car || N.drvCtrl) return; var src=N.drvBot?hostId:N.drvId, cv=null;
-  pl.forEach(function(q){ if (q.id===src && !q.me) cv=q.pr.cv; }); if (!Array.isArray(cv) || cv.length<8) return; var C=N.car;
-  if (!C.arr){ var tx=num(cv[0],C.x), tz=num(cv[1],C.z); if (Math.hypot(tx-C.x,tz-C.z)>8){ C.x=tx; C.z=tz; } else { C.x+=(tx-C.x)*0.35; C.z+=(tz-C.z)*0.35; } C.yaw+=angDiff(num(cv[2],C.yaw),C.yaw)*0.35; C.v=num(cv[3],0);
-    if (num(cv[4],0)>0){ C.arr=num(cv[4],0); C.ax=num(cv[5],C.x); C.az=num(cv[6],C.z); C.ayaw=num(cv[7],C.yaw); } } }
-function vanReset(){ vanG.visible=false; carG.visible=true; carG.rotation.y=0; }
-// who sits where: real survivors first (the first one drives), then the bots
-function vanSeats(N){ var ids=Object.keys(N.roles||{}).filter(function(id){ return N.roles[id]!=='k' && N.roles[id]!=='killer'; }).sort(); N.bots.forEach(function(b){ if (b.role==='s') ids.push(b.id); }); N.seats={}; ids.forEach(function(id,i){ N.seats[id]=i; });
-  N.drvId=ids[0]||null; N.drvBot=!!(N.drvId && /^bots/.test(N.drvId)); N.car={x:CAR0.x,z:CAR0.z,yaw:CAR0.yaw,v:0,arr:0}; N.rideDone=false; N.carDied=false; }
+function angDiff(a,b){ var d=a-b; return Math.atan2(Math.sin(d),Math.cos(d)); }
+function carLocal(C,lx,lz){ var c=Math.cos(C.yaw), s=Math.sin(C.yaw); return {x:C.x+lx*c+lz*s, z:C.z-lx*s+lz*c}; }
+function myCar(){ return net && FLEET.cars[netMe]; }
+function vanPhase(N){ return !!(N && N.mode==='s' && game.role!=='killer' && !N.outCar && N.alive===1); }
+function fleetSeats(N){
+  var ids=Object.keys(N.roles||{}).filter(function(id){ return N.roles[id]!=='k' && N.roles[id]!=='killer'; }).sort(), bots=[];
+  N.bots.forEach(function(b){ if (b.role==='s') bots.push(b.id); }); N.seats={}; ids.concat(bots).slice(0,4).forEach(function(id,i){ N.seats[id]=i; });
+  fleetReset(); FLEET.ids=ids.concat(bots).slice(0,4);
+  FLEET.ids.forEach(function(id,i){ var bot=bots.indexOf(id)>=0, lz=bot?2.1:-2.1, C={id:id,seat:i,bot:bot,x:120+i*8,z:lz,yaw:Math.PI,v:0,steer:0,st:0,t:0,lz:lz,stall:{x:STALLS[i],z:STALL_Z},m:makeCar(CAR_COLS[i%4]),col:null,wp:null,wi:0};
+    C.m.g.visible=true; FLEET.cars[id]=C; poseCar(C,0); });
+  N.outCar=false; N.allParked=false; carG.visible=false; carCol.minX=carCol.maxX=9999; carCol.minZ=carCol.maxZ=9999;
+}
+function vanSeats(N){ fleetSeats(N); }
+function fleetReset(){ for (var id in FLEET.cars){ var C=FLEET.cars[id]; scene.remove(C.m.g); if (C.col){ var k=colliders.indexOf(C.col); if (k>=0) colliders.splice(k,1); } } FLEET.cars={}; FLEET.ids=[]; if (FLEET.mark){ FLEET.mark.visible=false; FLEET.beacon.visible=false; FLEET.lamp.intensity=0; } }
+function vanReset(){ fleetReset(); if (carG){ carG.visible=true; carG.rotation.y=0; moveCar(-64,2.6); } }
+function vanSeatPos(i,out){ var id=FLEET.ids[i], C=id&&FLEET.cars[id]; if (!C) return {x:-64,z:4.6}; return out?carLocal(C,CAR_EXIT[0],CAR_EXIT[1]):carLocal(C,CAR_SEAT[0],CAR_SEAT[1]); }
+function carDoorPt(id){ var C=FLEET.cars[id]; if (!C) return CARSIDE; return carLocal(C,CAR_DOOR[0],CAR_DOOR[1]); }
+// the route a car follows by itself: down the lane, then a left turn into its bay
+function arriveRoute(C){ var sx=C.stall.x, w=[{x:-40,z:C.lz},{x:sx+13,z:C.lz},{x:sx+5.5,z:C.lz*0.5+0.6},{x:sx+1.4,z:2.8},{x:sx,z:5.6}];
+  return w.filter(function(p,i){ return i>=3 || p.x<C.x-2; }); }
+function leaveRoute(C){ return [{x:C.stall.x-4,z:1.4},{x:-80,z:0.3},{x:-100,z:0},{x:-152,z:0}]; }
+function drive(C,dt,thr,st){ var v0=C.v; C.steer+=(st-C.steer)*Math.min(1,dt*6);
+  C.v+=thr*(thr*C.v<0?16:(thr>0?7.5:5))*dt; if (!thr) C.v*=1-Math.min(1,0.8*dt); C.v=Math.max(-5,Math.min(16,C.v));
+  C.yaw+=C.steer*C.v*0.2*dt; return v0; }
+function aiDrive(C,dt){ var w=C.wp[C.wi]; if (!w) return true; var dx=w.x-C.x, dz=w.z-C.z, d=Math.hypot(dx,dz), want=Math.atan2(-dz,dx);
+  var st=Math.max(-1,Math.min(1,angDiff(want,C.yaw)*2.2)), last=C.wi===C.wp.length-1, tv=last?Math.min(12,2.5+d*0.6):(Math.abs(angDiff(want,C.yaw))>0.5?5:12);
+  var thr=C.v<tv-0.5?1:(C.v>tv+0.5?-0.6:0); drive(C,dt,thr,st); C.x+=Math.cos(C.yaw)*C.v*dt; C.z-=Math.sin(C.yaw)*C.v*dt;
+  if (d<(last?1.8:2.6)) C.wi++; return C.wi>=C.wp.length; }
+function startPark(C,el){ C.st=2; C.t=el; C.p0={x:C.x,z:C.z,yaw:C.yaw,v:C.v}; }
+function parkedCol(C,on){ if (on && !C.col){ C.col={minX:C.stall.x-0.92,maxX:C.stall.x+0.92,minZ:C.stall.z-2.25,maxZ:C.stall.z+2.25}; colliders.push(C.col); }
+  if (!on && C.col){ var k=colliders.indexOf(C.col); if (k>=0) colliders.splice(k,1); C.col=null; } }
+function fleetLeave(id){ var C=FLEET.cars[id]; if (!C || C.st>=5) return; C.st=5; C.t=net?net.el:0; }
+// one car, driven here (yours, or a bot's on the host)
+function simCar(C,dt,el,mine){
+  if (C.st===0){ C.v=0; if (el>=VAN_T0 && (!mine || game.mode==='play')){ C.st=1; C.wp=null; } return; }
+  if (C.st===1){
+    if (mine && !C.auto && el>VAN_T0+52){ C.auto=true; toast('Autopilot: the car takes you to your spot.',2400); }
+    if (mine && !C.auto){
+      var thr=0, st=0; if (game.mode==='play' && !game.paused){ thr=((keys.KeyW||keys.ArrowUp)?1:0)-((keys.KeyS||keys.ArrowDown)?1:0)-touchMove.y; st=((keys.KeyA||keys.ArrowLeft)?1:0)-((keys.KeyD||keys.ArrowRight)?1:0)-touchMove.x; }
+      thr=Math.max(-1,Math.min(1,thr)); st=Math.max(-1,Math.min(1,st)); var v0=drive(C,dt,thr,st);
+      var p={x:C.x+Math.cos(C.yaw)*C.v*dt, z:C.z-Math.sin(C.yaw)*C.v*dt}; resolve(p,1.05); var want=Math.abs(C.v*dt), got=Math.hypot(p.x-C.x,p.z-C.z);
+      if (want>0.01 && got<want*0.6){ C.v*=0.4; if (Math.abs(v0)>5){ thud(0.8); shake(); } }
+      C.x=Math.max(-150,Math.min(147,p.x)); C.z=Math.max(-38,Math.min(38,p.z));
+      if (Math.hypot(C.x-C.stall.x,C.z-5.6)<4.6 || Math.hypot(C.x-C.stall.x,C.z-C.stall.z)<4) startPark(C,el); }
+    else { if (!C.wp){ C.wp=arriveRoute(C); C.wi=0; } if (aiDrive(C,dt) || (C.wi>=2 && Math.hypot(C.x-C.stall.x,C.z-5.6)<3.2)) startPark(C,el); }
+    return; }
+  if (C.st===2){ var k=ease((el-C.t)/2.2), P0=C.p0; C.x=P0.x+(C.stall.x-P0.x)*k; C.z=P0.z+(C.stall.z-P0.z)*k; C.yaw=P0.yaw+angDiff(STALL_YAW,P0.yaw)*k; C.v=Math.max(0,P0.v*(1-k)*0.6+(k<1?1.2:0)); C.steer*=0.9;
+    if (k>=1){ C.st=3; C.t=el; C.v=0; parkedCol(C,true); if (mine || Math.hypot(P.x-C.x,P.z-C.z)<25){ tone(70,0.5,'sawtooth',0.06,35); noise(0.3,0.12,300); } } return; }
+  if (C.st===3){ if (el-C.t>2.2){ C.st=4; C.t=el; } return; }
+  if (C.st===5){ if (el-C.t>1.8){ C.st=6; C.t=el; parkedCol(C,false); C.rv=true; } return; }
+  if (C.st===6){
+    if (C.rv){ var k2=ease((el-C.t)/2.4); if (!C.r0) C.r0={x:C.x,z:C.z,yaw:C.yaw}; C.x=C.r0.x+0.8*k2; C.z=C.r0.z+(3.2-C.r0.z)*k2; C.yaw=C.r0.yaw+angDiff(Math.PI,C.r0.yaw)*k2; C.v=-2*(1-k2); if (k2>=1){ C.rv=false; C.wp=leaveRoute(C); C.wi=0; } return; }
+    if (aiDrive(C,dt) || C.x<-148){ C.st=7; } return; }
+}
+function poseCar(C,dt){ var m=C.m, g=m.g; g.visible=C.st!==7; if (!g.visible) return;
+  g.position.set(C.x,0,C.z); g.rotation.y=C.yaw;
+  var acc=dt>0?(C.v-(C.pv||0))/dt:0; C.pv=C.v; C.pitch=(C.pitch||0)+((Math.max(-1,Math.min(1,acc/8))*0.03)-(C.pitch||0))*Math.min(1,dt*5);
+  var roll=Math.max(-0.05,Math.min(0.05,-C.steer*C.v*0.006)), idle=(C.st>=1 && C.st<=2)||C.st===6?Math.sin(performance.now()*0.05+C.seat)*0.004:0;
+  m.b.rotation.z=C.pitch; m.b.rotation.x=roll; m.b.position.y=idle+(Math.abs(C.v)>1?Math.sin(performance.now()*0.017+C.seat)*0.008:0);
+  m.wheels.forEach(function(w){ w.rotation.z-=C.v*dt/0.34; }); m.fronts.forEach(function(f){ f.rotation.y=C.steer*0.5; }); m.sw.rotation.x=-C.steer*1.6;
+  var open=(C.st===3 && (net.el-C.t)>0.35 && (net.el-C.t)<1.9) || C.st===5; m.doorA+=((open?-1.1:0)-m.doorA)*Math.min(1,dt*(open?5:7)); m.door.rotation.y=m.doorA;
+  if (!open && Math.abs(m.doorA)<0.05 && C.dOpen){ C.dOpen=false; if (Math.hypot(P.x-C.x,P.z-C.z)<20) { thud(0.5); noise(0.07,0.15,1100); } } if (open && !C.dOpen){ C.dOpen=true; if (Math.hypot(P.x-C.x,P.z-C.z)<20){ tone(900,0.04,'square',0.04); noise(0.12,0.06,1800); } }
+  var lit=C.st>=1 && C.st<=3 || C.st>=5; m.beam.visible=lit; }
+function fleetTick(dt){
+  var N=net; if (!N || N.mode!=='s'){ return; } var el=N.el, all=true;
+  FLEET.ids.forEach(function(id){ var C=FLEET.cars[id]; if (!C) return; var mine=id===netMe && game.role!=='killer', sim=mine || (C.bot && N.isHost);
+    if (mine && N.alive!==1 && C.st<5 && C.st>=4) {}
+    if (sim) simCar(C,dt,el,mine);
+    else if (C.net){ var T=C.net, k=Math.min(1,dt*8); if (C.st!==T.st && T.st===3) C.t=el; if (T.st===5 && C.st!==5) C.t=el; C.st=T.st; C.x+=(T.x-C.x)*k; C.z+=(T.z-C.z)*k; C.yaw+=angDiff(T.yaw,C.yaw)*k; C.v=T.v; C.steer+=(T.steer-C.steer)*k; parkedCol(C,C.st>=3 && C.st<=5); }
+    poseCar(C,dt); if (C.st<4 && C.st!==7) all=false; });
+  N.allParked=all || el>VAN_T0+80;
+  // you, in the driver's seat, then climbing out
+  var C=myCar(); if (C && game.role!=='killer' && N.alive===1 && !N.outCar){
+    var s=carLocal(C,CAR_SEAT[0],CAR_SEAT[1]), cy=C.yaw;
+    if (C.st<3 || (C.st===3 && el-C.t<0.6)){ P.x=s.x; P.z=s.z; P.y=0.27; P.gy=0.27; if (N.lastCy!=null) P.yaw+=angDiff(cy,N.lastCy); N.lastCy=cy; if (!P.crouch){ P.crouch=true; crouchUI(); } vm.visible=false; }
+    else { var e=carLocal(C,CAR_EXIT[0],CAR_EXIT[1]), k=ease((el-C.t-0.6)/1.1); P.x=s.x+(e.x-s.x)*k; P.z=s.z+(e.z-s.z)*k; P.y=0.27*(1-k); P.gy=P.y; if (k>0.5 && P.crouch){ P.crouch=false; crouchUI(); }
+      if (C.st>=4 || k>=1){ N.outCar=true; P.y=0; vm.visible=true; N.lastCy=null; } } }
+  // your bay glows and a light hangs over it until you are parked
+  var show=C && C.st<3 && game.role!=='killer' && N.alive===1; FLEET.mark.visible=FLEET.beacon.visible=!!show;
+  if (show){ var pu=0.25+Math.sin(performance.now()*0.006)*0.12; FLEET.mark.position.set(C.stall.x,0.035,C.stall.z); FLEET.mark.material.opacity=pu; FLEET.beacon.position.set(C.stall.x,2.6+Math.sin(performance.now()*0.004)*0.25,C.stall.z); }
+  // headlight beam and engine for your car
+  if (C && C.st!==7 && C.st!==4 && !(C.st===3 && el-C.t>1) && game.role!=='killer'){ var hp=carLocal(C,2.3,0), ht=carLocal(C,16,0); FLEET.lamp.position.set(hp.x,0.9,hp.z); FLEET.lamp.target.position.set(ht.x,0,ht.z); FLEET.lamp.intensity=2.4; }
+  else FLEET.lamp.intensity=0;
+  if (C && Math.abs(C.v)>0.3 && C.st>=1 && C.st<=2){ N.vanEng=(N.vanEng||0)-dt; if (N.vanEng<=0){ N.vanEng=0.13; tone(52+Math.abs(C.v)*4.2,0.15,'sawtooth',0.035,44+Math.abs(C.v)*3.6); } }
+}
+function vanTick(dt){ fleetTick(dt); }
+// bots ride in their own cars on the host's game
+function fleetBot(b){ var C=FLEET.cars[b.id]; if (!C){ return false; }
+  if (C.st<3 || (C.st===3 && net.el-C.t<1.0)){ var s=carLocal(C,CAR_SEAT[0],CAR_SEAT[1]); b.x=s.x; b.z=s.z; b.y=0.32; b.cr=1; b.ih=-1; b.ry=C.yaw+Math.PI/2; b.an=0; return true; }
+  if (!b.outCar){ b.outCar=true; var e=carLocal(C,CAR_EXIT[0],CAR_EXIT[1]); b.x=e.x; b.z=e.z; b.y=0; b.cr=0; } return false; }
+// what everyone sends about cars
+function fleetPatch(patch,host){ var C=myCar(); if (C && game.role!=='killer' && C.st!==7) patch.cv=[Math.round(C.x*100)/100,Math.round(C.z*100)/100,Math.round(C.yaw*1000)/1000,Math.round(C.v*10)/10,Math.round(C.steer*100)/100,C.st];
+  else if (C && C.st===7) patch.cv=[0,0,0,0,0,7];
+  if (host) patch.bcv=FLEET.ids.map(function(id){ var B=FLEET.cars[id]; return B && B.bot ? [Math.round(B.x*100)/100,Math.round(B.z*100)/100,Math.round(B.yaw*1000)/1000,Math.round(B.v*10)/10,Math.round(B.steer*100)/100,B.st] : 0; }); }
+function fleetRead(pl,hostId){ var N=net; if (!N || N.mode!=='s') return;
+  function put(C,a){ if (!C || !Array.isArray(a) || a.length<6) return; C.net={x:num(a[0],C.x),z:num(a[1],C.z),yaw:num(a[2],C.yaw),v:num(a[3],0),steer:num(a[4],0),st:Math.max(0,Math.min(7,num(a[5],0)|0))}; }
+  pl.forEach(function(q){ if (q.me) return; put(FLEET.cars[q.id],q.pr.cv);
+    if (q.id===hostId && !N.isHost && Array.isArray(q.pr.bcv)) q.pr.bcv.forEach(function(a,i){ var id=FLEET.ids[i], C=id&&FLEET.cars[id]; if (C && C.bot) put(C,a); }); }); }
+function vanRead(pl,hostId){ fleetRead(pl,hostId); }
+function fleetNearLamp(px,pz){ var C=myCar(); if (!C || C.st===7) return null; return Math.hypot(px-C.x,pz-C.z)<2.6?C:null; }
 
 /* ---------- the job: cleaning the neighbours' houses ---------- */
 // Each house has two chores. Stand at one for 30 seconds to finish it; step away and it starts over.
@@ -4416,6 +4532,105 @@ var wireUI=(function(){
   return {open:open,close:close,tick:tick,isOpen:function(){ return !!st; },_st:function(){ return st; }};
 })();
 
+/* ---------- chores are little puzzles: scrub, sweep, sort, shelve, match ---------- */
+var choreUI=(function(){
+  var cv=$('choreCv'), g=cv.getContext('2d'), W=cv.width, H=cv.height, st=null, R=Math.random;
+  function rr(a,b){ return a+R()*(b-a); }
+  function shuffle(a){ for (var i=a.length-1;i>0;i--){ var j=(R()*(i+1))|0, t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+  // ---- scrub: rub the grime away (dishes, mop, tub)
+  function scrubInit(kind){ var S={kind:kind,stage:0,stages:kind==='dish'?3:1}; scrubStage(S); return S; }
+  function scrubStage(S){ var cells=[], cs=12, cx=W/2, cy=H/2+6;
+    for (var y=0;y<H;y+=cs) for (var x=0;x<W;x+=cs){ var px=x+cs/2, py=y+cs/2, inside;
+      if (S.kind==='dish') inside=Math.hypot(px-cx,py-cy)<92; else if (S.kind==='tub') inside=Math.abs(px-cx)<160 && Math.abs(py-cy)<70; else inside=py>40;
+      if (!inside) continue; cells.push({x:x,y:y,d:0}); }
+    // blotches of dirt, not an even coat
+    var bl=[]; for (var i=0;i<(S.kind==='mop'?7:6);i++){ if (S.kind==='dish'){ var a=R()*7, r=R()*62; bl.push([cx+Math.cos(a)*r,cy+Math.sin(a)*r,rr(20,36)]); } else if (S.kind==='tub') bl.push([rr(cx-140,cx+140),rr(cy-55,cy+55),rr(22,40)]); else bl.push([rr(40,W-40),rr(70,H-30),rr(22,44)]); }
+    S.cells=cells.filter(function(c){ return bl.some(function(b){ return Math.hypot(c.x+6-b[0],c.y+6-b[1])<b[2]; }); }); S.cells.forEach(function(c){ c.d=rr(0.7,1); c.a=R(); }); S.total=S.cells.length; }
+  function scrubDraw(S){ var cx=W/2, cy=H/2+6;
+    if (S.kind==='dish'){ g.fillStyle='#2a4a5a'; g.fillRect(0,0,W,H); g.fillStyle='rgba(255,255,255,.08)'; for (var i=0;i<14;i++){ g.beginPath(); g.arc((i*53)%W,(i*37)%H,6+i%4*3,0,7); g.fill(); }
+      g.fillStyle='#e8e4d8'; g.beginPath(); g.arc(cx,cy,96,0,7); g.fill(); g.strokeStyle='#9aa0a8'; g.lineWidth=3; g.beginPath(); g.arc(cx,cy,70,0,7); g.stroke(); g.strokeStyle='#4a6ab0'; g.lineWidth=4; g.beginPath(); g.arc(cx,cy,90,0,7); g.stroke(); }
+    else if (S.kind==='tub'){ g.fillStyle='#c8d0d4'; g.fillRect(0,0,W,H); g.fillStyle='#f4f4f0'; g.fillRect(cx-170,cy-80,340,160); g.fillStyle='#dfe6ea'; g.fillRect(cx-150,cy-62,300,124); g.fillStyle='#9aa0a8'; g.beginPath(); g.arc(cx+120,cy,7,0,7); g.fill(); }
+    else { for (var y=40;y<H;y+=32) for (var x=0;x<W;x+=32){ g.fillStyle=((x+y)/32)%2?'#d9d4c6':'#55585c'; g.fillRect(x,y,32,32); } g.fillStyle='#262a33'; g.fillRect(0,0,W,40); }
+    S.cells.forEach(function(c){ if (c.d<=0) return; g.fillStyle=S.kind==='tub'?'rgba(120,96,40,'+(c.d*0.85)+')':(S.kind==='mop'?'rgba(70,44,20,'+(c.d*0.9)+')':'rgba(110,82,30,'+(c.d*0.9)+')'); g.fillRect(c.x,c.y,12,12);
+      if (c.a>0.7){ g.fillStyle='rgba(40,30,10,'+c.d*0.6+')'; g.fillRect(c.x+3,c.y+4,4,3); } });
+    if (S.foam) S.foam.forEach(function(f){ g.fillStyle='rgba(255,255,255,'+f[2]+')'; g.beginPath(); g.arc(f[0],f[1],4+f[2]*4,0,7); g.fill(); });
+    var left=S.cells.filter(function(c){ return c.d>0.15; }).length;
+    return (S.kind==='dish'?'Plate '+(S.stage+1)+' of '+S.stages+' · ':'')+'Scrub: rub the dirt away · '+Math.min(100,Math.round((1-left/Math.max(1,S.total))/0.92*100))+'%'; }
+  function scrubRub(S,p){ var hit=false; S.cells.forEach(function(c){ if (c.d>0 && Math.hypot(c.x+6-p[0],c.y+6-p[1])<24){ c.d-=0.22; hit=true; } }); S.foam=S.foam||[];
+    if (hit){ S.foam.push([p[0]+rr(-10,10),p[1]+rr(-10,10),1]); if (S.foam.length>40) S.foam.shift(); if (R()<0.25) noise(0.06,0.05,S.kind==='dish'?3000:1600); }
+    var left=S.cells.filter(function(c){ return c.d>0.15; }).length; if (left<=S.total*0.08){ if (S.stage+1<S.stages){ S.stage++; tone(700,0.1,'triangle',0.1); scrubStage(S); S.foam=[]; } else return true; } return false; }
+  // ---- sweep: drag each dust pile into the dustpan
+  function sweepInit(){ var piles=[]; for (var i=0;i<8;i++) piles.push({x:rr(40,W-160),y:rr(40,H-40),in:false}); return {piles:piles,pan:{x:W-110,y:H-90,w:96,h:70},drag:-1}; }
+  function sweepDraw(S){ g.fillStyle='#6a4a32'; g.fillRect(0,0,W,H); g.fillStyle='rgba(0,0,0,.15)'; for (var y=0;y<H;y+=20) g.fillRect(0,y,W,2);
+    var P2=S.pan; g.fillStyle='#b0302a'; g.fillRect(P2.x,P2.y,P2.w,P2.h); g.fillStyle='#7a1a16'; g.fillRect(P2.x+8,P2.y+8,P2.w-16,P2.h-16); g.fillStyle='#ddd'; g.font='14px monospace'; g.fillText('PAN',P2.x+32,P2.y+42);
+    S.piles.forEach(function(p,i){ if (p.in) return; g.fillStyle='#8a8070'; g.beginPath(); g.ellipse(p.x,p.y,18,11,0,0,7); g.fill(); g.fillStyle='#5a5246'; for (var k=0;k<5;k++) g.fillRect(p.x-12+k*5,p.y-3+(k%2)*4,3,3); if (S.drag===i){ g.strokeStyle='#fff'; g.lineWidth=2; g.beginPath(); g.ellipse(p.x,p.y,22,14,0,0,7); g.stroke(); } });
+    return 'Sweep: drag every pile of dust into the pan · '+S.piles.filter(function(p){ return p.in; }).length+'/'+S.piles.length; }
+  // ---- shelve: swap books until they go tallest to shortest
+  function shelfInit(){ var hs=[150,138,126,114,102,90,78], cols=['#7a2f26','#2f5d50','#3d4f7a','#b59a52','#6a3a6a','#3a6a8a','#8a6a2a']; var b=hs.map(function(h,i){ return {h:h,c:cols[i]}; }); do { shuffle(b); } while (b.every(function(x,i){ return x.h===hs[i]; })); return {b:b,sel:-1}; }
+  function shelfDraw(S){ g.fillStyle='#3a2616'; g.fillRect(0,0,W,H); g.fillStyle='#5a3e28'; g.fillRect(20,200,W-40,16); g.fillRect(20,20,W-40,10);
+    S.b.forEach(function(b,i){ var x=40+i*44, y=200-b.h; g.fillStyle=b.c; g.fillRect(x,y,36,b.h); g.fillStyle='rgba(255,255,255,.25)'; g.fillRect(x+4,y+10,28,4); g.fillRect(x+4,y+b.h-18,28,4); if (S.sel===i){ g.strokeStyle='#fff'; g.lineWidth=3; g.strokeRect(x-2,y-2,40,b.h+4); } });
+    return 'Shelve the books: tap two to swap them, tallest on the left'; }
+  function shelfTap(S,p){ var i=Math.floor((p[0]-40)/44); if (i<0 || i>=S.b.length || p[0]-40-i*44>36) return false; if (S.sel<0){ S.sel=i; tone(400,0.04,'square',0.05); return false; }
+    if (S.sel!==i){ var t=S.b[S.sel]; S.b[S.sel]=S.b[i]; S.b[i]=t; noise(0.08,0.1,900); } S.sel=-1; return S.b.every(function(b,k){ return k===0 || S.b[k-1].h>b.h; }); }
+  // ---- trash: drag each thing into the right bin
+  var JUNK=[['Bottle','r','#4a9a6a'],['Can','r','#c0c4c8'],['Newspaper','r','#d8d4c4'],['Box','r','#b08850'],['Banana peel','t','#e0c030'],['Apple core','t','#c03020'],['Old pizza','t','#c87a3a'],['Tissues','t','#e8e8f0']];
+  function trashInit(){ return {items:shuffle(JUNK.slice()),i:0,x:W/2,y:70,drag:false,bad:0}; }
+  function trashDraw(S){ g.fillStyle='#2a2e36'; g.fillRect(0,0,W,H);
+    [['TRASH',30,'#3a3a3a'],['RECYCLE',W-150,'#2a5aa0']].forEach(function(b){ g.fillStyle=b[2]; g.fillRect(b[1],H-110,120,100); g.fillStyle='#111'; g.fillRect(b[1]-6,H-116,132,12); g.fillStyle='#eee'; g.font='15px monospace'; g.fillText(b[0],b[1]+(b[0]==='TRASH'?34:22),H-50); });
+    var it=S.items[S.i]; if (it){ g.fillStyle=it[2]; g.fillRect(S.x-22,S.y-16,44,32); g.fillStyle='#fff'; g.font='14px monospace'; g.fillText(it[0],S.x-it[0].length*4,S.y-24); }
+    if (S.bad>0){ g.fillStyle='rgba(200,0,0,'+S.bad+')'; g.fillRect(0,0,W,H); }
+    return 'Take out the trash: drag it to TRASH or RECYCLE · '+S.i+'/'+S.items.length; }
+  function trashDrop(S){ var it=S.items[S.i]; if (!it || S.y<H-130) { S.x=W/2; S.y=70; return false; } var bin=S.x<W/2?'t':'r';
+    if (bin===it[1]){ S.i++; thud(0.3); } else { S.bad=0.5; noise(0.15,0.3,300); tone(120,0.2,'square',0.08,60); } S.x=W/2; S.y=70; return S.i>=S.items.length; }
+  // ---- bed: match the pillowcase pairs
+  function bedInit(){ var c=[0,0,1,1,2,2,3,3,4,4,5,5]; shuffle(c); return {c:c,up:[],done:{},wait:0}; }
+  var PAT=['#c04040','#40a060','#4060c0','#d0a030','#a050b0','#40b0b0'];
+  function bedDraw(S){ g.fillStyle='#3a4a6a'; g.fillRect(0,0,W,H);
+    S.c.forEach(function(p,i){ var x=22+(i%6)*58, y=40+Math.floor(i/6)*96, show=S.done[i] || S.up.indexOf(i)>=0;
+      g.fillStyle=show?'#eeeae0':'#d8d2c4'; g.fillRect(x,y,50,80); if (show){ g.fillStyle=PAT[p]; for (var k=0;k<4;k++) g.fillRect(x+8+(k%2)*20,y+10+Math.floor(k/2)*32,14,22); } else { g.fillStyle='#b8b2a4'; g.fillRect(x+20,y+34,10,10); }
+      if (S.done[i]){ g.fillStyle='rgba(0,0,0,.35)'; g.fillRect(x,y,50,80); } });
+    return 'Make the bed: find the matching pillowcases · '+(Object.keys(S.done).length/2)+'/6'; }
+  function bedTap(S,p){ if (S.wait>0) return false; var col=Math.floor((p[0]-22)/58), row=Math.floor((p[1]-40)/96); if (col<0||col>5||row<0||row>1) return false; var i=row*6+col; if (S.done[i] || S.up.indexOf(i)>=0) return false;
+    S.up.push(i); tone(500,0.04,'triangle',0.06); if (S.up.length===2){ var a=S.up[0], b=S.up[1]; if (S.c[a]===S.c[b]){ S.done[a]=S.done[b]=1; S.up=[]; tone(800,0.1,'triangle',0.1); } else S.wait=0.8; }
+    return Object.keys(S.done).length===12; }
+  var KIND=['dish','sweep','mop','shelf','trash','bed','tub'];
+  function draw(){ if (!st) return; var S=st.s, info; g.clearRect(0,0,W,H);
+    if (st.k==='dish'||st.k==='mop'||st.k==='tub') info=scrubDraw(S); else if (st.k==='sweep') info=sweepDraw(S); else if (st.k==='shelf') info=shelfDraw(S); else if (st.k==='trash') info=trashDraw(S); else info=bedDraw(S);
+    if (st.fin){ g.fillStyle='rgba(0,0,0,.55)'; g.fillRect(0,0,W,H); g.fillStyle='#9fff9f'; g.font='26px monospace'; g.fillText('DONE',W/2-30,H/2+8); info='All clean.'; }
+    $('choreInfo').textContent=info; }
+  function at(e){ var r=cv.getBoundingClientRect(), t=e.touches?e.touches[0]||e.changedTouches[0]:e; return [(t.clientX-r.left)*W/r.width,(t.clientY-r.top)*H/r.height]; }
+  var down=false;
+  function win(){ if (st.fin) return; st.fin=true; tone(660,0.15,'triangle',0.15); tone(990,0.25,'triangle',0.12,null,0.1); draw(); setTimeout(finish,700); }
+  function onDown(e){ if (!st || st.fin) return; e.preventDefault(); down=true; var p=at(e), S=st.s;
+    if (st.k==='sweep'){ S.drag=-1; S.piles.forEach(function(q,i){ if (!q.in && Math.hypot(q.x-p[0],q.y-p[1])<26) S.drag=i; }); }
+    else if (st.k==='trash'){ S.drag=Math.hypot(S.x-p[0],S.y-p[1])<40; }
+    else if (st.k==='shelf'){ if (shelfTap(S,p)) win(); }
+    else if (st.k==='bed'){ if (bedTap(S,p)) win(); }
+    else if (scrubRub(S,p)) win();
+    draw(); }
+  function onMove(e){ if (!st || st.fin || !down) return; var p=at(e), S=st.s; e.preventDefault();
+    if (st.k==='sweep' && S.drag>=0){ var q=S.piles[S.drag]; q.x=p[0]; q.y=p[1]; if (R()<0.1) noise(0.05,0.03,1200); }
+    else if (st.k==='trash' && S.drag){ S.x=p[0]; S.y=p[1]; }
+    else if (st.k==='dish'||st.k==='mop'||st.k==='tub'){ if (scrubRub(S,p)) win(); }
+    draw(); }
+  function onUp(e){ if (!st || !down) return; down=false; var S=st.s;
+    if (st.k==='sweep' && S.drag>=0){ var q=S.piles[S.drag], P2=S.pan; if (q.x>P2.x-10 && q.x<P2.x+P2.w+10 && q.y>P2.y-10 && q.y<P2.y+P2.h+10){ q.in=true; noise(0.1,0.12,700); } S.drag=-1; if (S.piles.every(function(q){ return q.in; })) win(); }
+    else if (st.k==='trash' && S.drag){ S.drag=false; if (trashDrop(S)) win(); }
+    draw(); }
+  cv.addEventListener('mousedown',onDown); window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onUp);
+  cv.addEventListener('touchstart',onDown,{passive:false}); cv.addEventListener('touchmove',onMove,{passive:false}); cv.addEventListener('touchend',onUp);
+  $('choreClose').addEventListener('click',function(){ close(false); });
+  function tick(dt){ if (!st) return; var S=st.s; if (st.k==='bed' && S.wait>0){ S.wait-=dt; if (S.wait<=0){ S.up=[]; draw(); } } if (st.k==='trash' && S.bad>0){ S.bad=Math.max(0,S.bad-dt*2); draw(); }
+    var N=net; if (!N || game.mode!=='play' || N.alive!==1 || N.ih!==st.hi || Math.hypot(P.x-IX-CHORE_T[st.t].x,P.z-CHORE_T[st.t].z)>1.8 || (N.cleaned||{})[st.cid]) close(false); }
+  function finish(){ var N=net, s0=st; close(true); if (!N || !s0) return; if (N.cl.indexOf(s0.cid)<0) N.cl.push(s0.cid); netSend({cl:N.cl});
+    toast('Done: '+CHORE_T[s0.t].n.toLowerCase()+'. '+Math.min(CLEAN_NEED,(N.ncl||0)+1)+' of '+CLEAN_NEED+' chores finished.',2800); }
+  function close(ok){ if (!st) return; if (!ok && !st.fin) toast('You stopped. That chore starts over.',1800); st=null; down=false; $('chorePanel').hidden=true; if (net && net.wiring==='chore') net.wiring=null; if (!isTouch && game.mode==='play' && !document.pointerLockElement) lock(); }
+  function open(hi,t){ var k=KIND[t], S=(k==='dish'||k==='mop'||k==='tub')?scrubInit(k):(k==='sweep'?sweepInit():(k==='shelf'?shelfInit():(k==='trash'?trashInit():bedInit())));
+    st={hi:hi,t:t,cid:choreId(hi,t),k:k,s:S,fin:false}; if (net) net.wiring='chore'; $('chorePanel').hidden=false; $('choreTitle').textContent=CHORE_T[t].n;
+    wasLocked=false; if (document.exitPointerLock) try { document.exitPointerLock(); } catch(e){} draw(); }
+  return {open:open,close:close,tick:tick,isOpen:function(){ return !!st; }};
+})();
+
 Math.random=NATIVE_RANDOM;
 
 /* ---------- VHS tape look: the picture is drawn small, then played back like an old tape ---------- */
@@ -4475,7 +4690,7 @@ var VHS=(function(){
     rt=ps?rtPix:rtSoft; mat.uniforms.tD.value=rt.texture; mat.uniforms.ps.value=ps?1:0; if (rt.width!==ww || rt.height!==hh) rt.setSize(ww,hh); mat.uniforms.px.value.set(1/ww,1/hh);
     PS1SNAP.value.set(ps?ww/2:0,ps?hh/2:0); scene.fog.density=ps?mapFogD:0.03;
     mat.uniforms.t.value=t; VHSGLITCH=Math.max(0,VHSGLITCH-0.016); mat.uniforms.gl.value=reduced?0:Math.min(1,VHSGLITCH); mat.uniforms.sl.value=sz.y/3.2; mat.uniforms.tr.value=reduced?0:1;
-    renderer.setRenderTarget(rt); renderer.render(scene,camera); renderer.setRenderTarget(null); renderer.render(sc,cam);
+    renderer.setRenderTarget(rt); renderer.render(scene,camera); if (SCARE3D.isOn()){ var ac0=renderer.autoClear; renderer.autoClear=false; renderer.clearDepth(); renderer.render(SCARE3D.scene,camera); renderer.autoClear=ac0; } renderer.setRenderTarget(null); renderer.render(sc,cam);
     var paused=game.paused && game.mode==='play', stop=!$('start').hidden || !$('dead').hidden || !$('win').hidden || !$('netEnd').hidden, mode=stop?'s':(paused?'p':'r');
     if (mode!==lastMode){ lastMode=mode; play.innerHTML=stop?'STOP &#9632;':(paused?'PAUSE &#10074;&#10074;':'PLAY &#9654;'); }
     osd.classList.toggle('blink',paused && Math.floor(t*2)%2===0);
@@ -4519,8 +4734,7 @@ function update(dt){
   P.x+=(rx*mx-f.x*mz)*speed*dt; P.z+=(rz*mx-f.z*mz)*speed*dt;
   if (game.net && net.ih>=0) iFix(P,0.3);
   else { P.x=Math.max(-158.4,Math.min(148,P.x)); P.z=Math.max(-39.4,Math.min(39.4,P.z)); lvFix(P,0.45); P.fl=0; }
-  if (game.net) vanTick(dt); wireUI.tick(dt);
-  if (game.net && vanPhase(net) && game.role!=='killer' && net.alive===1 && net.seats){ var vsi=net.seats[netMe]||0, vsp=vanSeatPos(vsi,false), cy=net.car?net.car.yaw:0; P.x=vsp.x; P.z=vsp.z; P.y=0.32; if (net.lastCy!=null) P.yaw+=angDiff(cy,net.lastCy); net.lastCy=cy; if (!P.crouch){ P.crouch=true; crouchUI(); } }
+  if (game.net) vanTick(dt); wireUI.tick(dt); choreUI.tick(dt); doorSeqTick(dt); SCARE3D.tick(dt);
   if (m>0.1){ P.bob+=dt*speed*1.9; P.step+=dt*speed; if (P.step>2.3){ P.step=0; if (!P.crouch) stepSound(wantRun,false); else noise(0.05,0.025,300); } }
   var bob=reduced?0:Math.sin(P.bob)*(wantRun?0.06:0.045);
   // standing still, the character can't settle: quick glances, shallow breathing, shaking hands

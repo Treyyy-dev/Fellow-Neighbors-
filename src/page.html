@@ -60,9 +60,9 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
 #chatBox p{margin:0 0 8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}#chatBox b{color:var(--pumpkin);font-weight:400}
 .chatOpts{display:flex;flex-direction:column;gap:6px}.chatOpts button{font:inherit;font-size:14px;color:var(--bone);background:rgba(13,17,27,.8);border:1px solid rgba(231,226,210,.35);border-radius:2px;padding:8px 10px;cursor:pointer;text-align:left}
 .chatOpts button:hover{border-color:var(--pumpkin)}
-#wirePanel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:35;width:min(92vw,440px,calc((100vh - 150px)*1.52 + 24px));box-sizing:border-box;background:rgba(8,12,40,.94);border:2px solid var(--osd,#eee);padding:12px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;text-shadow:var(--chroma)}
-#wirePanel canvas{position:static!important;display:block;width:100%!important;height:auto!important;image-rendering:pixelated;touch-action:none;cursor:pointer;border:1px solid #333}
-#wirePanel p{margin:0;font-size:18px;line-height:1.15}
+#wirePanel,#chorePanel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:35;width:min(92vw,440px,calc((100vh - 150px)*1.52 + 24px));box-sizing:border-box;background:rgba(8,12,40,.94);border:2px solid var(--osd,#eee);padding:12px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;text-shadow:var(--chroma)}
+#wirePanel canvas,#chorePanel canvas{position:static!important;display:block;width:100%!important;height:auto!important;image-rendering:pixelated;touch-action:none;cursor:pointer;border:1px solid #333}
+#wirePanel p,#chorePanel p{margin:0;font-size:18px;line-height:1.15}
 #newsList{display:flex;flex-direction:column;gap:10px;width:min(100%,460px);text-align:left}
 .upd{border:1px solid rgba(154,150,138,.45);background:rgba(13,17,27,.72);border-radius:2px;padding:10px 14px}
 .upd.new{border-color:var(--pumpkin)}
@@ -234,7 +234,8 @@ body{font-size:20px}
   <button type="button" id="scareBtn" class="kab" hidden>Scare</button>
   <button type="button" id="vanishBtn" class="kab" hidden>Vanish</button>
   <div id="chatBox" hidden><p class="lab">Talking to <b id="chatName"></b></p><div class="chatOpts"><button type="button" data-c="1">1 · Get to safety</button><button type="button" data-c="2">2 · Do you have anything?</button><button type="button" data-c="3">3 · Call the police</button><button type="button" data-c="0">Close</button></div></div>
-  <div id="wirePanel" hidden><p class="lab" id="wireTitle">Generator</p><canvas id="wireCv" width="380" height="250"></canvas><p class="lab" id="wireInfo"></p><button class="chip" id="wireClose" type="button">Step away</button></div>
+  <div id="wirePanel" class="pzPanel" hidden><p class="lab" id="wireTitle">Generator</p><canvas id="wireCv" width="380" height="250"></canvas><p class="lab" id="wireInfo"></p><button class="chip" id="wireClose" type="button">Step away</button></div>
+  <div id="chorePanel" class="pzPanel" hidden><p class="lab" id="choreTitle">Chore</p><canvas id="choreCv" width="380" height="250"></canvas><p class="lab" id="choreInfo"></p><button class="chip" id="choreClose" type="button">Stop</button></div>
   <div id="updBar" hidden><span>A new update is out.</span><button type="button" id="updReload">Update now</button><button type="button" id="updLater">Later</button></div>
   <div id="team" hidden aria-label="Teammates"></div>
   <div id="items" hidden></div>
@@ -294,7 +295,7 @@ body{font-size:20px}
 
   <div class="card" id="online" hidden><div class="col">
     <h2>Play</h2>
-    <p>Kill Feast: up to 2 killers and 5 survivors. Survivors fix the car and four generators, or last until morning. At 2:00 AM the Blood Moon rises. Create a room, or find one someone else has opened. Everyone waits in the lobby until someone presses Start.</p>
+    <p>Kill Feast: up to 4 survivors against an invisible AI killer. Drive in, wire up 5 generators, solve 6 chore puzzles in the neighbours’ houses, then drive out. Or last until morning. At 2:00 AM the Blood Moon rises. Create a room, or find one someone else has opened. Everyone waits in the lobby until someone presses Start.</p>
     <p class="lab">Your name</p>
     <input class="inp" id="netName" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Player" aria-label="Your name">
     <div class="list">
@@ -321,8 +322,7 @@ body{font-size:20px}
     <p id="lobInfo"></p>
     <ul class="plist" id="lobList"></ul>
     <div class="seg" id="lobMode" hidden></div>
-    <p class="lab">Play as</p>
-    <div class="seg" id="lobSeg"></div>
+    <div class="seg" id="lobSeg" hidden></div>
     <p class="lab" id="lobBotLab" hidden>Bots</p>
     <div class="seg" id="lobBots" hidden></div>
     <div class="list"><button class="btn" id="lobStart" type="button">Start</button><button class="mbtn" id="lobLeave" type="button">Leave</button></div>
