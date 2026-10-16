@@ -4305,8 +4305,9 @@ function teamTick(pl){ var tm=$('team'); if (!tm.hidden) tm.hidden=true; return;
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=61;
+var GAME_VER=62;
 var UPDATES=[
+  {v:62,t:'Stacked modes',n:['The mode cards are stacked on every screen now.']},
   {v:61,t:'Pick a mode',n:['Play now opens a mode screen: Kill Feast, plus a locked mode that is coming soon.']},
   {v:60,t:'Cash and the corner store',n:['Every chore you finish pays $5. Your cash shows next to the chores and generators.','The gas station store is bigger, with two glass doors side by side that swing open as you walk up.','Felix works the register. Grab a snack or drink right by the counter, ring it up, and keep it in your pocket (up to 3). Press R (or tap Use) to have it.','Bolt Energy $5: faster for 30 s. Marathon Bar $5: run without tiring for 30 s. Iron Jerky $10: a shield that takes the next hit. Midnight Cola $10: the killer can’t see or hear you for 30 s.','Walk out without paying and Felix makes you put it back.','The killer no longer vanishes and pops up somewhere else, and Elias no longer appears at the Blood Moon.']},
   {v:59,t:'Music instead of red, a Tokens tab',n:['No more red at the edges of the screen when the killer is near. Instead a low, dissonant score creeps in and gets louder and faster the closer it gets, with a shriek when it is right on you.','Chests are gone, and so are the knives, first aid kits and bear traps. Neighbours don’t hand out items any more either.','The shop has a Tokens tab: your balance and a history of every token you earned and spent. Token packs you can buy are coming soon.']},

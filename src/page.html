@@ -63,12 +63,12 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
 #wirePanel,#chorePanel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:35;width:min(92vw,440px,calc((100vh - 150px)*1.52 + 24px));box-sizing:border-box;background:rgba(8,12,40,.94);border:2px solid var(--osd,#eee);padding:12px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;text-shadow:var(--chroma)}
 #wirePanel canvas,#chorePanel canvas{position:static!important;display:block;width:100%!important;height:auto!important;image-rendering:pixelated;touch-action:none;cursor:pointer;border:1px solid #333}
 #wirePanel p,#chorePanel p{margin:0;font-size:18px;line-height:1.15}
-.modeGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;margin:6px 0 14px}
+.modeGrid{display:grid;grid-template-columns:1fr;gap:12px;width:100%;max-width:520px;margin:6px auto 14px}
 .modeCard{font:inherit;color:var(--osd,#eee);text-shadow:var(--chroma);background:rgba(8,12,40,.78);border:2px solid var(--osd,#eee);padding:18px 14px;min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;text-align:center}
 .modeCard b{font-size:26px;letter-spacing:.06em;text-transform:uppercase}.modeCard span{font-size:15px;opacity:.85;line-height:1.3}
 .modeCard:hover,.modeCard:focus-visible{background:var(--vcr,#1a2a8a)}
 .modeCard.locked{opacity:.45;cursor:not-allowed;border-style:dashed}.modeCard.locked:hover{background:rgba(8,12,40,.78)}
-@media (max-width:560px){.modeGrid{grid-template-columns:1fr}.modeCard{min-height:110px}}
+.modeCard{min-height:110px}
 #newsList{display:flex;flex-direction:column;gap:10px;width:min(100%,460px);text-align:left}
 .upd{border:1px solid rgba(154,150,138,.45);background:rgba(13,17,27,.72);border-radius:2px;padding:10px 14px}
 .upd.new{border-color:var(--pumpkin)}
