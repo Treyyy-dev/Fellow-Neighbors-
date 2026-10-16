@@ -3501,7 +3501,7 @@ var OUTHIDES=[];
   var busY=mat(0xe0a818,{roughness:.6}), glassM=mat(0x1a2430,{roughness:.1,metalness:.3});
   function free(x,z,r){ for (var k=0;k<14;k++){ var a=k*2.4, d=k*0.7, xx=x+Math.cos(a)*d, zz=z+Math.sin(a)*d; if (!blocked(xx,zz,r)) return [xx,zz]; } return null; }
   // dumpsters you can hide in
-  [[-96.5,-30],[-46,-40.5],[62,40.5],[116,-40.5]].forEach(function(p){ var f=free(p[0],p[1],1.6); if (!f) return;
+  [[-96.5,-30],[-66,-46],[-66,46],[136,-46]].forEach(function(p){ var f=free(p[0],p[1],1.6); if (!f) return;
     var g=new THREE.Group(); g.position.set(f[0],0,f[1]); world.add(g); box(2.0,1.25,1.2,mat(0x2a4a3a,{roughness:.6,metalness:.2}),0,0.65,0,g); box(2.05,0.08,1.25,mat(0x1a2a22),0,1.31,0,g).rotation.x=0.06;
     addBox(f[0],f[1],1.0,0.6); OUTHIDES.push({id:'dump'+OUTHIDES.length,in:0,f:0,x:f[0],z:f[1]+1.0,r:1.2,t:'Hide in the dumpster',cam:[f[0],0.95,f[1]],yaw:Math.PI}); });
   // picnic tables in the park
@@ -3765,6 +3765,7 @@ function laneNav(e,T){
   if (tx<-73 && e.x>=-73){ var X=Math.abs(tz)<20?{x:-71,z:Math.max(-12,Math.min(12,tz))}:{x:-71,z:sT*33}; if (Math.hypot(e.x-X.x,e.z-X.z)>2.5) return laneNav(e,X)||X; return null; }
   if (e.x<-73){ if (tx<-73) return null; var Y=lzone(tz)===0?{x:-70,z:Math.max(-12,Math.min(12,tz))}:{x:-70,z:sT*33}; return Math.hypot(e.x-Y.x,e.z-Y.z)>2.5?Y:null; }
   var ze=lzone(e.z), zt=lzone(tz);
+  if (e.x<-61){ var zl=zt===0?Math.max(-9,Math.min(9,tz)):(zt===1?sT*26.5:sT*33); if (tx<-61) return null; if (Math.abs(e.z-zl)>1.5) return {x:-66,z:zl}; return {x:-58,z:zl}; }
   // tucked in among the houses: step back out to the open line first
   if (ze===2 && Math.abs(e.z)>38 && Math.abs(e.x-tx)>3) return {x:e.x,z:se*33};
   var inGap=ze===1 && Math.abs(e.z)<24.3 && onGate(e.x);
@@ -3816,9 +3817,19 @@ function houseNav(e,T){
   if (tf===1 || (onStairs(T.x,T.z) && (T.y||0)>0.3)) return (Math.abs(e.x-FOOT.x)<0.3 && e.z<1.3)?{x:IX+0.27,z:0.0}:hnAround(e,FOOT,HN_BODY,HN_BC);
   var r=hnAround(e,g,HN_BODY,HN_BC); if (r!==g && g.exit) r.exit=false; return r;
 }
+// look a step ahead: if a wall, house, tree or car is in the way, turn early instead of walking into it (out on the ground)
+function steerAround(e,dx,dz,d,dt){ if ((e.ih!=null && e.ih>=0) || (e.y||0)>0.3 || d<2.6 || bldAt(e.x,e.z)) return null;   // big buildings find their own way through doorways and up stairs
+  var ux=dx/d, uz=dz/d, look=Math.min(d-1.0,1.7), r=0.42;
+  e.stT=Math.max(0,(e.stT||0)-dt);
+  if (!blocked(e.x+ux*look,e.z+uz*look,r) && !blocked(e.x+ux*look*0.5,e.z+uz*look*0.5,r)){ if (e.stT<=0) e.stSide=0; return null; }
+  var side=e.stSide||((e.x*7+e.z*13)%2<1?1:-1), A=[0.35,0.7,1.05,1.4];
+  for (var k=0;k<2;k++){ var sd=k?-side:side; for (var i=0;i<A.length;i++){ var a=A[i]*sd, c=Math.cos(a), sn=Math.sin(a), rx=ux*c-uz*sn, rz=ux*sn+uz*c;
+    if (!blocked(e.x+rx*look,e.z+rz*look,r) && !blocked(e.x+rx*look*0.5,e.z+rz*look*0.5,r)){ e.stSide=sd; e.stT=0.8; return [rx,rz]; } } }
+  return null; }
 function navStep(e,T,sp,dt,breaker){
   var g=navGoal(e,T), dx=g.x-e.x, dz=g.z-e.z, d=Math.hypot(dx,dz)||0.001;
   if (e.sideT>0 && (e.ih<0 || !stairNow(e))){ e.sideT-=dt; var ca=Math.cos(1.2*e.sideD), sa=Math.sin(1.2*e.sideD), tx=dx*ca-dz*sa; dz=dx*sa+dz*ca; dx=tx; }
+  else if (g.enter===undefined && !g.exit){ var sv=steerAround(e,dx,dz,d,dt); if (sv){ dx=sv[0]*d; dz=sv[1]*d; } }
   if (g.exit && d<0.8){ var h=houses[e.ih], dp=doorPt(h); e.ih=-1; e.x=dp.x; e.z=dp.z-h.side*1.1; e.fl=0; e.y=h.fy?h.fy:groundY(e.x,e.z); e.lv=h.fy?1:0; h.open=1; setTimeout(function(){ h.open=0; },1500); return d; }
   if (g.enter!==undefined && d<1.4 && Math.abs((e.y||0)-(g.y||0))<1.2){ var h2=houses[g.enter];
     if (breaker && !h2.netBroke){ e.kicking=true; e.ry=Math.atan2(dx,dz); e.kick=(e.kick||0)+dt; var kn=Math.floor(e.kick/0.62);
@@ -3827,7 +3838,7 @@ function navStep(e,T,sp,dt,breaker){
   var step=Math.min(d,sp*dt), p={x:e.x+dx/d*step,z:e.z+dz/d*step,fl:e.fl|0,y:e.y||0};
   if (e.ih>=0) iFix(p,0.3); else { var inB=bldAt(p.x,p.z); if (!((e.stuck||0)>=2.5) || inB) lvFix(p,0.45); p.x=Math.max(-157,Math.min(148,p.x)); p.z=Math.max(-56,Math.min(56,p.z)); if (!(p.y>0.05)) p.y=groundY(p.x,p.z); }
   var mv=Math.hypot(p.x-e.x,p.z-e.z), st=e.stuck||0; e.stuck=mv<step*0.35?st+dt:(st>=2.5?(st+dt>4.5?0:st+dt):0);
-  if (e.ih<0 && e.stuck>0.8 && bldIn(e.x,e.z)){ e.sideT=0.9; e.sideD=e.sideD===1?-1:1; e.stuck=0; }
+  if (e.ih<0 && e.stuck>0.6){ e.sideT=0.9; e.sideD=e.sideD===1?-1:1; e.stuck=0; }
   if (e.ih>=0 && e.stuck>0.45 && !stairNow(e)){ e.sideT=0.7; e.sideD=e.sideD===1?-1:1; e.stuck=0; }   // furniture in the way: step round it
   e.x=p.x; e.z=p.z; e.fl=p.fl; e.y=p.y; e.ry=Math.atan2(dx,dz); return d;
 }
@@ -4873,7 +4884,7 @@ function botsHost(dt,pl,W){
     if (!sp){ b.an=0; return; }
     if (goal && (b.ih>=0 || goal.ih>=0 || bldIn(goal.x,goal.z) || bldIn(b.x,b.z) || (WMAP==='hotel' && (inHotel(goal.x,goal.z) || inHotel(b.x,b.z) || inHotel(goal.x,goal.z-1.5))))){ var ih0=b.ih; navStep(b,goal,sp,dt,false); if (b.ih!==ih0) b.doorCd=N.el+5; b.an=b.cr?1:(sp>5?2:1); return; }
     if (goal){ var lgo=b.ih<0?laneNav(b,goal):null, gg=lgo||goal; vx=gg.x-b.x; vz=gg.z-b.z; }
-    var n=Math.hypot(vx,vz)||1; vx/=n; vz/=n;
+    var n=Math.hypot(vx,vz)||1; vx/=n; vz/=n; if (goal){ var gd2=Math.hypot(goal.x-b.x,goal.z-b.z), sv2=steerAround(b,vx*gd2,vz*gd2,gd2,dt); if (sv2){ vx=sv2[0]; vz=sv2[1]; } }
     if (b.jinkT>0){ b.jinkT-=dt; var c=Math.cos(1.35*b.jink), sn=Math.sin(1.35*b.jink), tx=vx*c-vz*sn; vz=vx*sn+vz*c; vx=tx; }
     var p2={x:b.x+vx*sp*dt,z:b.z+vz*sp*dt,y:b.y||0}; lvFix(p2,0.4); p2.x=Math.max(-157,Math.min(147,p2.x)); p2.z=Math.max(-56,Math.min(56,p2.z));
     b.acc+=dt; if (b.acc>0.7){ if (Math.hypot(p2.x-b.lx,p2.z-b.lz)<sp*0.7*0.3){ b.jink=Math.random()<0.5?1:-1; b.jinkT=1.3; } b.lx=p2.x; b.lz=p2.z; b.acc=0; }
@@ -5276,8 +5287,9 @@ function teamTick(pl){ var tm=$('team'); if (!tm.hidden) tm.hidden=true; return;
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=80;
+var GAME_VER=81;
 var UPDATES=[
+  {v:81,t:'Smarter killers',n:['The killer and the bots look a step ahead now: when a house, a hedge, a tree, a car or a lamp post is in the way, they turn before they hit it instead of walking into it.','If one does get stuck, it steps sideways and tries again anywhere, not just inside the hotel.','The west end of the lane, past the last houses, is treated as the open ground it is, so they no longer get caught on the hedge by the Mart.','Dumpsters moved out of the way of the back-row generators.']},
   {v:80,t:'Voice chat: on or off',n:['Voice chat always fades with distance now: the further away someone is, the quieter they are. The setting is just On or Off.']},
   {v:79,t:'Texts reach everyone',n:['Fixed texts not reaching other players: your last few texts now go out with every update, so a dropped one can’t get lost.','The living’s texts now reach everyone, the dead included. Texts from the dead still only reach the dead.','Fixed chores in houses 21–40 not counting, which made the 40-house job impossible to finish.']},
   {v:78,t:'Phone light',n:['The flashlight is gone. Your phone is in your right hand now, and its light on the back is your light: F (or tap Light) turns it on and off.','The phone light is a little wider and whiter than the old flashlight, and does not reach quite as far.','Bring the phone up with T (or tap Phone): your right hand lifts it to your face.']},
