@@ -61,6 +61,9 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
 #chatBox p{margin:0 0 8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}#chatBox b{color:var(--pumpkin);font-weight:400}
 .chatOpts{display:flex;flex-direction:column;gap:6px}.chatOpts button{font:inherit;font-size:14px;color:var(--bone);background:rgba(13,17,27,.8);border:1px solid rgba(231,226,210,.35);border-radius:2px;padding:8px 10px;cursor:pointer;text-align:left}
 .chatOpts button:hover{border-color:var(--pumpkin)}
+#wirePanel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:35;width:min(92vw,440px,calc((100vh - 150px)*1.52 + 24px));box-sizing:border-box;background:rgba(8,12,40,.94);border:2px solid var(--osd,#eee);padding:12px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;text-shadow:var(--chroma)}
+#wirePanel canvas{position:static!important;display:block;width:100%!important;height:auto!important;image-rendering:pixelated;touch-action:none;cursor:pointer;border:1px solid #333}
+#wirePanel p{margin:0;font-size:18px;line-height:1.15}
 #newsList{display:flex;flex-direction:column;gap:10px;width:min(100%,460px);text-align:left}
 .upd{border:1px solid rgba(154,150,138,.45);background:rgba(13,17,27,.72);border-radius:2px;padding:10px 14px}
 .upd.new{border-color:var(--pumpkin)}
@@ -230,6 +233,7 @@ body{font-size:20px}
   <button type="button" id="scareBtn" class="kab" hidden>Scare</button>
   <button type="button" id="vanishBtn" class="kab" hidden>Vanish</button>
   <div id="chatBox" hidden><p class="lab">Talking to <b id="chatName"></b></p><div class="chatOpts"><button type="button" data-c="1">1 · Get to safety</button><button type="button" data-c="2">2 · Do you have anything?</button><button type="button" data-c="3">3 · Call the police</button><button type="button" data-c="0">Close</button></div></div>
+  <div id="wirePanel" hidden><p class="lab" id="wireTitle">Generator</p><canvas id="wireCv" width="380" height="250"></canvas><p class="lab" id="wireInfo"></p><button class="chip" id="wireClose" type="button">Step away</button></div>
   <div id="updBar" hidden><span>A new update is out.</span><button type="button" id="updReload">Update now</button><button type="button" id="updLater">Later</button></div>
   <div id="team" hidden aria-label="Teammates"></div>
   <div id="items" hidden></div>
@@ -3481,7 +3485,7 @@ function netHideFrame(dt){
 }
 // ---- what you can do where you stand
 function netInteract(dt,pl){
-  var N=net, killer=game.role==='killer'; N.near=null; if (N.alive!==1 || N.fin || N.jailed || N.brk || vanPhase(N)) return;
+  var N=net, killer=game.role==='killer'; N.near=null; if (N.alive!==1 || N.fin || N.jailed || N.brk || vanPhase(N) || N.wiring) return;
   if (N.hide){ N.near={k:'unhide'}; return; }
   if (N.ih>=0){
     var h=houses[N.ih], lx=P.x-IX;
@@ -3496,12 +3500,13 @@ function netInteract(dt,pl){
       HIDES.forEach(function(s){ if (N.near || Math.abs((P.y||0)-s.f*FLOOR2)>0.4) return; if (Math.hypot(P.x-IX-s.x,P.z-s.z)<s.r) N.near={k:'search',s:s,t:'Search: '+s.t.replace(/^Hide (in|under) /,'')}; }); }
   } else {
     if (!killer && (P.y||0)<0.8){ var ci=-1; chests.forEach(function(c,i){ if (!c.open && Math.hypot(c.x-P.x,c.z-P.z)<1.6) ci=i; }); if (ci>=0) N.near={k:'chest',i:ci,t:'Open the chest'}; }
-    if (!N.near){ var dh=nearDoor(); if (dh) N.near={k:'door',h:dh,t:killer&&!dh.netBroke?'Break the door down':'Open the door'}; }
+    if (!N.near && !killer) houses.forEach(function(hh,hi){ if (N.near || hh.power) return; if (Math.hypot(P.x-hh.gen.x,P.z-hh.gen.z)<2.2) N.near={k:'wire',hi:hi,t:'Connect the generator wires'}; });
+    if (!N.near){ var dh=nearDoor(); if (dh) N.near={k:'door',h:dh,t:killer?(dh.netBroke?'Open the door':'Break the door down'):((dh.power||dh.netBroke)?'Open the door':'Locked · fix their generator out back')}; }
     if (!N.near) OUTHIDES.forEach(function(s){ if (N.near || Math.abs((s.y||0)-(P.y||0))>0.8) return; if (Math.hypot(P.x-s.x,P.z-s.z)<s.r) N.near=killer?{k:'search',s:s,t:'Search the dumpster'}:{k:'hide',s:s,t:s.t}; });
   }
   if (N.chat && (!N.near || N.near.k!=='chat')) closeChat();
-  var lab={up:'Up',down:'Down',killnb:'Kill',chest:'Open',door:killer&&N.near&&N.near.h&&!N.near.h.netBroke?'Break':'Open',chat:'Chat',hide:'Hide',search:'Search',unhide:'Out'};
-  if (N.near && !N.working) setPrompt(N.near.t,lab[N.near.k]); else if (curPrompt && !N.working && /^(Open the|Break the|Chat with|Hide|Search|Come out|Kill |Go up|Go down)/.test(curPrompt)) setPrompt(null);
+  var lab={wire:'Fix',up:'Up',down:'Down',killnb:'Kill',chest:'Open',door:killer&&N.near&&N.near.h&&!N.near.h.netBroke?'Break':'Open',chat:'Chat',hide:'Hide',search:'Search',unhide:'Out'};
+  if (N.near && !N.working) setPrompt(N.near.t,lab[N.near.k]); else if (curPrompt && !N.working && /^(Open the|Break the|Chat with|Hide|Search|Come out|Kill |Go up|Go down|Connect the|Locked)/.test(curPrompt)) setPrompt(null);
 }
 // ---- police (run by one player's game, shown to everyone)
 function polTick(dt,pl,killers){
@@ -3883,7 +3888,7 @@ function netBegin(go){
   lobby=null;
   net={mode:mode,code:code,role:role,gid:go.id,roles:go.roles,t0:performance.now(),el:0,st:0,f:0,hits:0,hp:3,alive:1,acc:{},spd:1,
        E:{x:0,z:0,ry:0,vis:0,cool:mode==='s'?22:30,lost:0,stuck:0,mv:0},ek:{},k:{},o:{g:0,b:0,c:0,gn:{}},hold:[0,0],sendT:0,cd:0,slow:0,boost:0,inv:0,objT:0,lastObj:'',
-       prey:null,esc:0,over:false,stT:0,lx:0,lz:0,an:0,done:false,spec:0,kills:0,world:{},bots:[],held:null,bd:[],nd:[],brk:null,kn:0,cs:[],cl:[],chKey:null,chT:0,traps:[],tt:[],kh:{},stun:0,nearChest:-1,khSeen:0,hc:0,knock:null,kd:null,nearDoor:null};
+       prey:null,esc:0,over:false,stT:0,lx:0,lz:0,an:0,done:false,spec:0,kills:0,world:{},bots:[],held:null,bd:[],nd:[],brk:null,kn:0,cs:[],cl:[],pw:[],wiring:null,chKey:null,chT:0,traps:[],tt:[],kh:{},stun:0,nearChest:-1,khSeen:0,hc:0,knock:null,kd:null,nearDoor:null};
   houses.forEach(function(h){ h.netCd=0; });
   clearItems(); applyMap('lane'); buildChests(); applyMap(MAPS.some(function(x){ return x.id===go.map; })?go.map:'lane'); net.map=curMap;
   net.vanOut=false; net.vanBots=false; net.lastCy=null; vanReset();
@@ -3892,7 +3897,7 @@ function netBegin(go){
   game.net=net; game.role=(role==='k'||role==='killer')?'killer':'victim'; initAudio(); reset(); stairsOpen(true); if (net.mode==='s') gateOpenNow(); net.ih=-1; P.fl=0; P.y=0; houses.forEach(function(h){ h.netHid=false; h.netAsked=false; h.netBroke=false; h.netDead=false; h.netPool=false; }); polCar.visible=false; if (polCop) polCop.g.visible=false; closeChat(); story.hold=null; story.tearH=null; surv.active=false; setChain(false); stalkerOff(1e9);
   gasCan.visible=battery.visible=keysG.visible=leverG.visible=truckG.visible=boxG.visible=false; moveCar(-64,2.6); allPower(true); resident.g.visible=false; resident.dead=false;
   var ids=Object.keys(go.roles).sort(), idx=Math.max(0,ids.indexOf(netMe)), sp;
-  if (mode==='s'){ if (role==='k'){ sp=[60-idx*2,idx%2?3:-3]; P.yaw=Math.PI/2; } else { sp=[-60+(idx%3)*1.6,-1.5+((idx/3)|0)*2.6]; P.yaw=-Math.PI/2; } SGENS.forEach(function(h){ setPower(houses[h],false); }); showItem(gasCan,GAS); showItem(battery,batPos()); }
+  if (mode==='s'){ if (role==='k'){ sp=[60-idx*2,idx%2?3:-3]; P.yaw=Math.PI/2; } else { sp=[-60+(idx%3)*1.6,-1.5+((idx/3)|0)*2.6]; P.yaw=-Math.PI/2; } houses.forEach(function(h){ setPower(h,false); }); showItem(gasCan,GAS); showItem(battery,batPos()); }
   else { var C=COOP[mode]; sp=C.spawn[role]; P.yaw=-Math.PI/2; C.gens.forEach(function(h){ setPower(houses[h],false); }); }
   if (mode==='s'){ vanSeats(net); vanG.position.set(CAR0.x,0,CAR0.z); vanG.rotation.y=CAR0.yaw; vanG.updateMatrixWorld(true); vanG.visible=true; carG.visible=false;
     if (role!=='k'){ var si=net.seats[netMe]||0, vp=vanSeatPos(si,false); sp=[vp.x,vp.z]; P.yaw=CAR0.yaw-Math.PI/2; P.pitch=-0.05; P.crouch=true; crouchUI(); } }
@@ -3938,8 +3943,9 @@ function netTick(dt){
     if (hostId===null) hostId=p.id; pl.push(q); seen[p.id]=1;
     if (!p.me && pr.bl===1 && N.el>NIGHT*0.45) N.el=Math.max(N.el,NIGHT*0.5+0.01);
     if (!p.me){ maxSt=Math.max(maxSt,Math.min(99,num(pr.st,0)|0)); maxF=Math.max(maxF,num(pr.f,0)|0); maxEl=Math.max(maxEl,num(pr.el,0)); }
-    var A=N.acc[p.id]||(N.acc[p.id]={g:0,b:0,c:0,gn:{},k:0,ek:0,hold:[0,0],kb:{},cs:[],tp:[],tt:[],kh:{},khb:{},cl:[]});
+    var A=N.acc[p.id]||(N.acc[p.id]={g:0,b:0,c:0,gn:{},k:0,ek:0,hold:[0,0],kb:{},cs:[],tp:[],tt:[],kh:{},khb:{},cl:[],pw:[]});
     if (N.mode==='s'){ var cs=p.me?N.cs:pr.cs, tp=p.me?N.traps:pr.tp, tt=p.me?N.tt:pr.tt, kh=p.me?N.kh:pr.kh;
+      var pw=p.me?N.pw:pr.pw; if (Array.isArray(pw)) A.pw=pw.filter(function(c){ return typeof c==='number' && c>=0 && c<houses.length; }).slice(0,houses.length);
       var cl=p.me?N.cl:pr.cl; if (Array.isArray(cl)) A.cl=cl.filter(function(c){ return typeof c==='number' && c>=0 && c<200; }).slice(0,60);
       if (Array.isArray(cs)) A.cs=cs.filter(function(c){ return typeof c==='number' && c>=0 && c<CHEST_SPOTS.length; }).slice(0,20);
       if (Array.isArray(tp)) A.tp=tp.filter(function(t){ return Array.isArray(t) && t.length===3 && isFinite(t[1]) && isFinite(t[2]); }).slice(0,6);
@@ -4005,12 +4011,12 @@ function netTick(dt){
   }
   // being hit
   var H=hitsK+hitsE;
-  if (H>N.hits){ N.hits=H; if (N.alive===1 && N.inv<=0 && game.role!=='killer'){ N.inv=2.5; netHurt(); if (N.mode==='s') jumpFace(); if (N.hide){ netUnhide(); toast('He found you!',2000); } closeChat();
+  if (H>N.hits){ N.hits=H; if (N.alive===1 && N.inv<=0 && game.role!=='killer'){ N.inv=2.5; netHurt(); if (N.mode==='s') jumpFace(); wireUI.close(false); if (N.hide){ netUnhide(); toast('He found you!',2000); } closeChat();
       if (N.mode==='s'){ N.hp--; if (N.hp<=0){ N.alive=0; vm.visible=false; setLight(false); toast('You are dead. You can watch the others.',4000); } else { N.boost=4; toast(N.hp===1?'You are badly hurt. One more hit and you are dead.':'You are hurt. Two more hits and you are dead.',3500); } }
       else { N.f=maxF=Math.max(maxF,N.f)+1; N.failMine=true; } } }
   if (N.mode==='s') netSurvival(dt,pl,surv,killers,me); else netCoop(dt,pl,maxSt,maxF,me,host);
   if (!net || net.over) return;
-  N.spd = (N.alive!==1 || N.stun>0 || N.fright>0 || vanPhase(N)) ? 0 : (game.role==='killer' && N.blood && N.slow<=0) ? 1.12 : (N.slow>0 ? 0.45 : (N.boost>0 ? 1.15 : (N.mode==='s' && N.hp<3 && game.role!=='killer' ? (N.hp<2?0.86:0.94) : 1)));
+  N.spd = (N.alive!==1 || N.stun>0 || N.fright>0 || vanPhase(N) || N.wiring) ? 0 : (game.role==='killer' && N.blood && N.slow<=0) ? 1.12 : (N.slow>0 ? 0.45 : (N.boost>0 ? 1.15 : (N.mode==='s' && N.hp<3 && game.role!=='killer' ? (N.hp<2?0.86:0.94) : 1)));
   // spectating
   if (N.alive!==1){ var cands=surv.filter(function(q){ return !q.me && q.alive && q.av; }); if (!cands.length) cands=pl.filter(function(q){ return !q.me && q.av; });
     if (cands.length){ var w=cands[N.spec%cands.length], a=w.av, bx=Math.sin(a.ry), bz=Math.cos(a.ry); camera.position.set(a.x-bx*3.2,2.4,a.z-bz*3.2); camera.lookAt(a.x,1.4,a.z); }
@@ -4021,7 +4027,7 @@ function netTick(dt){
     var patch={p:[Math.round(P.x*100)/100,Math.round(P.z*100)/100,Math.round(P.yaw*100)/100,N.an],a:N.alive,h:N.hp,cr:P.crouch?1:0,el:Math.round(N.el),st:N.st,f:N.f,hp:[N.hold[0],Math.round(N.hold[1]*10)/10]};
     if (N.mode==='s'){ if (game.role==='killer') patch.k=N.k; patch.o={g:N.o.g,b:N.o.b,c:Math.round(N.o.c*10)/10,gn:N.o.gn};
       patch.bd=N.bd; patch.nd=N.nd; patch.ih=N.ih; patch.fy=Math.round((P.y||0)*100)/100; patch.hid=N.hide?1:0; if (N.pc) patch.pc=N.pc; if (host){ patch.pol=N.polView||[0]; patch.jl=N.jl||[]; }
-      patch.nz=game.role==='killer'?0:(N.nz||0); if (N.drvCtrl && N.car && !N.rideDone){ var Cc=N.car; patch.cv=[Math.round(Cc.x*100)/100,Math.round(Cc.z*100)/100,Math.round(Cc.yaw*1000)/1000,Math.round(Cc.v*10)/10,Cc.arr?Math.round(Cc.arr*100)/100:0,Math.round((Cc.ax||0)*100)/100,Math.round((Cc.az||0)*100)/100,Math.round((Cc.ayaw||0)*1000)/1000]; } if (game.role==='killer'){ patch.sc=N.sc||0; patch.iv=N.iv>0?1:0; } if (host) patch.bsc=N.bsc||0; patch.bl=N.blood?1:0; patch.cs=N.cs; patch.cl=N.cl; patch.tp=N.traps; patch.tt=N.tt; patch.kh=N.kh; if (N.kd) patch.kd=N.kd; if (game.role==='killer'){ patch.sn=N.stun>0?Math.ceil(N.stun):0; patch.hc=N.hc; }
+      patch.nz=game.role==='killer'?0:(N.nz||0); if (N.drvCtrl && N.car && !N.rideDone){ var Cc=N.car; patch.cv=[Math.round(Cc.x*100)/100,Math.round(Cc.z*100)/100,Math.round(Cc.yaw*1000)/1000,Math.round(Cc.v*10)/10,Cc.arr?Math.round(Cc.arr*100)/100:0,Math.round((Cc.ax||0)*100)/100,Math.round((Cc.az||0)*100)/100,Math.round((Cc.ayaw||0)*1000)/1000]; } if (game.role==='killer'){ patch.sc=N.sc||0; patch.iv=N.iv>0?1:0; } if (host) patch.bsc=N.bsc||0; patch.bl=N.blood?1:0; patch.cs=N.cs; patch.cl=N.cl; patch.pw=N.pw; patch.tp=N.traps; patch.tt=N.tt; patch.kh=N.kh; if (N.kd) patch.kd=N.kd; if (game.role==='killer'){ patch.sn=N.stun>0?Math.ceil(N.stun):0; patch.hc=N.hc; }
       if (host && N.bots.length){ patch.bz=N.bots.map(function(b){ return [Math.round(b.x*100)/100,Math.round(b.z*100)/100,Math.round(b.ry*100)/100,b.an,b.a,b.hp,b.stun>0?Math.ceil(b.stun):0,b.hc||0,b.nz||0,b.ih==null?-1:b.ih,Math.round((b.y||0)*100)/100,b.hid?1:0,b.cr?1:0,b.iv>0?1:0]; }); patch.ek=N.ek; } }
     if (eliasOn && host){ patch.e=[Math.round(E.x*100)/100,Math.round(E.z*100)/100,Math.round(E.ry*100)/100,E.vis,E.mv]; patch.ek=N.ek; }
     if (N.prey) patch.pv=[Math.round(N.prey.x*100)/100,Math.round(N.prey.z*100)/100,Math.round(N.prey.ry*100)/100,N.prey.an,N.prey.who,N.prey.dead?1:0,N.st];
@@ -4057,7 +4063,7 @@ function botsHost(dt,pl,W){
   function hurt(b,dx,dz){ if (b.a!==1 || b.inv>0) return; b.inv=2.5; b.hp--; b.hid=0; b.hide=null; b.scare=6; bloodBurst(b.x,(b.y||0)+1.2,b.z,dx,dz,45); if (b.hp<=0){ b.a=0; b.an=0; bloodPool(b.x,b.ih>=0?(b.y||0):groundY(b.x,b.z),b.z,0.9); toast(b.name+' is dead.',2600); } }
   function hitPlayer(T,dx,dz){ if (T.bot) hurt(T.bot,dx,dz); else { N.ek[T.id]=(N.ek[T.id]||0)+1; if (!T.me) bloodBurst(T.x,(T.y||0)+1.2,T.z,dx,dz,40); } }
   function taken(s,ih,me){ var p=spotPos(s,ih); return pl.some(function(q){ return q.hid && q.alive && q.id!==me && (q.ih==null?-1:q.ih)===p.ih && Math.hypot(q.x-p.x,q.z-p.z)<1.4; }); }
-  function patrolPts(){ var a=[CARSIDE,{x:100,z:-18.5},{x:104,z:20},{x:108,z:-24.5,y:3.4}]; SGENS.forEach(function(h){ if (W.gens[h]<GENNEED) a.push(genPt(h)); }); if (W.G===0) a.push(GAS); if (W.B===0) a.push(batPos());
+  function patrolPts(){ var a=[CARSIDE,{x:100,z:-18.5},{x:104,z:20},{x:108,z:-24.5,y:3.4}]; houses.forEach(function(h,hi){ if (!W.powered[hi] && hi%3===0) a.push(genPt(hi)); }); if (W.G===0) a.push(GAS); if (W.B===0) a.push(batPos());
     chests.forEach(function(c){ if (!c.open) a.push({x:c.x+1.2,z:c.z}); }); return a; }
   N.bots.forEach(function(b){
     if (b.ih==null) b.ih=-1;
@@ -4133,7 +4139,7 @@ function botsHost(dt,pl,W){
         // run for a house or a dumpster that is not back toward the killer
         if (b.flee!=null && b.flee.t>N.el){ move(b.flee.T,fsp); if (b.flee.T.out && Math.hypot(b.flee.T.x-b.x,b.flee.T.z-b.z)<0.9){ var od=b.flee.s; if (!taken(od,-1,b.id)){ b.hid=1; b.hidT=0; b.calm=0; b.hide=od; b.x=od.x; b.z=od.z; b.y=od.y||0; b.an=0; b.nz=0; b.flee=null; return; } b.flee=null; } }
         else { b.flee=null; var Kp=bwp(K), ax=b.x-Kp.x, az=b.z-Kp.z, al=Math.hypot(ax,az)||1, pick=null, pd=1e9;
-          houses.forEach(function(h,hi){ var dp=doorPt(h), ddx=dp.x-b.x, ddz=dp.z-b.z, dd=Math.hypot(ddx,ddz); if (dd>18 || N.el<(b.doorCd||0) || hunters.some(function(q){ return (q.ih==null?-1:q.ih)===hi; })) return; var kdd=Math.hypot(dp.x-Kp.x,dp.z-Kp.z); if (kdd<dd+1.5) return; if ((ddx*ax+ddz*az)/(dd*al||1)<-0.3 && dd>3) return; if (dd<pd){ pd=dd; pick={x:dp.x,z:dp.z,ih:hi,y:0}; } });
+          houses.forEach(function(h,hi){ var dp=doorPt(h), ddx=dp.x-b.x, ddz=dp.z-b.z, dd=Math.hypot(ddx,ddz); if (dd>18 || !(h.power || h.netBroke) || N.el<(b.doorCd||0) || hunters.some(function(q){ return (q.ih==null?-1:q.ih)===hi; })) return; var kdd=Math.hypot(dp.x-Kp.x,dp.z-Kp.z); if (kdd<dd+1.5) return; if ((ddx*ax+ddz*az)/(dd*al||1)<-0.3 && dd>3) return; if (dd<pd){ pd=dd; pick={x:dp.x,z:dp.z,ih:hi,y:0}; } });
           OUTHIDES.forEach(function(s){ var dd=Math.hypot(s.x-b.x,s.z-b.z); if (dd>9 || Math.abs((s.y||0)-(b.y||0))>1 || taken(s,-1,b.id)) return; if (Math.hypot(s.x-Kp.x,s.z-Kp.z)<dd+3) return; if (dd*1.3<pd){ pd=dd*1.3; pick={x:s.x,z:s.z,ih:-1,y:0,out:true,s:s}; } });
           if (pick && (kd>5 || pd<4)){ b.flee={T:pick,t:N.el+8,s:pick.s}; move(pick,fsp); }
           else { vx=ax/al; vz=az/al; killers.forEach(function(q){ if (q===K) return; var qp=bwp(q), ex=b.x-qp.x, ez=b.z-qp.z, e=Math.hypot(ex,ez)||1; if (e<12){ vx+=ex/e*0.8; vz+=ez/e*0.8; } });
@@ -4143,7 +4149,7 @@ function botsHost(dt,pl,W){
       if (b.held==='heal' && b.hp<3){ b.held=null; b.hp++; }
       if (!b.goal || N.el>b.goalT){ b.goal=null;
         // hurt and empty-handed: ask a neighbour for help, like a person would
-        if (b.hp<3 && !b.held){ var hb=-1, hd=36; houses.forEach(function(h,hi){ if (h.netHid || h.netDead || h.netAsked) return; var dp=doorPt(h), dd=Math.hypot(dp.x-b.x,dp.z-b.z); if (dd<hd){ hd=dd; hb=hi; } }); if (hb>=0) b.goal={k:'ask',h:hb}; }
+        if (b.hp<3 && !b.held){ var hb=-1, hd=36; houses.forEach(function(h,hi){ if (h.netHid || h.netDead || h.netAsked || !h.power) return; var dp=doorPt(h), dd=Math.hypot(dp.x-b.x,dp.z-b.z); if (dd<hd){ hd=dd; hb=hi; } }); if (hb>=0) b.goal={k:'ask',h:hb}; }
         // empty hands: open a chest on the way
         if (!b.goal && !b.held){ var cb=-1, cdist=24; chests.forEach(function(c,ci){ if (c.open) return; var dd=Math.hypot(c.x-b.x,c.z-b.z); if (dd<cdist){ cdist=dd; cb=ci; } }); if (cb>=0) b.goal={k:'chest',i:cb}; }
         if (b.goal) b.goalT=N.el+30; }
@@ -4162,9 +4168,10 @@ function botsHost(dt,pl,W){
         else { if (W.G===0) opts.push({k:'gas',pt:GAS,r:1.6,f:function(){ o.g=Math.max(o.g,1); }}); if (W.G===1) opts.push({k:'gas2',pt:CARSIDE,r:3.2,f:function(){ o.g=2; }});
           if (W.B===0) opts.push({k:'bat',pt:batPos(),r:1.6,f:function(){ o.b=Math.max(o.b,1); }}); if (W.B===1) opts.push({k:'bat2',pt:CARSIDE,r:3.2,f:function(){ o.b=2; }});
           if (W.G===2 && W.B===2 && !W.carOK) opts.push({k:'car',pt:CARSIDE,r:3.2,f:function(){ o.c=Math.min(CARNEED,o.c+dt); }});
-          if (W.ncl<CLEAN_NEED) houses.forEach(function(hh,hi){ if (hh.netDead) return; choresOf(hi).forEach(function(t){ var cid=choreId(hi,t); if (W.cleaned[cid]) return; var CT=CHORE_T[t];
+          houses.forEach(function(hh,hi){ if (W.powered[hi]) return; opts.push({k:'wire'+hi,pt:genPt(hi),r:2.0,f:function(){ if (b.wK!==hi){ b.wK=hi; b.wT=0; } b.wT+=dt; if (b.wT>=8){ if (N.pw.indexOf(hi)<0) N.pw.push(hi); b.wK=null; } }}); });
+          if (W.ncl<CLEAN_NEED) houses.forEach(function(hh,hi){ if (hh.netDead || !(W.powered[hi] || hh.netBroke)) return; choresOf(hi).forEach(function(t){ var cid=choreId(hi,t); if (W.cleaned[cid]) return; var CT=CHORE_T[t];
             opts.push({k:'ch'+cid,pt:{x:IX+CT.x,z:CT.z,ih:hi,y:CT.f*FLOOR2},wp:doorPt(hh),r:1.25,f:function(){ if (b.chK!==cid){ b.chK=cid; b.chT=0; } b.chT+=dt; if (b.chT>=30){ if (N.cl.indexOf(cid)<0) N.cl.push(cid); b.chK=null; } }}); }); });
-          SGENS.forEach(function(h){ if (W.gens[h]<GENNEED) opts.push({k:'gen'+h,pt:genPt(h),r:2.4,f:function(){ o.gn[h]=Math.round(Math.min(GENNEED,(o.gn[h]||0)+dt)*100)/100; }}); }); }
+ }
         if (opts.length){
           // nearest job, spread out so they don't all crowd one generator
           var O=null, os=1e9, here=bwp(b); opts.forEach(function(op){ var crowd=0; N.bots.forEach(function(o2){ if (o2!==b && o2.role==='s' && o2.a===1 && o2.job===op.k) crowd++; });
@@ -4177,7 +4184,7 @@ function botsHost(dt,pl,W){
     }
     if (run){ b.st-=dt/7; if (b.st<=0) b.tired=3; } else { b.st=Math.min(1,b.st+dt/8); b.tired-=dt; }
     b.nz=(work||run||(b.hp===1 && !b.cr)||b.nzF>0)?1:0;
-    if (!(work && /^ch/.test(work.k))) b.chK=null;
+    if (!(work && /^ch/.test(work.k))) b.chK=null; if (!(work && /^wire/.test(work.k))) b.wK=null;
     if (work){ work.f(); b.an=0; return; }
     if (!sp){ b.an=0; return; }
     if (goal && (b.ih>=0 || goal.ih>=0 || bldIn(goal.x,goal.z) || bldIn(b.x,b.z))){ var ih0=b.ih; navStep(b,goal,sp,dt,false); if (b.ih!==ih0) b.doorCd=N.el+5; b.an=b.cr?1:(sp>5?2:1); return; }
@@ -4196,8 +4203,10 @@ function netSurvival(dt,pl,surv,killers,me){
   var N=net, G=0, B=0, C=0, gens={}, done, i;
   for (var id in N.acc){ var A=N.acc[id]; G=Math.max(G,A.g); B=Math.max(B,A.b); C+=A.c; SGENS.forEach(function(h){ gens[h]=(gens[h]||0)+(A.gn[h]||0); }); }
   var cleaned={}, ncl=0; for (var id3 in N.acc) (N.acc[id3].cl||[]).forEach(function(c){ if (!cleaned[c]){ cleaned[c]=1; ncl++; } }); N.cleaned=cleaned; N.ncl=ncl; choreFxUpdate(cleaned);
-  var fixed=SGENS.filter(function(h){ return gens[h]>=GENNEED; }), carOK=C>=CARNEED; done=carOK && fixed.length===SGENS.length && ncl>=CLEAN_NEED;
-  if (N.isHost && N.bots.length) botsHost(dt,pl,{G:G,B:B,C:C,gens:gens,carOK:carOK,done:done,cleaned:cleaned,ncl:ncl});
+  var powered={}, npw=0; for (var id4 in N.acc) (N.acc[id4].pw||[]).forEach(function(c){ if (!powered[c]){ powered[c]=1; npw++; } }); N.powered=powered;
+  gens={}; houses.forEach(function(hh,hi){ gens[hi]=powered[hi]?GENNEED:0; });
+  var fixed=houses.filter(function(hh,hi){ return powered[hi]; }), carOK=C>=CARNEED; done=carOK && ncl>=CLEAN_NEED;
+  if (N.isHost && N.bots.length) botsHost(dt,pl,{G:G,B:B,C:C,gens:gens,carOK:carOK,done:done,cleaned:cleaned,ncl:ncl,powered:powered});
   itemsTick(dt,pl,killers); teamTick(pl);
   if (N.isHost) polTick(dt,pl,killers); polDraw(dt); jailTick(dt,pl); netHome(dt); netInteract(dt,pl);
   if (N.mode==='s' && !N.vanOut && !vanPhase(N)){ N.vanOut=true;
@@ -4206,7 +4215,7 @@ function netSurvival(dt,pl,surv,killers,me){
   var W=N.world;
   if (W.G!==G){ if (W.G!==undefined && G===1) toast('Someone has the gas can. Get it to the car.',3000); if (W.G!==undefined && G===2) toast('The gas is in the tank.',3000); W.G=G; gasCan.visible=G===0; }
   if (W.B!==B){ if (W.B!==undefined && B===1) toast('Someone has the battery. Get it to the car.',3000); if (W.B!==undefined && B===2) toast('The battery is at the car.',3000); W.B=B; battery.visible=B===0; }
-  if (W.fx!==fixed.length){ SGENS.forEach(function(h){ var on=gens[h]>=GENNEED; if (houses[h].power!==on){ setPower(houses[h],on); if (on){ tone(60,0.8,'sawtooth',0.1,95); toast('A generator is running. '+fixed.length+' of '+SGENS.length+'.',3000); } } }); moonLight.shadow.needsUpdate=true; W.fx=fixed.length; }
+  if (W.fx!==fixed.length){ houses.forEach(function(hh,hi){ var on=!!powered[hi]; if (hh.power!==on){ setPower(hh,on); if (on && W.fx!==undefined){ var nb=NEIGHBOURS[hh.n].n; if (Math.hypot(P.x-hh.gen.x,P.z-hh.gen.z)<30) toast(nb+': “The lights are back! Thank you, come on in.”',3200); tone(60,0.8,'sawtooth',0.1,95); } } }); moonLight.shadow.needsUpdate=true; W.fx=fixed.length; }
   if (carOK && !W.car){ W.car=true; toast('The car is fixed.',3000); tone(90,0.9,'sawtooth',0.12,140); }
   if (done && !game.gateOpening){ openGate(); toast(game.role==='killer'?'The car is ready. Stop them before they drive off.':'The car is ready. Get in and go.',4500); }
   var left=NIGHT-N.el, hr=22+N.el/NIGHT*8, h12=((Math.floor(hr)+11)%12)+1, mn=Math.floor((hr%1)*60), clockT=h12+':'+('0'+mn).slice(-2)+(hr>=24||hr<12?' AM':' PM');
@@ -4220,7 +4229,7 @@ function netSurvival(dt,pl,surv,killers,me){
       else if (N.ih>=0 && nbKillable(houses[N.ih],true)) killNeighbour(houses[N.ih]);
       else noise(0.12,0.25,900); }
     var near=null, nd=1e9; surv.forEach(function(q){ if (!q.alive) return; var dd=Math.hypot(q.x-P.x,q.z-P.z); if (dd<nd){ nd=dd; near=q; } });
-    netObj('Kill Feast · '+clockT,(isTouch?'Tap Swing':'Click or press V')+' to swing your knife. Hunt them down before morning. '+alive+' alive'+(out?', '+out+' escaped':'')+'. Chores '+Math.min(ncl,CLEAN_NEED)+'/'+CLEAN_NEED+'. Car '+Math.round(Math.min(1,C/CARNEED)*100)+'%, generators '+fixed.length+'/'+SGENS.length+'.', done?CARSIDE:null);
+    netObj('Kill Feast · '+clockT,(isTouch?'Tap Swing':'Click or press V')+' to swing your knife. Hunt them down before morning. '+alive+' alive'+(out?', '+out+' escaped':'')+'. Chores '+Math.min(ncl,CLEAN_NEED)+'/'+CLEAN_NEED+'. Car '+Math.round(Math.min(1,C/CARNEED)*100)+'%, houses powered '+fixed.length+'/'+houses.length+'.', done?CARSIDE:null);
     netSafe(vanPhase(N)?'They are driving in…':N.stun>0?(N.stunWhy==='hits'?'Stunned':'Stuck in a trap')+' · '+mmss(N.stun):(N.iv>0?'Unseen · '+Math.ceil(N.iv)+'s':(N.slow>0?'Got one':null)));
   } else if (N.alive===1){
     var o=N.o, car=nearP(CARSIDE,3.4);
@@ -4236,22 +4245,21 @@ function netSurvival(dt,pl,surv,killers,me){
         if (Math.abs((P.y||0)-CT.f*FLOOR2)<0.5 && Math.hypot(P.x-IX-CT.x,P.z-CT.z)<1.25){ choring=true; if (N.chKey!==cid){ N.chKey=cid; N.chT=0; } N.chT+=dt; work=true; lab=CT.v+' · '+Math.round(Math.min(1,N.chT/30)*100)+'%';
           if (N.chT>=30){ if (N.cl.indexOf(cid)<0) N.cl.push(cid); N.chKey=null; N.chT=0; toast('Done: '+CT.n.toLowerCase()+'. '+Math.min(CLEAN_NEED,ncl+1)+' of '+CLEAN_NEED+' chores finished.',2800); tone(660,0.15,'triangle',0.15); tone(990,0.25,'triangle',0.12,null,0.1); } break; } } }
     if (!choring && N.chKey!==null){ if (N.chT>2) toast('You stopped. That chore starts over.',1800); N.chKey=null; N.chT=0; }
-    if (!work) for (i=0;i<SGENS.length;i++){ var h=SGENS[i]; if (gens[h]>=GENNEED) continue; if (Math.hypot(P.x-houses[h].gen.x,P.z-houses[h].gen.z)<2.6){ o.gn[h]=Math.round(Math.min(GENNEED,(o.gn[h]||0)+dt)*100)/100; work=true; lab='Fixing generator · '+Math.round(Math.min(1,gens[h]/GENNEED)*100)+'%'; break; } }
     N.nz=(work || P.sprinting || (N.hp===1 && !P.crouch) || N.reveal>0)?1:0;
     if (N.hp===1){ N.drip=(N.drip||0)-dt; if (N.drip<=0){ N.drip=2.2; bloodPool(P.x,P.gy,P.z,0.35); } }
     N.working=work; if (work){ N.tk=(N.tk||0)+dt; if (N.tk>0.8){ N.tk=0; tone(300+Math.random()*80,0.05,'square',0.07); } }
     var txt;
     var chorePt=null; if (ncl<CLEAN_NEED){ var cb=1e9; houses.forEach(function(hh,hi){ if (choresOf(hi).every(function(t){ return cleaned[choreId(hi,t)]; })) return; var dp=doorPt(hh), dd=Math.hypot(P.x-dp.x,P.z-dp.z); if (dd<cb){ cb=dd; chorePt=dp; } }); }
     if (done){ txt='Every job is done and the car runs. Get in and go.'; tgt=CARSIDE; }
-    else if (carOK && fixed.length===SGENS.length){ txt='Finish the chores in the neighbours’ houses: '+ncl+' of '+CLEAN_NEED+'.'; tgt=chorePt; }
+    else if (carOK){ txt='Finish the chores in the neighbours’ houses: '+ncl+' of '+CLEAN_NEED+'.'; tgt=chorePt; }
     else if (G===0){ txt='Find the gas can at the station.'; tgt=GAS; }
     else if (G===1){ txt='Take the gas to the car.'; tgt=CARSIDE; }
     else if (B===0){ txt='Find the spare battery behind the house with the truck.'; tgt=batPos(); }
     else if (B===1){ txt='Take the battery to the car.'; tgt=CARSIDE; }
     else if (!carOK){ txt='Fix the car. More hands are faster.'; tgt=CARSIDE; }
-    else { var bh=null, bd=1e9; SGENS.forEach(function(h2){ if (gens[h2]>=GENNEED) return; var dd=Math.hypot(P.x-houses[h2].gen.x,P.z-houses[h2].gen.z); if (dd<bd){ bd=dd; bh=h2; } }); txt='Start the generators behind the dark houses.'; tgt=bh!==null?genPt(bh):null; }
+    else { var bh=null, bd=1e9; houses.forEach(function(h2,hi2){ if (powered[hi2]) return; var dd=Math.hypot(P.x-h2.gen.x,P.z-h2.gen.z); if (dd<bd){ bd=dd; bh=hi2; } }); txt='Get into the houses: connect the wires on a generator out back so the neighbour lets you in, then do the chores.'; tgt=bh!==null?genPt(bh):chorePt; }
     var pvw=N.polView||[0]; if (pvw[0]===1) txt+=' Police in '+mmss(num(pvw[1],0)-N.el)+'.'; if (N.ih>=0) txt='You are inside. '+txt;
-    netObj('Kill Feast · '+clockT,txt+' Chores '+Math.min(ncl,CLEAN_NEED)+'/'+CLEAN_NEED+', car '+Math.round(Math.min(1,C/CARNEED)*100)+'%, generators '+fixed.length+'/'+SGENS.length+'. '+alive+' alive. Or last until 6:00 AM.',tgt);
+    netObj('Kill Feast · '+clockT,txt+' Chores '+Math.min(ncl,CLEAN_NEED)+'/'+CLEAN_NEED+', car '+Math.round(Math.min(1,C/CARNEED)*100)+'%, houses powered '+fixed.length+'/'+houses.length+'. '+alive+' alive. Or last until 6:00 AM.',tgt);
     netSafe(vanPhase(N)?(N.el<VAN_T0?'Get ready':(N.drvId===netMe?(N.car&&N.car.arr?'Pulling over':'Driving · '+(isTouch?'push the stick':'W go · A/D steer')):(N.car&&N.car.arr?'Pulling over':'Riding in'))):lab);
   } else { netObj('Kill Feast · '+clockT,(N.alive===2?'You escaped. ':'You are dead. ')+alive+' still alive.',null); netSafe(null); }
   if (N.el>6){
@@ -4468,7 +4476,8 @@ function netAct(){
   var N=net; if (!N) return; var pl=N.pl||[]; if (N.alive!==1){ N.spec++; return; }
   if (N.mode!=='s' || N.fin) return; var n=N.near; if (!n) return;
   if (n.k==='unhide') return netUnhide();
-  if (n.k==='door'){ if (game.role==='killer' && !n.h.netBroke) return startDoorBreak(n.h); return netEnterHouse(n.h); }
+  if (n.k==='wire'){ if (!wireUI.isOpen()) wireUI.open(n.hi); return; }
+  if (n.k==='door'){ if (game.role==='killer' && !n.h.netBroke) return startDoorBreak(n.h); if (game.role!=='killer' && !n.h.power && !n.h.netBroke){ thud(0.4); say(n.h.n,['The power’s out and I can’t see a thing! Fix the generator out back and I’ll let you in.','Who’s there? Get my generator running first, it’s round the back.','I’m not opening up in the dark. Fix the wires on the generator.'][(Math.random()*3)|0],3200); return; } return netEnterHouse(n.h); }
   if (n.k==='chat'){ if (N.chat) closeChat(); else openChat(n.h); return; }
   if (n.k==='killnb') return killNeighbour(n.h);
   if (n.k==='up'){ P.x=IX+1.55; P.z=-3.35; P.fl=1; P.y=FLOOR2; P.yaw=Math.PI/2*-1+Math.PI; iFix(P,0.3); stepSound(false,false); noise(0.1,0.1,500); return; }
@@ -4529,8 +4538,9 @@ function teamTick(pl){
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=53;
+var GAME_VER=54;
 var UPDATES=[
+  {v:54,t:'Power to the people',n:['Every house starts with the power out, and the neighbours won’t open the door in the dark.','Go round the back to their generator and press E: match each coloured wire to the socket of the same colour. Drag it, or tap the wire then the socket.','Get it wrong and it sparks. Get them all and the lights come on, and the neighbour lets you in to do the chores.','You can’t move while your hands are in the wires, and getting hit knocks you out of it. Survivor bots fix generators too.']},
   {v:53,t:'Cleaning crew',n:['The story: you clean houses for a living, and tonight’s job is every house in town.','You ride in by car: 5 seats, and the first survivor drives. W to go, A and D to steer. When you reach the houses the engine dies and the car rolls to a stop.','New job: clean the neighbours’ houses. Each house has two chores: washing the dishes, sweeping, mopping, dusting, taking out the trash, making the bed or scrubbing the tub. Stand at the glowing spot for 30 seconds. If you step away, it starts over. You need 6 chores done to leave.','Jump scares are much nastier now: a strobe of horrible faces, a scream that rings in your ears, and the tape tearing apart. You also get one when a killer hits you.','Stairs are easier: stand at the bottom or the top and press Go upstairs or Go downstairs.']},
   {v:52,t:'The van',n:['Cutscenes can’t be skipped any more.','After the intro, every survivor rides into town in the back of a van. The driver brings it in for 20 seconds and stops, the side door slides open, and at 30 seconds you get out. Killers have to wait for the van too.','Every map looks its own now. Camp Pinewood has log cabins, dirt roads, lanterns, fireflies and a green moon. Blackwater Farm has white and red board houses, fences, a windmill and a huge orange harvest moon. Frostbite Ridge has snow everywhere, icicles, falling snow and a cold blue moon.']},
   {v:51,t:'New maps and killer moves',n:['Story Mode is gone and Online is now just Play.','There are 3 new maps to pick in the lobby: Camp Pinewood (pine woods, tents, outhouses and campfires), Blackwater Farm (cornfields, a red barn, hay bales and scarecrows) and Frostbite Ridge (deep snow, snowmen, snow forts and Christmas lights). Each one has its own hiding spots.','Killers have 2 new moves, each with a 40 second cooldown. Z · Scare jump-scares every survivor, freezes them for a moment and gives away where they are. X · Vanish makes you invisible for 8 seconds, or until you swing.']},
@@ -4818,6 +4828,43 @@ var CHOREFX=(function(){ var gs=[], F=FLOOR2, brown=mat(0x4a3a24,{roughness:1}),
 function choreFxUpdate(cleaned){ var N=net, hi=N && N.mode==='s' ? N.ih : -1, list=hi>=0?choresOf(hi):[];
   CHOREFX.forEach(function(g,t){ var v=list.indexOf(t)>=0 && !cleaned[choreId(hi,t)]; if (g.visible!==v) g.visible=v; }); }
 
+/* ---------- generators: match the wires to get the power back on ---------- */
+var WIRE_COLS=['#e0322a','#2f6fe8','#f2cc22','#3cc25a'], WIRE_N=['red','blue','yellow','green'];
+var wireUI=(function(){
+  var cv=$('wireCv'), g=cv.getContext('2d'), W=cv.width, H=cv.height, st=null;
+  function lx(){ return 44; } function rx(){ return W-44; } function wy(i){ return 46+i*((H-80)/3); }
+  function draw(){ if (!st) return; g.clearRect(0,0,W,H); g.fillStyle='#14161c'; g.fillRect(0,0,W,H);
+    g.fillStyle='#262a33'; g.fillRect(18,18,40,H-36); g.fillRect(W-58,18,40,H-36);
+    for (var i=0;i<4;i++){ var y=wy(i); g.fillStyle=WIRE_COLS[i]; g.fillRect(4,y-7,lx()-4,14); g.beginPath(); g.arc(lx(),y,10,0,7); g.fill();
+      if (st.sel===i){ g.strokeStyle='#fff'; g.lineWidth=3; g.beginPath(); g.arc(lx(),y,15,0,7); g.stroke(); }
+      var c=st.right[i], ry=wy(i); g.fillStyle='#0a0b0e'; g.beginPath(); g.arc(rx(),ry,13,0,7); g.fill(); g.strokeStyle=WIRE_COLS[c]; g.lineWidth=5; g.beginPath(); g.arc(rx(),ry,13,0,7); g.stroke(); g.fillStyle=WIRE_COLS[c]; g.fillRect(rx()+14,ry-6,W-rx()-14,12); }
+    st.done.forEach(function(d,i){ if (d<0) return; g.strokeStyle=WIRE_COLS[i]; g.lineWidth=9; g.lineCap='round'; g.beginPath(); g.moveTo(lx(),wy(i)); g.bezierCurveTo(W/2-30,wy(i)+30,W/2+30,wy(d)-30,rx(),wy(d)); g.stroke(); });
+    if (st.sel>=0 && st.drag){ g.strokeStyle=WIRE_COLS[st.sel]; g.lineWidth=9; g.lineCap='round'; g.beginPath(); g.moveTo(lx(),wy(st.sel)); g.lineTo(st.drag[0],st.drag[1]); g.stroke(); }
+    if (st.spark>0){ g.fillStyle='rgba(255,240,160,'+st.spark+')'; for (var k=0;k<14;k++){ g.fillRect(st.sx+(Math.random()-0.5)*50,st.sy+(Math.random()-0.5)*50,3,3); } }
+    $('wireInfo').textContent=st.fin?'Power is back on!':(st.sel>=0?'Now tap the '+WIRE_N[st.sel]+' socket on the right':'Tap a wire on the left, then the socket of the same colour'); }
+  function at(e){ var r=cv.getBoundingClientRect(), t=e.touches?e.touches[0]||e.changedTouches[0]:e; return [(t.clientX-r.left)*W/r.width,(t.clientY-r.top)*H/r.height]; }
+  function pickL(p){ for (var i=0;i<4;i++) if (st.done[i]<0 && Math.hypot(p[0]-lx(),p[1]-wy(i))<26) return i; return -1; }
+  function pickR(p){ for (var i=0;i<4;i++) if (Math.hypot(p[0]-rx(),p[1]-wy(i))<28) return i; return -1; }
+  function tryR(r){ if (st.sel<0 || r<0) return; if (st.done.indexOf(r)>=0) return; var ok=st.right[r]===st.sel;
+    if (ok){ st.done[st.sel]=r; tone(520+st.sel*90,0.12,'square',0.08); st.sel=-1; if (st.done.every(function(d){ return d>=0; })){ st.fin=true; tone(90,0.9,'sawtooth',0.12,140); setTimeout(function(){ finish(); },650); } }
+    else { st.spark=1; st.sx=rx(); st.sy=wy(r); noise(0.18,0.5,3000); tone(120,0.2,'square',0.1,60); shake(); st.sel=-1; } draw(); }
+  function down(e){ if (!st || st.fin) return; e.preventDefault(); var p=at(e), l=pickL(p); if (l>=0){ st.sel=l; st.drag=p; tone(300,0.05,'square',0.05); draw(); return; } tryR(pickR(p)); }
+  function move(e){ if (!st || st.sel<0 || !st.drag) return; e.preventDefault(); st.drag=at(e); draw(); }
+  function up(e){ if (!st || !st.drag) return; var p=at(e), r=pickR(p); st.drag=null; if (r>=0) tryR(r); else draw(); }
+  cv.addEventListener('mousedown',down); window.addEventListener('mousemove',move); window.addEventListener('mouseup',up);
+  cv.addEventListener('touchstart',down,{passive:false}); cv.addEventListener('touchmove',move,{passive:false}); cv.addEventListener('touchend',up);
+  $('wireClose').addEventListener('click',function(){ close(false); });
+  window.addEventListener('keydown',function(e){ if (!st || st.fin) return; var n=['Digit1','Digit2','Digit3','Digit4'].indexOf(e.code); if (n<0) return; e.stopPropagation(); if (st.sel<0) { if (st.done[n]<0){ st.sel=n; draw(); } } else tryR(n); },true);
+  function tick(dt){ if (!st) return; if (st.spark>0){ st.spark=Math.max(0,st.spark-dt*3); draw(); } var N=net, h=houses[st.hi];
+    if (!N || game.mode!=='play' || N.alive!==1 || Math.hypot(P.x-h.gen.x,P.z-h.gen.z)>3 || h.power) close(false); }
+  function finish(){ var N=net, hi=st?st.hi:-1; close(true); if (!N || hi<0) return; if (N.pw.indexOf(hi)<0) N.pw.push(hi); netSend({pw:N.pw}); }
+  function close(ok){ if (!st) return; st=null; $('wirePanel').hidden=true; if (net) net.wiring=null; if (!isTouch && game.mode==='play' && !document.pointerLockElement) lock(); }
+  function open(hi){ var perm=[0,1,2,3]; for (var i=3;i>0;i--){ var j=(Math.random()*(i+1))|0, t=perm[i]; perm[i]=perm[j]; perm[j]=t; }
+    st={hi:hi,right:perm,done:[-1,-1,-1,-1],sel:-1,drag:null,spark:0,fin:false}; if (net) net.wiring=st; $('wirePanel').hidden=false; $('wireTitle').textContent=NEIGHBOURS[houses[hi].n].n+'’s generator';
+    wasLocked=false; if (document.exitPointerLock) try { document.exitPointerLock(); } catch(e){} noise(0.2,0.2,800); draw(); }
+  return {open:open,close:close,tick:tick,isOpen:function(){ return !!st; },_st:function(){ return st; }};
+})();
+
 Math.random=NATIVE_RANDOM;
 
 /* ---------- VHS tape look: the picture is drawn small, then played back like an old tape ---------- */
@@ -4921,7 +4968,7 @@ function update(dt){
   P.x+=(rx*mx-f.x*mz)*speed*dt; P.z+=(rz*mx-f.z*mz)*speed*dt;
   if (game.net && net.ih>=0) iFix(P,0.3);
   else { P.x=Math.max(-158.4,Math.min(148,P.x)); P.z=Math.max(-39.4,Math.min(39.4,P.z)); lvFix(P,0.45); P.fl=0; }
-  if (game.net) vanTick(dt);
+  if (game.net) vanTick(dt); wireUI.tick(dt);
   if (game.net && vanPhase(net) && game.role!=='killer' && net.alive===1 && net.seats){ var vsi=net.seats[netMe]||0, vsp=vanSeatPos(vsi,false), cy=net.car?net.car.yaw:0; P.x=vsp.x; P.z=vsp.z; P.y=0.32; if (net.lastCy!=null) P.yaw+=angDiff(cy,net.lastCy); net.lastCy=cy; if (!P.crouch){ P.crouch=true; crouchUI(); } }
   if (m>0.1){ P.bob+=dt*speed*1.9; P.step+=dt*speed; if (P.step>2.3){ P.step=0; if (!P.crouch) stepSound(wantRun,false); else noise(0.05,0.025,300); } }
   var bob=reduced?0:Math.sin(P.bob)*(wantRun?0.06:0.045);
