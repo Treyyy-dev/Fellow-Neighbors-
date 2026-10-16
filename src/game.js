@@ -3310,18 +3310,6 @@ function nameSprite(text){
   var t=canvasTex(256,64,function(g){ g.clearRect(0,0,256,64); g.font='bold 30px Georgia,serif'; g.textAlign='center'; g.textBaseline='middle'; g.lineWidth=6; g.strokeStyle='rgba(0,0,0,.85)'; g.strokeText(text,128,34); g.fillStyle='#ffd9a8'; g.fillText(text,128,34); });
   var s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false,fog:true})); s.scale.set(1.5,0.375,1); s.position.y=2.15; return s;
 }
-// the killer cannot be seen: only a heat-haze shimmer when it is close, a glimpse when it strikes or is stunned
-function ghostKiller(av,o2,dt){
-  var N=net; if (!av.ghost){ av.ghost=[]; av.g.traverse(function(o){ if (o.isSprite || o.isLight){ o.visible=false; return; } if (!o.isMesh || !o.material) return;
-      var ms=Array.isArray(o.material)?o.material:[o.material]; ms=ms.map(function(m){ var c=m.clone(); c.transparent=true; c.depthWrite=false; av.ghost.push(c); return c; }); o.material=Array.isArray(o.material)?ms:ms[0]; o.castShadow=false; }); av.rev=0; av.br=0; }
-  var d=Math.hypot(o2.x-P.x,o2.z-P.z), b=o2.bot, stun=b?((b.stun||0)>0 || (b.sn||0)>0):false;
-  if (stun || (N.fin) || (N.killRev||0)>0) av.rev=1; else av.rev=Math.max(0,av.rev-dt*1.6);
-  var t=clock.elapsedTime, near=d<7?(1-d/7):0, sh=near*0.2*(0.55+0.45*Math.sin(t*23+Math.sin(t*7)*3));
-  var op=Math.max(av.rev,sh); av.ghost.forEach(function(m){ m.opacity=op; m.depthWrite=op>0.9; });
-  av.g.visible=op>0.01; if (av.tag) av.tag.visible=false;
-  // you can hear it breathing when it is close
-  av.br-=dt; if (d<11 && av.br<=0 && o2.a!==2 && AC){ av.br=1.5+Math.random()*0.6; var v=(1-d/11); noise(0.7,0.09*v,380); noise(0.55,0.06*v,260,0.85); }
-}
 function avatarFor(id,kind,sp,label,ks){
   var key=kind+':'+(sp?sp.n:'')+':'+(label||'')+':'+(ks|0), a=avatars[id];
   if (a && a.key===key && (a.rig || !NETTPL.m)) return a;
@@ -3620,7 +3608,7 @@ function netTick(dt){
     var mate=(kind==='k')===(game.role==='killer') || N.mode!=='s';
     var av=avatarFor(o2.id,kind,sp,mate?nick(o2.pr):'',kind==='k'?Math.max(0,Math.min(KSKINS.length-1,num(o2.bot?o2.bot.ks:o2.pr.ks,0)|0)):0); av.g.visible=o2.a!==2 && o2.ih===N.ih && !o2.hid && !(kind==='k' && game.role!=='killer' && (o2.bot?o2.bot.iv>0:num(o2.pr.iv,0)>0));
     if (N.fin && N.fin.q.id===o2.id) av.g.visible=false;
-    if (kind==='k' && game.role!=='killer' && av.g.visible) ghostKiller(av,o2,dt);
+    if (kind==='k' && game.role!=='killer' && (vanPhase(N) || !N.allParked)) av.g.visible=false;   // nobody sees the killer while the cars are still coming in
     if (o2.a===0 && !av.pooled && av.g.visible){ av.pooled=true; bloodPool(o2.x,((o2.ih>=0||o2.y>0.3)?o2.y:groundY(o2.x,o2.z)),o2.z,1.5); bloodBurst(o2.x,(o2.y||0)+0.3,o2.z,0,0,40); }
     av.scared=kind==='p' && !(N.mode==='k'); var dz=kind==='k' && num(o2.pr.sn,0)>0; avatarStep(av,dt,o2.x,o2.z,o2.yaw+Math.PI,dz?0:o2.an,o2.a===0,(o2.ih>=0||o2.y>0.3)?o2.y:undefined);
     if (kind==='p' && N.mode==='s'){ var loud=game.role==='killer' && o2.a===1 && (N.sense>0 || (o2.bot?o2.bot.nz:num(o2.pr.nz,0)));
@@ -4179,9 +4167,10 @@ function teamTick(pl){
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=56;
+var GAME_VER=57;
 var UPDATES=[
-  {v:56,t:'Own cars, an invisible killer, chore puzzles',n:['Everyone drives their own car now. Drive down the lane to the new parking lot at the end and pull into your glowing spot: the car parks itself, the door swings open and you climb out. Bots drive their own cars too.','The cars are rebuilt: steering front wheels, a turning steering wheel, a headlight beam, body roll and a working driver door. No more floating up before you are in your seat.','At the end of the night, walk back to your car to leave and you drive off.','The killer is always the AI now, and you cannot see it. Up close there is a faint shimmer and you can hear it breathing. You only see it clearly when it strikes or gets stunned. Up to 4 survivors.','Chores are puzzles: scrub the plates, the floor or the tub clean, sweep the dust into the pan, put the books back tallest to shortest, sort the trash from the recycling, and match the pillowcases.','Front doors animate: you reach for the knob, the door creaks open, you step through and it shuts behind you.','The jump scare is now a 3D face that lunges right into the lens.','Removed: the Go upstairs and Go downstairs buttons (just walk the stairs), the spoken voices, and the killer skins and kill animations in the shop.']},
+  {v:57,t:'Killer unseen on the drive',n:['The killer is only invisible while everyone is driving in. Once you are out of your car you can see it again, like before.']},
+  {v:56,t:'Own cars, an invisible killer, chore puzzles',n:['Everyone drives their own car now. Drive down the lane to the new parking lot at the end and pull into your glowing spot: the car parks itself, the door swings open and you climb out. Bots drive their own cars too.','The cars are rebuilt: steering front wheels, a turning steering wheel, a headlight beam, body roll and a working driver door. No more floating up before you are in your seat.','At the end of the night, walk back to your car to leave and you drive off.','The killer is always the AI now. Up to 4 survivors.','Chores are puzzles: scrub the plates, the floor or the tub clean, sweep the dust into the pan, put the books back tallest to shortest, sort the trash from the recycling, and match the pillowcases.','Front doors animate: you reach for the knob, the door creaks open, you step through and it shuts behind you.','The jump scare is now a 3D face that lunges right into the lens.','Removed: the Go upstairs and Go downstairs buttons (just walk the stairs), the spoken voices, and the killer skins and kill animations in the shop.']},
   {v:55,t:'New stairs, simpler job',n:['The stairs in every house are rebuilt: 14 even steps with clear edges, a proper handrail and a light over the stairwell, so they look right from the top and the bottom.','The car runs fine now. No more gas can, battery or repairs.','The job is just two things: get 5 generators running and finish 6 chores. Then get back in the car and go.','Only Hollow Lane is left. Camp Pinewood, Blackwater Farm and Frostbite Ridge are gone, and so is the map picker.','On phones the action button (Open, Up, Down, Fix…) now sits beside the others instead of over the tape timer.']},
   {v:54,t:'Power to the people',n:['Every house starts with the power out, and the neighbours won’t open the door in the dark.','Go round the back to their generator and press E: match each coloured wire to the socket of the same colour. Drag it, or tap the wire then the socket.','Get it wrong and it sparks. Get them all and the lights come on, and the neighbour lets you in to do the chores.','You can’t move while your hands are in the wires, and getting hit knocks you out of it. Survivor bots fix generators too.']},
   {v:53,t:'Cleaning crew',n:['The story: you clean houses for a living, and tonight’s job is every house in town.','You ride in by car: 5 seats, and the first survivor drives. W to go, A and D to steer. When you reach the houses the engine dies and the car rolls to a stop.','New job: clean the neighbours’ houses. Each house has two chores: washing the dishes, sweeping, mopping, dusting, taking out the trash, making the bed or scrubbing the tub. Stand at the glowing spot for 30 seconds. If you step away, it starts over. You need 6 chores done to leave.','Jump scares are much nastier now: a strobe of horrible faces, a scream that rings in your ears, and the tape tearing apart. You also get one when a killer hits you.','Stairs are easier: stand at the bottom or the top and press Go upstairs or Go downstairs.']},
