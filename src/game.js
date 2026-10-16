@@ -11,6 +11,27 @@ var rand = function(a,b){ return a + Math.random()*(b-a); };
 var lin = function(hex){ return new THREE.Color(hex).convertSRGBToLinear(); };
 var reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 var isTouch = false;
+var KB_ACT=[{a:'fwd',n:'Move forward',d:'KeyW'},{a:'back',n:'Move back',d:'KeyS'},{a:'left',n:'Move left',d:'KeyA'},{a:'right',n:'Move right',d:'KeyD'},
+  {a:'run',n:'Run',d:'ShiftLeft'},{a:'crouch',n:'Crouch',d:'KeyC'},{a:'use',n:'Interact / open / clean',d:'KeyE'},{a:'item',n:'Eat or drink a snack',d:'KeyR'},
+  {a:'light',n:'Flashlight',d:'KeyF'},{a:'pause',n:'Pause',d:'KeyP'},{a:'spec',n:'Switch who you watch (dead)',d:'Space'}], kbWait=null;
+function kbCode(a){ var K=(typeof SAVE!=='undefined' && SAVE.kb)||{}; for (var i=0;i<KB_ACT.length;i++) if (KB_ACT[i].a===a) return K[a]||KB_ACT[i].d; return null; }
+function kbName(c){ if (!c) return '—'; if (/^Key/.test(c)) return c.slice(3); if (/^Digit/.test(c)) return c.slice(5); if (/^Numpad/.test(c)) return 'Num '+c.slice(6);
+  return ({ShiftLeft:'Left Shift',ShiftRight:'Right Shift',ControlLeft:'Left Ctrl',ControlRight:'Right Ctrl',AltLeft:'Left Alt',AltRight:'Right Alt',Space:'Space',Tab:'Tab',CapsLock:'Caps Lock',Enter:'Enter',Backquote:'`',Minus:'-',Equal:'=',BracketLeft:'[',BracketRight:']',Semicolon:';',Quote:"'",Comma:',',Period:'.',Slash:'/',Backslash:'\\'})[c]||c; }
+function kbMap(e){
+  if (!e.isTrusted) return;
+  if (kbWait){ if (e.type!=='keydown') { e.stopImmediatePropagation(); return; } e.preventDefault(); e.stopImmediatePropagation(); var w=kbWait; kbWait=null; if (e.code!=='Escape' && !/^Arrow/.test(e.code) && !/^Meta/.test(e.code)) kbSet(w,e.code); else kbRender(); return; }
+  var t=e.target; if (t && (t.tagName==='INPUT' || t.tagName==='TEXTAREA')) return;
+  var code=e.code, virt=null, blocked=false;
+  for (var i=0;i<KB_ACT.length;i++){ var A=KB_ACT[i], b=kbCode(A.a); if (b===code) virt=A.d; else if (A.d===code) blocked=true; }
+  if (virt && virt!==code){ e.stopImmediatePropagation(); if (e.type==='keydown' && !/^(Shift|Control|Alt)/.test(code)) e.preventDefault(); window.dispatchEvent(new KeyboardEvent(e.type,{code:virt,key:e.key,repeat:e.repeat,bubbles:true,cancelable:true})); return; }
+  if (blocked && !virt) e.stopImmediatePropagation(); }
+window.addEventListener('keydown',kbMap,true); window.addEventListener('keyup',kbMap,true);
+function kbSet(a,code){ SAVE.kb=SAVE.kb||{}; var old=kbCode(a); KB_ACT.forEach(function(A){ if (A.a!==a && kbCode(A.a)===code) SAVE.kb[A.a]=old; }); SAVE.kb[a]=code; save(); kbRender(); kbHelp(); }
+function kbRender(){ var L=document.getElementById('kbList'); if (!L) return; L.textContent='';
+  KB_ACT.forEach(function(A){ var r=document.createElement('div'); r.className='kbRow'; var n=document.createElement('span'); n.textContent=A.n; var b=document.createElement('button'); b.type='button';
+    b.textContent=kbWait===A.a?'Press a key…':kbName(kbCode(A.a)); if (kbWait===A.a) b.className='wait'; b.addEventListener('click',function(){ kbWait=A.a; kbRender(); }); r.appendChild(n); r.appendChild(b); L.appendChild(r); }); }
+function kbHelp(){ var el=document.getElementById('keysHelp'); if (!el || isTouch) return; var k=function(a){ return kbName(kbCode(a)); };
+  el.textContent=k('fwd')+' '+k('left')+' '+k('back')+' '+k('right')+' move · Mouse look · '+k('run')+' run · '+k('crouch')+' crouch · '+k('light')+' flashlight · '+k('use')+' interact · '+k('item')+' snack · Esc or '+k('pause')+' pause'; }
 try { isTouch = matchMedia('(pointer: coarse)').matches; } catch(e){}
 
 /* ---------- renderer ---------- */
@@ -1430,7 +1451,7 @@ window.addEventListener('keydown',function(e){
   if (e.code==='KeyF' && game.mode==='play' && !game.paused && (!shelter || shelter.view==='walk')) toggleLight();
   if ((e.code==='Escape' || e.code==='KeyP') && game.mode==='play'){ if (game.paused) resume(); else pause(); }
   if (e.code==='KeyE') act();
-  if (e.code==='KeyC' || e.code==='ControlLeft') toggleCrouch();
+  if (e.code==='KeyC') toggleCrouch();
   if (game.mode==='play' && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].indexOf(e.code)>=0) e.preventDefault();
 });
 window.addEventListener('keyup',function(e){ keys[e.code]=false; });
@@ -1706,7 +1727,10 @@ function syncSeg(){
   SAVE.voices=true;
   [['fpsSeg',SAVE.fps],['qSeg',SAVE.q]].forEach(function(p){ var bs=$(p[0]).children; for (var i=0;i<bs.length;i++) bs[i].setAttribute('aria-pressed', String(+bs[i].dataset.v===p[1])); });
 }
-function openSettings(from){ settingsBack=from; syncSeg(); show('settings'); }
+function openSettings(from){ settingsBack=from; syncSeg(); kbWait=null; kbRender(); kbHelp(); show('settings'); }
+(function(){ var tabs=document.querySelectorAll('#setTabs button'); Array.prototype.forEach.call(tabs,function(b){ b.addEventListener('click',function(){ var t=b.dataset.t; kbWait=null;
+  Array.prototype.forEach.call(tabs,function(x){ x.setAttribute('aria-pressed',String(x===b)); }); $('setGen').hidden=t!=='gen'; $('setKeys').hidden=t!=='keys'; kbRender(); }); });
+  $('kbReset').addEventListener('click',function(){ SAVE.kb={}; save(); kbWait=null; kbRender(); kbHelp(); }); })();
 $('fpsSeg').addEventListener('click',function(e){ var v=e.target.dataset && e.target.dataset.v; if (v===undefined) return; SAVE.fps=+v; save(); syncSeg(); });
 $('qSeg').addEventListener('click',function(e){ var v=e.target.dataset && e.target.dataset.v; if (v===undefined) return; SAVE.q=+v; save(); syncSeg(); applyQuality(); });
 $('setDone').addEventListener('click',function(){ show(settingsBack); });
@@ -4305,8 +4329,9 @@ function teamTick(pl){ var tm=$('team'); if (!tm.hidden) tm.hidden=true; return;
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=62;
+var GAME_VER=63;
 var UPDATES=[
+  {v:63,t:'PC keybinds',n:['Settings has a PC keybinds tab. Click any action and press a new key to rebind it: moving, running, crouching, interacting, snacks, flashlight, pause and spectating. Picking a key that is already used swaps the two. Reset to defaults puts everything back.']},
   {v:62,t:'Stacked modes',n:['The mode cards are stacked on every screen now.']},
   {v:61,t:'Pick a mode',n:['Play now opens a mode screen: Kill Feast, plus a locked mode that is coming soon.']},
   {v:60,t:'Cash and the corner store',n:['Every chore you finish pays $5. Your cash shows next to the chores and generators.','The gas station store is bigger, with two glass doors side by side that swing open as you walk up.','Felix works the register. Grab a snack or drink right by the counter, ring it up, and keep it in your pocket (up to 3). Press R (or tap Use) to have it.','Bolt Energy $5: faster for 30 s. Marathon Bar $5: run without tiring for 30 s. Iron Jerky $10: a shield that takes the next hit. Midnight Cola $10: the killer can’t see or hear you for 30 s.','Walk out without paying and Felix makes you put it back.','The killer no longer vanishes and pops up somewhere else, and Elias no longer appears at the Blood Moon.']},

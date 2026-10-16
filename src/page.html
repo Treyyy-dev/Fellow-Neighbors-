@@ -69,6 +69,11 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
 .modeCard:hover,.modeCard:focus-visible{background:var(--vcr,#1a2a8a)}
 .modeCard.locked{opacity:.45;cursor:not-allowed;border-style:dashed}.modeCard.locked:hover{background:rgba(8,12,40,.78)}
 .modeCard{min-height:110px}
+#kbList{display:flex;flex-direction:column;gap:6px;width:100%;max-width:460px;margin:0 auto 10px}
+.kbRow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 10px;background:rgba(0,0,0,.3);border:1px solid rgba(231,226,210,.18)}
+.kbRow span{font-size:17px}.kbRow button{font:inherit;min-width:120px;padding:6px 10px;color:var(--osd,#eee);background:rgba(8,12,40,.85);border:1px solid var(--osd,#eee);cursor:pointer}
+.kbRow button.wait{background:var(--vcr,#1a2a8a);animation:kbBlink .8s steps(2) infinite}@keyframes kbBlink{50%{opacity:.4}}
+.setPane{width:100%;display:flex;flex-direction:column;align-items:center}
 #newsList{display:flex;flex-direction:column;gap:10px;width:min(100%,460px);text-align:left}
 .upd{border:1px solid rgba(154,150,138,.45);background:rgba(13,17,27,.72);border-radius:2px;padding:10px 14px}
 .upd.new{border-color:var(--pumpkin)}
@@ -363,10 +368,18 @@ body{font-size:20px}
 
   <div class="card" id="settings" hidden><div class="col">
     <h2>Settings</h2>
+    <div class="seg" id="setTabs"><button type="button" data-t="gen" aria-pressed="true">General</button><button type="button" data-t="keys" aria-pressed="false">PC keybinds</button></div>
+    <div id="setGen" class="setPane">
     <p class="lab">Frame rate</p>
     <div class="seg" id="fpsSeg"><button type="button" data-v="30">30</button><button type="button" data-v="60">60</button><button type="button" data-v="120">120</button></div>
     <p class="lab">Quality</p>
     <div class="seg" id="qSeg"><button type="button" data-v="0">Very low</button><button type="button" data-v="1">Low</button><button type="button" data-v="2">Medium</button><button type="button" data-v="3">High</button><button type="button" data-v="4">Very high</button></div>
+    </div>
+    <div id="setKeys" class="setPane" hidden>
+      <p class="lab">Click a key, then press the new one. Esc cancels. Arrow keys always move too.</p>
+      <div id="kbList"></div>
+      <div class="list"><button class="mbtn" id="kbReset" type="button">Reset to defaults</button></div>
+    </div>
     <p class="lab" id="keysHelp">W A S D move &middot; Mouse look &middot; Shift run &middot; C crouch &middot; F flashlight &middot; E use &middot; Esc pause &middot; Online: click or R uses what is in your left hand, killers click or V to swing, Q sense, Z scare, X vanish</p>
     <div class="list"><button class="mbtn" id="setDone" type="button">Done</button></div>
   </div></div>
