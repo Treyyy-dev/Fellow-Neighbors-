@@ -3730,6 +3730,8 @@ function netBegin(go){
     {cam:[110,1.25,-7],to:[114,1.35,-6],look:[128,0.9,-0.5],dur:4.5,text:WMAP==='hotel'?'You clean rooms for a living. Tonight’s job is the whole Night Haven Hotel.':'You clean houses for a living. Tonight’s job is every house on '+mn+'.'},
     {cam:[24,1.6,5.2],to:[-4,1.6,5.2],look:[-18,1.7,15],dur:4.5,text:WMAP==='hotel'?'The power is out at the Night Haven Hotel. Every room has its own generator beside its door in the hallway. Fix them, then clean the rooms.':'The power is out on the whole street. Fix the generators, then wash the dishes, sweep, mop, take out the trash.'},
     {cam:[-54.5,1.6,1.6],to:[-57.5,1.6,2.8],look:[-67,0.6,9],dur:4,text:'Everyone drives their own car. Park in the lot at the end of the lane. You are not alone out here.'}] : COOP[mode].intro();
+  // the last shot drops you into your own driver's seat, so when it ends you are already behind the wheel
+  if (mode==='s' && role!=='k' && vp) shots.push({cam:[vp.x+7,2.4,vp.z+3.2],to:[vp.x,P.eye+P.gy,vp.z],look:[vp.x-14,0.55,vp.z],dur:2.6,text:'Your car. Drive to the lot.'});
   playCut(shots,netResume);
   if (mode!=='s') netStageWorld();
 }
@@ -3806,7 +3808,7 @@ function vcTick(dt,pl){ var N=net; if (!vcCan()){ if (Object.keys(VOICE.pcs).len
   var box=$('vcList'), show=game.mode==='play' && talk.length>0; if (box.hidden===show) box.hidden=!show;
   if (show){ var t=talk.join('\n'); if (box.dataset.t!==t){ box.dataset.t=t; box.innerHTML=''; talk.forEach(function(n){ var d=document.createElement('div'); d.textContent=n; box.appendChild(d); }); } }
 }
-function netResume(){ if (!net) return; if (net.mode==='s' && !MIC.on && !MIC.denied) micStart(); game.mode='play'; game.paused=false; setHud(true); vm.visible=game.role!=='killer' && net.alive===1; vmKnife.visible=game.role==='killer'; setLight(P.light); net.objT=0; net.lastObj=''; if (!isTouch && !document.pointerLockElement) lock(); }
+function netResume(){ if (!net) return; if (vanPhase(net)){ var C0=myCar(); if (C0){ var s0=carLocal(C0,CAR_SEAT[0],CAR_SEAT[1]); P.x=s0.x; P.z=s0.z; P.y=P.gy=0.27; P.yaw=C0.yaw-Math.PI/2; P.pitch=-0.05; } } if (net.mode==='s' && !MIC.on && !MIC.denied) micStart(); game.mode='play'; game.paused=false; setHud(true); vm.visible=game.role!=='killer' && net.alive===1 && !vanPhase(net); vmKnife.visible=game.role==='killer'; setLight(P.light); net.objT=0; net.lastObj=''; if (!isTouch && !document.pointerLockElement) lock(); }
 function netOver(title,text,win){ if (CHASE && AC) CHASE.g.gain.setTargetAtTime(0,AC.currentTime,0.3), CHASE.hi.gain.setTargetAtTime(0,AC.currentTime,0.3), CHASE.lvl=0;
   if (!net || net.over) return; net.over=true; var gain=win?20:10; SAVE.tokens+=gain; tokLog(gain,(win?'Won':'Played')+' a Kill Feast · '+title); save();
   var fin=function(){ closeChat(); game.mode='over'; setHud(false); hpBar(false); $('items').hidden=true; $('team').hidden=true; $('senseBtn').hidden=true; $('scareBtn').hidden=true; $('vanishBtn').hidden=true; setPrompt(null); setPrompt(null); $('safe').hidden=true; $('fear').style.opacity=0; beacon.visible=false; keys={}; touchMove.x=touchMove.y=0; moveId=lookId=null;
@@ -3918,6 +3920,7 @@ function netTick(dt){
     var av=avatarFor(o2.id,kind,sp,mate?nick(o2.pr):'',kind==='k'?Math.max(0,Math.min(KSKINS.length-1,num(o2.bot?o2.bot.ks:o2.pr.ks,0)|0)):0); av.g.visible=o2.a!==2 && o2.ih===N.ih && !o2.hid && !(kind==='k' && game.role!=='killer' && (o2.bot?o2.bot.iv>0:num(o2.pr.iv,0)>0));
     if (N.fin && N.fin.q.id===o2.id) av.g.visible=false;
     if (isK && game.role!=='killer' && (vanPhase(N) || !N.allParked)) av.g.visible=false;
+    if (!isK && o2.a===1){ var CC=FLEET.cars[o2.id]; if (CC && CC.st<3) av.g.visible=false; }   // still inside their car: you see the car, not them standing in it
     if (isK && av.g.visible && o2.a===1){ var kdd=Math.hypot(o2.x-P.x,o2.z-P.z); if (kdd<(N.kNear?N.kNear.d:1e9) || !N.kNearF){ N.kNear={d:kdd,girl:girl}; N.kNearF=1; } }   // nobody sees the killer while the cars are still coming in
     if (o2.a===0 && !av.pooled && av.g.visible){ av.pooled=true; bloodPool(o2.x,((o2.ih>=0||o2.y>0.3)?o2.y:groundY(o2.x,o2.z)),o2.z,1.5); bloodBurst(o2.x,(o2.y||0)+0.3,o2.z,0,0,40); }
     av.scared=kind==='p' && !girl && !(N.mode==='k'); var dz=kind==='k' && num(o2.pr.sn,0)>0; avatarStep(av,(girl && av.tw && av.tw.fz>0)?0:dt,o2.x,o2.z,o2.yaw+Math.PI,dz?0:(girl&&o2.an>0?1:o2.an),o2.a===0,(o2.ih>=0||o2.y>0.3)?o2.y:undefined);
@@ -4557,8 +4560,9 @@ function teamTick(pl){ var tm=$('team'); if (!tm.hidden) tm.hidden=true; return;
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=70;
+var GAME_VER=71;
 var UPDATES=[
+  {v:71,t:'Straight into your car',n:['The intro now ends inside your car: the last shot moves from behind it into the driver’s seat, and you start the match already behind the wheel.','Your car pulls away as soon as the intro ends.','Other players and bots are no longer shown standing where their car is while they are still inside it.']},
   {v:70,t:'Voice chat, Hollow Mart, better stairs',n:['Voice chat: talk to your team with your mic. Voices get quieter the further away someone is, and you can switch to the whole team at full volume, or off, in Settings.','Dead players can’t be heard by the living. Once you die you only hear, and are only heard by, the others who died.','The police and the police station are gone, and so is calling the police.','The gas station is now Hollow Mart, a bigger supermarket next door on both maps. 16 snacks and drinks from different brands: cheap ones by the register that don’t last long, better ones in the back that last up to a minute, combos that give two boosts, and gum and coffee that make the boosts you have last longer. Boosts of the same kind now stack.','The shelves are full of real packets, bottles and cans, each with its name on it.','Stairs rebuilt so the killer and the bots can get upstairs, around the stairwell and into every room. A carpet runner and a second handrail too.','Every house now has one chore upstairs: make the bed, scrub the tub, clean the bathroom mirror or tidy the kid’s room.','Too loud while hiding? The killer hears you, walks up to your hiding spot and drags you out.']},
   {v:69,t:'Ghosts and smarter AI',n:['When you die you spectate: the camera follows a teammate from behind. Switch with the arrows on screen, the arrow keys or Space.','Fate cards: while you spectate, every 25 seconds you get 5 face-down cards. 3 help and 2 hurt, but you can’t tell which. Pick one and it hits the person you’re watching: speed, a shield, endless stamina, unseen, +1 health or +$5, or slowed, noisy, a dead flashlight or losing $5.','Dead players’ mics no longer do anything, so the killer can’t hear you once you’re dead.','The killer is smarter: it cuts you off instead of chasing your back, goes to check when a generator comes on or a chore gets finished nearby, patrols the houses with lights on, and waits by the cars once the job is done.','Survivor bots avoid jobs the killer is standing near.']},
   {v:68,t:'A bigger hotel with crossing halls',n:['The Night Haven Hotel is wider and deeper now. Its hallways form a cross: a long east-west hall with rooms on both sides, crossed by a north-south hall, meeting at a hub with a chandelier and signs to each wing.','Four ways in and out: the lobby doors facing the parking, a back exit at the end of the north hall, and open exits at both ends of the east-west hall.','Generators sit in the hall beside each room’s door, never at the very end of a hall.']},
@@ -4940,7 +4944,7 @@ function parkedCol(C,on){ if (on && !C.col){ C.col={minX:C.stall.x-0.92,maxX:C.s
 function fleetLeave(id){ var C=FLEET.cars[id]; if (!C || C.st>=5) return; C.st=5; C.t=net?net.el:0; }
 // one car, driven here (yours, or a bot's on the host)
 function simCar(C,dt,el,mine){
-  if (C.st===0){ C.v=0; if (el>=VAN_T0 && (!mine || game.mode==='play')){ C.st=1; C.wp=null; } return; }
+  if (C.st===0){ C.v=0; if (mine ? game.mode==='play' : el>=VAN_T0){ C.st=1; C.wp=null; } return; }   // yours pulls away the moment the intro ends
   if (C.st===1){
     if (mine && !C.auto && el>VAN_T0+52){ C.auto=true; toast('Autopilot: the car takes you to your spot.',2400); }
     if (mine && !C.auto){
