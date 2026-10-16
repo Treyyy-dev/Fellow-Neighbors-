@@ -131,6 +131,9 @@ body.touch #team{bottom:auto;top:96px}
 .seg{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
 .seg button{font:inherit;font-size:13px;letter-spacing:.06em;color:var(--bone);background:rgba(13,17,27,.72);border:1px solid var(--dim);padding:8px 12px;border-radius:2px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--pumpkin);border-color:var(--pumpkin);color:var(--night)}
+#shopGrid .tokBox{grid-column:1/-1;display:flex;flex-direction:column;gap:8px}.tokBal{font-size:34px;margin:0}.tokList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;max-height:40vh;overflow:auto}
+.tokList li{display:grid;grid-template-columns:64px 1fr auto;gap:10px;align-items:baseline;padding:6px 8px;background:rgba(0,0,0,.3);border:1px solid rgba(231,226,210,.15)}
+.tokList b.up{color:#7ae08a}.tokList b.down{color:#ff7a6a}.tokList i{font-style:normal;opacity:.6;font-size:.85em}
 #shopGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;width:100%}
 .skin{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 8px;border:1px solid rgba(154,150,138,.5);background:rgba(13,17,27,.72);border-radius:2px;min-width:0}
 .skin.on{border-color:var(--pumpkin)}
@@ -240,7 +243,7 @@ body{font-size:20px}
   <button type="button" id="senseBtn" hidden>Sense</button>
   <button type="button" id="scareBtn" class="kab" hidden>Scare</button>
   <button type="button" id="vanishBtn" class="kab" hidden>Vanish</button>
-  <div id="chatBox" hidden><p class="lab">Talking to <b id="chatName"></b></p><div class="chatOpts"><button type="button" data-c="1">1 · Get to safety</button><button type="button" data-c="2">2 · Do you have anything?</button><button type="button" data-c="3">3 · Call the police</button><button type="button" data-c="0">Close</button></div></div>
+  <div id="chatBox" hidden><p class="lab">Talking to <b id="chatName"></b></p><div class="chatOpts"><button type="button" data-c="1">1 · Get to safety</button><button type="button" data-c="3">3 · Call the police</button><button type="button" data-c="0">Close</button></div></div>
   <div id="wirePanel" class="pzPanel" hidden><p class="lab" id="wireTitle">Generator</p><canvas id="wireCv" width="380" height="250"></canvas><p class="lab" id="wireInfo"></p><button class="chip" id="wireClose" type="button">Step away</button></div>
   <div id="chorePanel" class="pzPanel" hidden><p class="lab" id="choreTitle">Chore</p><canvas id="choreCv" width="380" height="250"></canvas><p class="lab" id="choreInfo"></p><button class="chip" id="choreClose" type="button">Stop</button></div>
   <div id="updBar" hidden><span>A new update is out.</span><button type="button" id="updReload">Update now</button><button type="button" id="updLater">Later</button></div>

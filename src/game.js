@@ -1349,6 +1349,18 @@ function noise(dur,vol,freq,when){
   var g=AC.createGain(), t=AC.currentTime+(when||0); s.loop=true; g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
   s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t+dur);
 }
+var CHASE=null;
+function chaseMusic(fr,dt){ if (!AC) return; fr=Math.max(0,Math.min(1,fr||0));
+  if (!CHASE){ var g=AC.createGain(); g.gain.value=0; g.connect(master); var lp=AC.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=300; lp.Q.value=6; lp.connect(g);
+    [55,58.27,41.2].forEach(function(f){ var o=AC.createOscillator(); o.type='sawtooth'; o.frequency.value=f; o.connect(lp); o.start(); });
+    var hi=AC.createGain(); hi.gain.value=0; hi.connect(master); var trem=AC.createGain(); trem.gain.value=0.5; trem.connect(hi);
+    [1244.5,1318.5,1396.9].forEach(function(f,i){ var o=AC.createOscillator(); o.type=i===1?'triangle':'sine'; o.frequency.value=f; var lfo=AC.createOscillator(); lfo.frequency.value=7+i*1.3; var lg=AC.createGain(); lg.gain.value=f*0.006; lfo.connect(lg); lg.connect(o.frequency); lfo.start(); o.connect(trem); o.start(); });
+    var tl=AC.createOscillator(); tl.frequency.value=11; var tg=AC.createGain(); tg.gain.value=0.5; tl.connect(tg); tg.connect(trem.gain); tl.start();
+    CHASE={g:g,lp:lp,hi:hi,beat:0,lvl:0,scr:0}; }
+  var C=CHASE, now=AC.currentTime; C.lvl+=(fr-C.lvl)*Math.min(1,dt*(fr>C.lvl?3:0.8));
+  C.g.gain.setTargetAtTime(C.lvl*0.16,now,0.15); C.lp.frequency.setTargetAtTime(220+C.lvl*1400,now,0.2); C.hi.gain.setTargetAtTime(C.lvl*C.lvl*0.05,now,0.2);
+  if (C.lvl>0.05){ C.beat-=dt; if (C.beat<=0){ C.beat=0.95-C.lvl*0.6; tone(70,0.3,'sine',0.35*C.lvl,36); noise(0.12,0.12*C.lvl,500); if (C.lvl>0.5) tone(140,0.12,'square',0.05*C.lvl,70,0.16); }
+    C.scr-=dt; if (C.lvl>0.75 && C.scr<=0){ C.scr=2.5+Math.random()*2.5; tone(1900+Math.random()*600,0.6,'sawtooth',0.05*C.lvl,1200); } } }
 function heartbeat(v){ tone(62,0.16,'sine',v,38); tone(56,0.18,'sine',v*0.8,34,0.2); }
 function sting(v,long){
   [311,330,466,494,698].forEach(function(f,i){ tone(f*(long?1:0.5), long?1.6:0.7, 'sawtooth', v/(i+2), f*(long?0.92:0.48)); });
@@ -1715,7 +1727,19 @@ function shopPreview(i){
   doorLight.position.set(M.x+0.9,1.8,M.z+2.4); doorLight.intensity=4.2;
 }
 var shopTab='surv', kPrev=null, kPrevI=-1;
-function shopTabs(){ var t=$('shopTabs'); t.textContent=''; t.hidden=true; shopTab='surv'; }   // killer skins and kill animations are gone: the killer is the AI
+function tokLog(d,why){ if (!Array.isArray(SAVE.tx)) SAVE.tx=[]; SAVE.tx.unshift({t:Date.now(),d:d,w:String(why).slice(0,60),b:SAVE.tokens}); if (SAVE.tx.length>60) SAVE.tx.length=60; }
+function shopTabs(){ var t=$('shopTabs'); t.textContent=''; t.hidden=false; [['surv','Characters'],['tok','Tokens']].forEach(function(d){ var b=document.createElement('button'); b.type='button'; b.textContent=d[1]; b.setAttribute('aria-pressed',String(shopTab===d[0]));
+  b.addEventListener('click',function(){ if (shopTab!==d[0]){ shopTab=d[0]; renderShop(); } }); t.appendChild(b); }); }
+function renderTokShop(){ var grid=$('shopGrid'); grid.innerHTML=''; resident.g.visible=false; $('shopName').textContent='Tokens'; $('shopTimer').textContent='You have '+SAVE.tokens+' tokens · earn 20 for a win, 10 for playing';
+  var box0=document.createElement('div'); box0.className='tokBox'; var bal=document.createElement('p'); bal.className='tokBal'; bal.textContent=SAVE.tokens+' tokens'; box0.appendChild(bal);
+  var soon=document.createElement('p'); soon.className='lab'; soon.textContent='Token packs you can buy are coming soon.'; box0.appendChild(soon);
+  var hd=document.createElement('p'); hd.className='lab'; hd.textContent='History'; box0.appendChild(hd);
+  var ul=document.createElement('ul'); ul.className='tokList'; var tx=Array.isArray(SAVE.tx)?SAVE.tx:[];
+  if (!tx.length){ var li0=document.createElement('li'); li0.textContent='Nothing yet. Play a match to earn your first tokens.'; ul.appendChild(li0); }
+  tx.forEach(function(e){ var li=document.createElement('li'), d=new Date(e.t), a=document.createElement('b'), w=document.createElement('span'), when=document.createElement('i');
+    a.textContent=(e.d>0?'+':'')+e.d; a.className=e.d>0?'up':'down'; w.textContent=e.w; when.textContent=(d.getMonth()+1)+'/'+d.getDate()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+(typeof e.b==='number'?' · '+e.b+' left':'');
+    li.appendChild(a); li.appendChild(w); li.appendChild(when); ul.appendChild(li); });
+  box0.appendChild(ul); grid.appendChild(box0); }
 function killerPreview(i){
   var M=lamps[2]; resident.g.visible=false; $('shopName').textContent=KSKINS[i].n;
   if (kPrev && kPrevI!==i){ scene.remove(kPrev.g); kPrev=null; }
@@ -1766,7 +1790,7 @@ function renderKillShop(){
     el.appendChild(sw); el.appendChild(nm); el.appendChild(bt); grid.appendChild(el); });
 }
 function renderShop(){
-  shopTabs(); stopFinPreview(); hideKillerPreview();
+  shopTabs(); stopFinPreview(); hideKillerPreview(); if (shopTab==='tok') return renderTokShop();
   var grid=$('shopGrid'); grid.innerHTML=''; var stock=shopStock();
   var list=SAVE.owned.slice(); stock.forEach(function(i){ if (list.indexOf(i)<0) list.push(i); });
   if (shopView<0 || list.indexOf(shopView)<0) shopView = SAVE.equipped>=0 ? SAVE.equipped : STARTER;
@@ -1781,7 +1805,7 @@ function renderShop(){
     if (on){ bt.textContent='Equipped'; bt.disabled=true; }
     else if (owned){ bt.textContent='Equip'; bt.addEventListener('click',function(){ SAVE.equipped=i; save(); applySkin(); renderShop(); }); }
     else { bt.textContent='Buy · '+price(i); bt.disabled=SAVE.tokens<price(i);
-      bt.addEventListener('click',function(){ if (SAVE.tokens<price(i)) return; SAVE.tokens-=price(i); SAVE.owned.push(i); SAVE.equipped=i; save(); applySkin(); renderShop(); }); }
+      bt.addEventListener('click',function(){ if (SAVE.tokens<price(i)) return; SAVE.tokens-=price(i); tokLog(-price(i),'Bought '+NEIGHBOURS[i].n); SAVE.owned.push(i); SAVE.equipped=i; save(); applySkin(); renderShop(); }); }
     el.appendChild(sw); el.appendChild(nm); el.appendChild(bt); grid.appendChild(el);
   });
   shopTimer();
@@ -3119,8 +3143,7 @@ function chatPick(n){
   var N=net; if (!N || !N.chat) return; var h=N.chat, nm=h.n;
   if (n===1){ say(nm,['All right. I’m going upstairs and I’m locking the door.','Thank you. I’ll hide. Be careful out there.','Upstairs. Got it. Don’t let him follow you in.'][(Math.random()*3)|0],3000); h.netHid=true; closeChat(); setTimeout(function(){ if (net && net.ih===houses.indexOf(h)) resident.g.visible=false; },1600); return; }
   if (n===2){ if (h.netAsked){ say(nm,'I already gave you everything I could find.',2600); return; } h.netAsked=true;
-    if (N.held){ h.netAsked=false; say(nm,'Your hands are full. Use what you’ve got first.',2600); return; }
-    if (Math.random()<0.5){ var it=Math.random()<0.5?'knife':'heal'; giveHeld(it); say(nm,it==='knife'?'Here, take my kitchen knife. Two good stabs in it.':'Here’s the first aid kit. Use it when you need it.',3200); tone(660,0.15,'triangle',0.15); itemsUI(); }
+    if (false){ var it=Math.random()<0.5?'knife':'heal'; giveHeld(it); say(nm,it==='knife'?'Here, take my kitchen knife. Two good stabs in it.':'Here’s the first aid kit. Use it when you need it.',3200); tone(660,0.15,'triangle',0.15); itemsUI(); }
     else say(nm,['Nothing, I’m sorry. Not even a bat.','I wish I did. I have nothing.','No… I’m sorry.'][(Math.random()*3)|0],2600); return; }
   if (n===3){ var pv=polInfo(); if (pv[0]>0){ say(nm,'They’re already on their way. Hang on.',2600); return; }
     if (N.called && N.el-N.called<5) return; N.called=N.el; N.pc=[Math.round(N.el*10)/10,houses.indexOf(h)]; netSend({pc:N.pc});
@@ -3471,6 +3494,7 @@ function lobbyStart(){
   netSend({go:{id:Date.now(),mode:lobby.mode,roles:roles,bots:bots,map:lobby.map||'lane'}}); lobbyTick();
 }
 function netLeave(){
+  if (CHASE && AC){ CHASE.g.gain.setTargetAtTime(0,AC.currentTime,0.2); CHASE.hi.gain.setTargetAtTime(0,AC.currentTime,0.2); CHASE.lvl=0; }
   micStop(); $('micBar').hidden=true;
   if (lobby && lobby.timer) clearInterval(lobby.timer); lobby=null; dirSend({rm:null});
   for (var id in avatars) dropAvatar(id);
@@ -3580,8 +3604,8 @@ function micTick(dt){ var bar=$('micBar'), N=net, show=!!(N && N.mode==='s' && g
 (function(){ var bar=$('micBar'); function tap(e){ e.preventDefault(); e.stopPropagation(); if (!MIC.on) micStart(); else { MIC.muted=!MIC.muted; toast(MIC.muted?'Mic muted.':'Mic on. Keep your voice down.',1600); } }
   bar.addEventListener('click',tap); bar.addEventListener('touchend',tap,{passive:false}); bar.addEventListener('keydown',function(e){ if (e.key==='Enter'||e.key===' ') tap(e); }); })();
 function netResume(){ if (!net) return; if (net.mode==='s' && !MIC.on && !MIC.denied) micStart(); game.mode='play'; game.paused=false; setHud(true); vm.visible=game.role!=='killer' && net.alive===1; vmKnife.visible=game.role==='killer'; setLight(P.light); net.objT=0; net.lastObj=''; if (!isTouch && !document.pointerLockElement) lock(); }
-function netOver(title,text,win){
-  if (!net || net.over) return; net.over=true; var gain=win?20:10; SAVE.tokens+=gain; save();
+function netOver(title,text,win){ if (CHASE && AC) CHASE.g.gain.setTargetAtTime(0,AC.currentTime,0.3), CHASE.hi.gain.setTargetAtTime(0,AC.currentTime,0.3), CHASE.lvl=0;
+  if (!net || net.over) return; net.over=true; var gain=win?20:10; SAVE.tokens+=gain; tokLog(gain,(win?'Won':'Played')+' a Kill Feast · '+title); save();
   var fin=function(){ closeChat(); game.mode='over'; setHud(false); hpBar(false); $('items').hidden=true; $('team').hidden=true; $('senseBtn').hidden=true; $('scareBtn').hidden=true; $('vanishBtn').hidden=true; setPrompt(null); setPrompt(null); $('safe').hidden=true; $('fear').style.opacity=0; beacon.visible=false; keys={}; touchMove.x=touchMove.y=0; moveId=lookId=null;
     wasLocked=false; if (document.exitPointerLock) try { document.exitPointerLock(); } catch(e){}
     $('neTitle').textContent=title; $('neText').textContent=text; $('neReward').textContent='+'+gain+' tokens for '+(win?'winning':'playing')+' · you have '+SAVE.tokens+' tokens'; show('netEnd'); };
@@ -3673,11 +3697,11 @@ function netTick(dt){
     S.mode=null; S.scare=0; S.state='hunt'; S.g.visible=!!E.vis;
     if (E.vis){ S.g.position.set(E.x,groundY(E.x,E.z),E.z); turnTo(S.g,E.ry,dt); if (S.mixer){ setAnim(E.mv?'Walk':'Idle'); if (S.actions.Walk) S.actions.Walk.timeScale=1.35; } }
     var ed=E.vis?Math.hypot(E.x-P.x,E.z-P.z):99, fear=N.alive===1?Math.max(0,Math.min(1,(24-ed)/20)):0;
-    $('fear').style.opacity=fear*0.5; if (droneGain) droneGain.gain.value=0.05+fear*0.08; game.heart-=dt;
+    $('fear').style.opacity=0; if (droneGain) droneGain.gain.value=0.05+fear*0.08; game.heart-=dt;
     if (fear>0 && game.heart<=0){ heartbeat(0.25+fear*0.4); game.heart=1.15-fear*0.75; }
   } else if (N.mode==='s' && game.role!=='killer' && N.alive===1){
-    var kd=99; killers.forEach(function(q){ kd=Math.min(kd,Math.hypot(q.x-P.x,q.z-P.z)); }); var fr=Math.max(0,Math.min(1,(22-kd)/18));
-    $('fear').style.opacity=fr*0.5; game.heart-=dt; if (fr>0 && game.heart<=0){ heartbeat(0.25+fr*0.4); game.heart=1.15-fr*0.75; }
+    var kd=99; killers.forEach(function(q){ if (q.ih===N.ih || (q.ih==null && N.ih<0)) kd=Math.min(kd,Math.hypot(q.x-P.x,q.z-P.z)); }); var fr=vanPhase(N)?0:Math.max(0,Math.min(1,(22-kd)/18));
+    $('fear').style.opacity=0; chaseMusic(fr,dt);
   }
   // being hit
   var H=hitsK+hitsE;
@@ -3836,7 +3860,6 @@ function botsHost(dt,pl,W){
       else if (b.goal && b.goal.k==='ask'){ var H=houses[b.goal.h];
         if (H.netHid || H.netDead || H.netAsked){ b.goal=null; }
         else if (b.ih===b.goal.h && Math.hypot(IX-1.0-b.x,1.9-b.z)<1.4 && (b.y||0)<0.3){ H.netAsked=true; b.goal=null;
-          if (Math.random()<0.5){ b.held=Math.random()<0.5?'knife':'heal'; if (b.held==='knife') b.kn=2; }
           var pv=N.polView||[0]; if (pv[0]===0 && !N.pc && Math.random()<0.35){ N.pc=[Math.round(N.el*10)/10,houses.indexOf(H)]; netSend({pc:N.pc}); }
           b.an=0; return; }
         else move({x:IX-1.0+0.9,z:1.9,ih:b.goal.h,y:0},wary?2.2:4.3); }
@@ -4021,7 +4044,7 @@ function preyTick(dt,others){
     if (e.code==='KeyZ') useScare();
     if (e.code==='KeyX') useVanish();
     if (e.code==='KeyV') swing();
-    if (net.chat){ if (e.code==='Digit1') chatPick(1); else if (e.code==='Digit2') chatPick(2); else if (e.code==='Digit3') chatPick(3); return; }
+    if (net.chat){ if (e.code==='Digit1') chatPick(1); else if (e.code==='Digit3') chatPick(3); return; }
     if (e.code==='KeyR') useHeld(); });
   Array.prototype.forEach.call(document.querySelectorAll('#chatBox [data-c]'),function(b){ b.addEventListener('click',function(){ chatPick(+b.dataset.c); }); });
   $('senseBtn').addEventListener('click',useSense); $('scareBtn').addEventListener('click',useScare); $('vanishBtn').addEventListener('click',useVanish);
@@ -4035,6 +4058,7 @@ CHEST_SPOTS.push([97,-18.2],[111.5,-30.5],[89.5,20.5],[123,31],[133,-10],[80,10.
 var chests=[], trapMeshes={}, ITEMN={heal:'Heal kit',trap:'Bear trap',knife:'Knife'};
 var chestWoodM=mat(0x5a3a22,{roughness:.75}), chestBandM=mat(0x2a2c30,{roughness:.4,metalness:.6}), trapM=mat(0x3a3c40,{roughness:.45,metalness:.7}), trapBloodM=mat(0x5a0a08,{roughness:.5,metalness:.3});
 function buildChests(){
+  return;   // no chests or pick-ups any more
   if (chests.length) return;
   CHEST_SPOTS.forEach(function(c,i){
     var x=c[0], z=c[1]; for (var k=0;k<24 && blocked(x,z,0.7);k++){ x=c[0]+Math.cos(k*1.7)*(0.6+k*0.25); z=c[1]+Math.sin(k*1.7)*(0.6+k*0.25); }
@@ -4086,7 +4110,7 @@ var vmHeld=(function(){ var g={heal:new THREE.Group(),trap:new THREE.Group(),kni
   var k=makeKnife(); k.scale.setScalar(0.7); k.rotation.set(-1.2,0,0.2); k.position.set(0,0.01,-0.05); g.knife.add(k);
   Object.keys(g).forEach(function(n){ g[n].visible=false; vmL.add(g[n]); }); return g; })();
 function heldShow(){ var h=net && net.mode==='s' && net.alive===1 ? net.held : null; Object.keys(vmHeld).forEach(function(n){ vmHeld[n].visible=h===n; }); return h; }
-function giveHeld(it){ var N=net; if (N.held) return false; N.held=it; if (it==='knife') N.kn=2; game.grab=0.5; itemsUI(); return true; }
+function giveHeld(it){ return false; var N=net; if (N.held) return false; N.held=it; if (it==='knife') N.kn=2; game.grab=0.5; itemsUI(); return true; }
 function useHeld(){
   var N=net; if (!N || N.mode!=='s' || game.role==='killer' || N.alive!==1 || game.mode!=='play' || N.hide || !N.held) return;
   var k=N.held;
@@ -4153,7 +4177,7 @@ function netKnockTick(dt){
     tmpV.set(0,2.2,5.2); h.g.localToWorld(tmpV); doorLight.position.copy(tmpV); doorLight.intensity=1.8; tone(140,0.35,'sawtooth',0.03,210);
     N.kd=[houses.indexOf(h),Date.now()%1e7];
     if (N.hp<3){ N.hp++; say(h.n,NETLINES.heal[(Math.random()*3)|0],3200); tone(520,0.2,'sine',0.15,780); }
-    else { var it=['heal','trap','knife'][(Math.random()*3)|0]; giveHeld(it); say(h.n,NETLINES.give[(Math.random()*3)|0]+' ('+ITEMN[it]+')',3400); }
+    else say(h.n,['Stay safe out there.','I can’t help you. Go!','Lock yourself in somewhere.'][(Math.random()*3)|0],3000);
     itemsUI(); }
   if (k.t>4.6){ if (h.open){ h.open=0; h.hall.visible=false; resident.g.visible=false; doorLight.intensity=0; } N.knock=null; }
 }
@@ -4224,8 +4248,9 @@ function teamTick(pl){ var tm=$('team'); if (!tm.hidden) tm.hidden=true; return;
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=58;
+var GAME_VER=59;
 var UPDATES=[
+  {v:59,t:'Music instead of red, a Tokens tab',n:['No more red at the edges of the screen when the killer is near. Instead a low, dissonant score creeps in and gets louder and faster the closer it gets, with a shriek when it is right on you.','Chests are gone, and so are the knives, first aid kits and bear traps. Neighbours don’t hand out items any more either.','The shop has a Tokens tab: your balance and a history of every token you earned and spent. Token packs you can buy are coming soon.']},
   {v:58,t:'Mics, cut generators, a bigger street',n:['Your microphone is in the game. The bar in the bottom-left shows how loud you are; past the white line the killer hears you and comes for you. Tap the bar to turn the mic on or mute it.','The killer sneaks round the back and cuts generators, often at a house with someone inside. The lights die, and you can’t clean until someone wires it back up.','The map is just the neighbourhood now, with the gas station and the police station. The park, churchyard, hospital and supermarket are gone, and the street goes on with 6 more houses: 18 in all.','10 new characters: Jax, Tess, Moe, Kiko, Zeke, Lou, Rudy, Bea, Ike and Zora. There is no default skin any more: everyone starts as Jax, and the shop always shows the characters you own.','The teammate cards on the left of the screen are gone, and the lobby no longer lists the AI killer.','The intro no longer clips through a house when it shows the parking lot, and bots start in their own cars instead of standing in the lot first.']},
   {v:57,t:'Killer unseen on the drive',n:['The killer is only invisible while everyone is driving in. Once you are out of your car you can see it again, like before.']},
   {v:56,t:'Own cars, an invisible killer, chore puzzles',n:['Everyone drives their own car now. Drive down the lane to the new parking lot at the end and pull into your glowing spot: the car parks itself, the door swings open and you climb out. Bots drive their own cars too.','The cars are rebuilt: steering front wheels, a turning steering wheel, a headlight beam, body roll and a working driver door. No more floating up before you are in your seat.','At the end of the night, walk back to your car to leave and you drive off.','The killer is always the AI now. Up to 4 survivors.','Chores are puzzles: scrub the plates, the floor or the tub clean, sweep the dust into the pan, put the books back tallest to shortest, sort the trash from the recycling, and match the pillowcases.','Front doors animate: you reach for the knob, the door creaks open, you step through and it shuts behind you.','The jump scare is now a 3D face that lunges right into the lens.','Removed: the Go upstairs and Go downstairs buttons (just walk the stairs), the spoken voices, and the killer skins and kill animations in the shop.']},
