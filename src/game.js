@@ -231,7 +231,7 @@ for (var dx=-68; dx<146; dx+=6){ var d=new THREE.Mesh(new THREE.PlaneGeometry(2.
 /* ---------- perimeter + gate ---------- */
 var hedgeM = new THREE.MeshStandardMaterial({map:rep(leafTex,30,2), color:lin(0x1d3a22), roughness:1});
 function hedge(x,z,hx,hz){ box(hx*2,3.4,hz*2,hedgeM,x,1.7,z); addBox(x,z,hx,hz); }
-hedge(37,-41,111,1); hedge(37,41,111,1); hedge(-73,-31.5,1,10.5); hedge(-73,31.5,1,10.5); hedge(148,0,1,41);
+hedge(37,-57,111,1); hedge(37,57,111,1); [-1,1].forEach(function(s){ hedge(-73,s*25.25,1,4.25); hedge(-73,s*49.5,1,7.5); }); hedge(148,0,1,57);
 var stoneM = new THREE.MeshStandardMaterial({map:rep(stoneTex,1,3), roughness:.9});
 var ironM = mat(0x0c0c10,{roughness:.45,metalness:.6});
 var leaves = [-1,1].map(function(s){
@@ -271,11 +271,13 @@ var gableShape = new THREE.Shape(); gableShape.moveTo(-4.1,0); gableShape.lineTo
 var gableG = new THREE.ShapeGeometry(gableShape);
 var gableShape2 = new THREE.Shape(); gableShape2.moveTo(-5.1,0); gableShape2.lineTo(5.1,0); gableShape2.lineTo(0,2.5); gableShape2.lineTo(-5.1,0);
 var gableG2 = new THREE.ShapeGeometry(gableShape2);
-houseXs.forEach(function(hx){ [-1,1].forEach(function(side){
+// row A faces the main street; row B, behind it, faces the back streets that run to Hollow Mart
+var houseXsB=[-55,-37,-19,-1,17,35,53,71,89,107,125];
+function mkHouse(hx,side,z,rowB){
   var litWin=[], litFx=[], hc0=colliders.length;
-  var z=side*18, g=new THREE.Group(); g.position.set(hx,0,z); g.rotation.y = side>0 ? Math.PI : 0; world.add(g);   // local +Z is the front
+  var g=new THREE.Group(); g.position.set(hx,0,z); g.rotation.y = side>0 ? Math.PI : 0; world.add(g);   // local +Z is the front
   var wallM = new THREE.MeshStandardMaterial({map:rep(sidingTex,3,5), bumpMap:rep(sidingBump,3,5), bumpScale:.03, color:lin(houseCols[hi%houseCols.length]), roughness:.8});
-  var ST={two:hi%4===1||hi===6||hi===11, roof:hi%3, brick:hi%4===2, garage:hi%4===0||hi===7, shut:hi%2===0};
+  var ST={two:hi%4===1||hi===6||hi===11, roof:hi%3, brick:hi%4===2, garage:!rowB && (hi%4===0||hi===7), shut:hi%2===0};
   var top=ST.two?8.0:5.4, wh=top-0.4;
   var trimM=mat([0xd9d6cc,0xe8dcc0,0x3a3f4a,0xf0ece2][hi%4],{roughness:.7}), roofM=new THREE.MeshStandardMaterial({map:roofM0.map,color:lin([0xffffff,0xc08a78,0x8a9ab0,0xa8a888,0x8a7a9a,0xd0b890][hi%6]),roughness:.9});
   if (ST.brick){ wallM.map=rep(brickTex,5,ST.two?7:4.5); wallM.bumpMap=null; wallM.color=lin([0xc89a86,0xb0a090,0xd0a890][hi%3]); }
@@ -314,11 +316,11 @@ houseXs.forEach(function(hx){ [-1,1].forEach(function(side){
   var knob=new THREE.Mesh(new THREE.SphereGeometry(0.05,8,6),mat(0xb89a4a,{roughness:.3,metalness:.8})); knob.position.set(0.995,-0.08,0.08); pivot.add(knob);
   var hall=box(1.15,2.3,0.02,glow(0xc98a48),0,1.68,4.07,g); hall.visible=false;
   var broken=box(1.15,0.1,2.3,mat(doorCols[hi%4],{roughness:.5}),0.55,0.66,5.25,g); broken.rotation.y=0.3; broken.visible=false;
-  var gen=new THREE.Group(); gen.position.set(2.6,0,-4.75); g.add(gen);
+  var gen=new THREE.Group(); if (rowB){ gen.position.set(5.75,0,2.4); gen.rotation.y=-Math.PI/2; } else gen.position.set(2.6,0,-4.75); g.add(gen);
   box(1.2,0.08,0.7,ironM,0,0.08,0,gen); box(1.05,0.5,0.56,mat(0x8a2a1a,{roughness:.5,metalness:.3}),0,0.4,0,gen); box(0.5,0.22,0.5,mat(0x1a1b1f,{roughness:.4,metalness:.5}),-0.22,0.76,0,gen);
   cyl(0.05,0.05,0.4,8,ironM,0.38,0.85,0.1,gen); cyl(0.09,0.09,0.06,10,mat(0x2a2a2e),0.2,0.68,0,gen); box(0.06,0.06,0.9,ironM,0.5,0.05,0.5,gen);
   var glamp=new THREE.Mesh(new THREE.SphereGeometry(0.05,8,6),new THREE.MeshBasicMaterial({color:0x38ff6a})); glamp.position.set(0.36,0.5,-0.3); gen.add(glamp);
-  var gwx=hx-side*2.6, gwz=z+side*4.75; addBox(gwx,gwz,0.62,0.36);
+  var gwx=rowB?hx-side*5.75:hx-side*2.6, gwz=rowB?z-side*2.4:z+side*4.75; if (rowB) addBox(gwx,gwz,0.36,0.62); else addBox(gwx,gwz,0.62,0.36);
   houses.push({gen:{g:gen,lamp:glamp,x:gwx,z:gwz,broken:false},power:true,litWin:litWin,litFx:litFx,x:hx,z:z,side:side,g:g,pivot:pivot,hall:hall,broken:broken,cd:0,open:0,n:hi,breached:false,dead:false});
   // windows
   [-3.2,3.2].forEach(function(wx){
@@ -342,14 +344,13 @@ houseXs.forEach(function(hx){ [-1,1].forEach(function(side){
   if (Math.random()<.6) pumpkin(g, (hi%2?-1:1)*rand(1.0,1.5), 5.4, rand(0.6,0.85));
   if (Math.random()<.4) pumpkin(g, (hi%2?1:-1)*0.6, 6.5, 0.6);
   hi++;
-}); });
+}
+houseXs.forEach(function(hx){ [-1,1].forEach(function(side){ mkHouse(hx,side,side*18,false); }); });
+houseXsB.forEach(function(hx){ [-1,1].forEach(function(side){ mkHouse(hx,side,side*48,true); }); });
 // back yard fences with a gap
 var fenceM = new THREE.MeshStandardMaterial({map:rep(plankTex,6,1), roughness:.9, color:lin(0xb9b0a0)});
 var FENCES=[];
-[-44,-22,0,22,44,66,88,110,132].forEach(function(fx){ [-1,1].forEach(function(s){
-  FENCES.push({m:box(0.12,1.9,6.5,fenceM,fx,0.95,s*25.75),c:addBox(fx,s*25.75,0.1,3.25)});
-  FENCES.push({m:box(0.12,1.9,7.5,fenceM,fx,0.95,s*36.25),c:addBox(fx,s*36.25,0.1,3.75)});
-}); });
+
 
 /* ---------- street lamps ---------- */
 var poleM = mat(0x1c1e22,{roughness:.5,metalness:.6}), bulbM = glow(0xffe2b0);
@@ -367,6 +368,25 @@ for (var li=0, lx=-60; lx<=144; lx+=21, li++){
   addBox(lx,lz,0.15,0.15);
   lamps.push({x:bx,z:bz,sx:lx,sz:lz-sgn*2.6});
 }
+
+var BACKN=[];   // the north back street, hidden under the hotel on that map
+function streetLamp(lx,lz,sgn,list){ var n0=world.children.length, s0=scene.children.length;
+  cyl(0.07,0.11,5.4,8,poleM,lx,2.7,lz); cyl(0.16,0.2,0.5,8,poleM,lx,0.25,lz); var arm=cyl(0.045,0.045,1.7,6,poleM,lx,5.35,lz-sgn*0.8); arm.rotation.x=Math.PI/2; box(0.34,0.14,0.7,poleM,lx,5.3,lz-sgn*1.7);
+  var bx=lx, bz=lz-sgn*1.7, bulb=new THREE.Mesh(new THREE.BoxGeometry(0.24,0.05,0.5),bulbM); bulb.position.set(bx,5.21,bz); scene.add(bulb); halo(0xffc070,4.5,bx,5.15,bz,scene,.9);
+  var pool=new THREE.Mesh(new THREE.CircleGeometry(8,28),new THREE.MeshBasicMaterial({map:glowTex,color:lin(0xffb060),transparent:true,opacity:.22,depthWrite:false,blending:THREE.AdditiveBlending})); pool.rotation.x=-Math.PI/2; pool.position.set(bx,0.05,bz); scene.add(pool);
+  var c=addBox(lx,lz,0.15,0.15), L={x:bx,z:bz,sx:lx,sz:lz-sgn*2.6}; lamps.push(L);
+  if (list){ world.children.slice(n0).forEach(function(o){ list.push({o:o}); }); scene.children.slice(s0).forEach(function(o){ list.push({o:o}); }); list.push({c:c,L:L}); } }
+[-1,1].forEach(function(s){ var list=s>0?BACKN:null, n0=world.children.length;
+  var r=new THREE.Mesh(new THREE.PlaneGeometry(216,6),roadM); r.rotation.x=-Math.PI/2; r.position.set(35,0.021,s*33); world.add(r); r.receiveShadow=true;
+  box(214,0.14,1.6,walkM,36,0.07,s*36.9); box(214,0.12,0.3,curbM,36,0.06,s*29.85);
+  for (var dx2=-70; dx2<142; dx2+=6){ var d2=new THREE.Mesh(new THREE.PlaneGeometry(2.2,0.14),paint); d2.rotation.x=-Math.PI/2; d2.position.set(dx2,0.03,s*33); world.add(d2); }
+  if (list) world.children.slice(n0).forEach(function(o){ list.push({o:o}); });
+  for (var lx2=-62, k2=0; lx2<=138; lx2+=25, k2++) streetLamp(lx2,s*(k2%2?36.9:29.4),s*(k2%2?1:-1),list);
+  // the sign at the west end: this way to the Mart
+  var n1=world.children.length; cyl(0.06,0.06,2.6,6,poleM,-69.5,1.3,s*29.6); var st=canvasTex(256,64,function(g){ g.fillStyle='#1f6a3a'; g.fillRect(0,0,256,64); g.fillStyle='#fff4e0'; g.font='bold 30px Georgia,serif'; g.textAlign='center'; g.fillText('← HOLLOW MART',128,42); });
+  [1,-1].forEach(function(f){ var p=new THREE.Mesh(new THREE.PlaneGeometry(1.8,0.45),new THREE.MeshBasicMaterial({map:st})); p.position.set(-69.5,2.45,s*29.6+f*0.02); p.rotation.y=f>0?0:Math.PI; world.add(p); });
+  if (list) world.children.slice(n1).forEach(function(o){ list.push({o:o}); }); });
+(function(){ var r=new THREE.Mesh(new THREE.PlaneGeometry(6,52),roadM); r.rotation.x=-Math.PI/2; r.position.set(140,0.021,0); world.add(r); })();
 
 var carG=null, carCol=null;
 /* ---------- car ---------- */
@@ -406,9 +426,9 @@ var SNACKS=[
 SNACKS.forEach(function(s){ s.x=s.f[0]+s.nr[0]*0.75; s.z=s.f[1]+s.nr[1]*0.75; });
 var STN={x:-97,z:0,cx:-96.6,cz:-7.2,tx:-94.6,tz:-7.2};
 (function(){
-  var lotM=new THREE.MeshStandardMaterial({map:rep(asphaltTex,9,11),bumpMap:rep(asphaltBump,9,11),bumpScale:0.02,roughness:.75,color:lin(0x9a9aa0)});
-  var lot=new THREE.Mesh(new THREE.PlaneGeometry(35,40),lotM); lot.rotation.x=-Math.PI/2; lot.position.set(-90.5,0.025,0); world.add(lot);
-  hedge(-96,-21,11,1); hedge(-75.5,-21,1.5,1); hedge(-90,21,17,1); hedge(-108,0,1,22);
+  var lotM=new THREE.MeshStandardMaterial({map:rep(asphaltTex,9,22),bumpMap:rep(asphaltBump,9,22),bumpScale:0.02,roughness:.75,color:lin(0x9a9aa0)});
+  var lot=new THREE.Mesh(new THREE.PlaneGeometry(35,82),lotM); lot.rotation.x=-Math.PI/2; lot.position.set(-90.5,0.025,0); world.add(lot);
+  hedge(-108,0,1,42); hedge(-90.5,-42,18.5,1); hedge(-90.5,42,18.5,1);
   var wallM=new THREE.MeshStandardMaterial({map:rep(concreteTex,5,1),color:lin(0xdcd6c8),roughness:.9}), grnM=mat(0x1f6a3a,{roughness:.5}), whiteM=mat(0xe8e6e0,{roughness:.5});
   var glassM=new THREE.MeshStandardMaterial({color:lin(0x9fc0d0),transparent:true,opacity:.18,roughness:.05,metalness:.3,depthWrite:false});
   var panelM=glow(0xfff6e0), darkM=mat(0x17181c,{roughness:.5}), woodM=mat(0x6a4a32,{roughness:.6});
@@ -620,7 +640,7 @@ var swings=[], spinner=null, __parkM=secMark();
   });
 })();
 
-secErase(__parkM); hedge(-100,-31.5,1,9.5); hedge(-100,31.5,1,9.5); hedge(-87,-41,13,1); hedge(-87,41,13,1);
+secErase(__parkM);
 /* ---------- trees ---------- */
 var trunkM = new THREE.MeshStandardMaterial({map:rep(barkTex,2,3),roughness:1});
 var leafMs = [0x7a3a12,0x8a5a14,0x4a2a10,0x2f4a22,0x6a2414].map(function(c){ return new THREE.MeshStandardMaterial({map:leafTex,color:lin(c),roughness:1}); });
@@ -630,9 +650,10 @@ var blobGs = [0,1,2].map(function(k){ var g=new THREE.IcosahedronGeometry(1,2), 
 var leafSway=[], windU={value:0};
 var trunkG = new THREE.CylinderGeometry(0.16,0.34,4,8), branchG = new THREE.CylinderGeometry(0.05,0.11,2.2,5);
 var TREES=[];
-for (var ti=0, placed=0; ti<900 && placed<58; ti++){
-  var west=false, tx=rand(-69,143), tz=rand(-38,38);
-  if ((!west && Math.abs(tz)<9) || (west && Math.abs(tz+15)<3.5) || blocked(tx,tz,2.6)) continue;
+var GATES=[-44,-22,0,22,44,66,88,110,132];
+for (var ti=0, placed=0; ti<1600 && placed<78; ti++){
+  var west=false, tx=rand(-69,143), tz=rand(-55,55), az=Math.abs(tz);
+  if (az<9 || (az>23 && az<44.5) || tx>134 || (az<30 && GATES.some(function(f){ return Math.abs(f-tx)<3; })) || blocked(tx,tz,2.6)) continue;
   var tg=new THREE.Group(); tg.position.set(tx,0,tz); tg.rotation.y=Math.random()*6; var ts=rand(.9,1.35); tg.scale.setScalar(ts); world.add(tg);
   var tr=new THREE.Mesh(trunkG,trunkM); tr.position.y=2; tr.rotation.z=rand(-.05,.05); tg.add(tr);
   for (var b=0;b<3;b++){ var br=new THREE.Mesh(branchG,trunkM), a=b*2.1+rand(-.3,.3); br.position.set(Math.cos(a)*.7,3.6+b*.25,Math.sin(a)*.7); br.rotation.set(Math.sin(a)*.8,0,-Math.cos(a)*.8); tg.add(br);
@@ -646,14 +667,14 @@ ground.castShadow=false; road.castShadow=false;
 var grassInst=null, grassMax=0;
 /* ---------- grass, mist, leaves ---------- */
 (function(){
-  var n = isTouch ? 8000 : 20000;
+  var n = isTouch ? 11000 : 30000;
   var g=new THREE.PlaneGeometry(0.6,0.36); g.translate(0,0.18,0);
   var m=new THREE.MeshStandardMaterial({map:bladeTex,alphaTest:.5,side:THREE.DoubleSide,roughness:1});
   m.onBeforeCompile=function(sh){ sh.uniforms.uTime=windU; sh.vertexShader='uniform float uTime;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n#ifdef USE_INSTANCING\n float wph=instanceMatrix[3].x*0.55+instanceMatrix[3].z*0.4; transformed.x+=(sin(uTime*1.6+wph)+sin(uTime*3.3+wph*1.7)*0.4)*0.085*uv.y;\n#endif'); };
   var inst=new THREE.InstancedMesh(g,m,n), o=new THREE.Object3D(), c=new THREE.Color(), k=0;
   for (var i=0;i<n*3 && k<n;i++){
-    var x=rand(-73,147), z=rand(-39.5,39.5);
-    if (Math.abs(z)<6.3 || (x<-58 && z>4 && z<13.5) || blocked(x,z,0.05)) continue;
+    var x=rand(-73,147), z=rand(-56,56);
+    if (Math.abs(z)<6.3 || (Math.abs(z)>29.6 && Math.abs(z)<37.8) || (x>136.8 && x<143.2 && Math.abs(z)<30) || (x<-58 && z>4 && z<13.5) || blocked(x,z,0.05)) continue;
     o.position.set(x,0,z); o.rotation.y=Math.random()*3.14; var s=rand(.7,1.5); o.scale.set(s,s*rand(.7,1.3),s); o.updateMatrix();
     inst.setMatrixAt(k,o.matrix); var dry=Math.random(); c.setRGB(.15+dry*.12,.22+dry*.06,.07); inst.setColorAt(k,c); k++;
   }
@@ -1069,7 +1090,7 @@ function setPrompt(text,label){
   if (text){ $('prompt').innerHTML=(isTouch||!label?'':'<b>E</b>')+text; if (label) $('btnKnock').textContent=label; }
 }
 function nearDoor(){
-  for (var i=0;i<houses.length;i++){ var h=houses[i]; if (!h.breached && Math.hypot(P.x-h.x, P.z-(h.z-h.side*4.9))<1.9) return h; }
+  for (var i=0;i<houses.length;i++){ var h=houses[i]; if (!h.breached && Math.hypot(P.x-h.x, P.z-(h.z-h.side*4.9))<1.9 && Math.abs((P.y||0)-(h.fy||0))<1.3) return h; }
   return null;
 }
 function showPrompt(h){ nearH=h; setPrompt(h?'Knock on the door':null,'Knock'); }
@@ -2216,7 +2237,7 @@ function openStory(role){
 
 /* story data: 20 chapters each */
 var WARN=3, FIXER=9, GAZEBO={x:-146,z:-28}, CYGATE={x:-125,z:2.4}, SLIDE={x:-107,z:-26.6}, STONE={x:-107,z:31.5}, ROADEND={x:104,z:0};
-function doorPt(h){ return {x:h.x,z:h.z-h.side*4.9}; }
+function doorPt(h){ return {x:h.x,z:h.z-h.side*4.9,y:h.fy||0}; }
 function loc(h,x,y,z){ tmpV.set(x,y,z); h.g.localToWorld(tmpV); return [tmpV.x,tmpV.y,tmpV.z]; }
 function nb(i){ return NEIGHBOURS[houses[i].n].n; }
 var chainGate=new THREE.Group(), chainCol=null; chainGate.position.set(-125,0,4.5); scene.add(chainGate);
@@ -2647,7 +2668,7 @@ function updateSurvivor(dt){
   var running=(scared || d<30) && surv.tired<=0;
   if (running){ surv.st-=dt/7; if (surv.st<=0) surv.tired=4; } else { surv.st=Math.min(1,surv.st+dt/8); surv.tired-=dt; }
   var sp=running?cfg.run:cfg.walk, p={x:surv.x+vx*sp*dt, z:surv.z+vz*sp*dt};
-  resolve(p,0.4); p.x=Math.max(-158,Math.min(game.gateOpen>0.75?80:71.6,p.x)); p.z=Math.max(-39.4,Math.min(39.4,p.z));
+  resolve(p,0.4); p.x=Math.max(-158,Math.min(game.gateOpen>0.75?80:71.6,p.x)); p.z=Math.max(-56,Math.min(56,p.z));
   surv.x=p.x; surv.z=p.z;
   surv.acc+=dt; if (surv.acc>0.7){ if (Math.hypot(surv.x-surv.lx,surv.z-surv.lz)<sp*0.7*0.3){ surv.jink=Math.random()<0.5?1:-1; surv.jinkT=1.1; } surv.lx=surv.x; surv.lz=surv.z; surv.acc=0; }
   R.position.set(surv.x,groundY(surv.x,surv.z),surv.z); turnTo(R,Math.atan2(vx,vz),dt);
@@ -2936,7 +2957,7 @@ var OUTHIDES=[];
   var busY=mat(0xe0a818,{roughness:.6}), glassM=mat(0x1a2430,{roughness:.1,metalness:.3});
   function free(x,z,r){ for (var k=0;k<14;k++){ var a=k*2.4, d=k*0.7, xx=x+Math.cos(a)*d, zz=z+Math.sin(a)*d; if (!blocked(xx,zz,r)) return [xx,zz]; } return null; }
   // dumpsters you can hide in
-  [[-96.5,-15],[38,-30],[-62,30.5],[100,30.5]].forEach(function(p){ var f=free(p[0],p[1],1.6); if (!f) return;
+  [[-96.5,-30],[-46,-40.5],[62,40.5],[116,-40.5]].forEach(function(p){ var f=free(p[0],p[1],1.6); if (!f) return;
     var g=new THREE.Group(); g.position.set(f[0],0,f[1]); world.add(g); box(2.0,1.25,1.2,mat(0x2a4a3a,{roughness:.6,metalness:.2}),0,0.65,0,g); box(2.05,0.08,1.25,mat(0x1a2a22),0,1.31,0,g).rotation.x=0.06;
     addBox(f[0],f[1],1.0,0.6); OUTHIDES.push({id:'dump'+OUTHIDES.length,in:0,f:0,x:f[0],z:f[1]+1.0,r:1.2,t:'Hide in the dumpster',cam:[f[0],0.95,f[1]],yaw:Math.PI}); });
   // picnic tables in the park
@@ -2976,7 +2997,25 @@ function lvFix(e,r){
 function navRoom(e){ var B=bldAt(e.x,e.z); if (!B || e.x<B.x0 || e.x>B.x1 || e.z<B.z0 || e.z>B.z1) return 'OUT'; var lv=Math.max(0,Math.min(B.n-1,Math.round((e.y||0)/B.H))), R=B.rooms[lv], best=null, bd=1e9;
   for (var i=0;i<R.length;i++){ var r=R[i], dx=Math.max(r[1]-e.x,0,e.x-r[2]), dz=Math.max(r[3]-e.z,0,e.z-r[4]), d=dx+dz; if (d<bd){ bd=d; best=r[0]; } if (d===0) break; }
   return bd<0.6?best:'OUT'; }
-function bldNav(e,T){
+// the hotel: pick the doorway that makes the shortest trip, and walk round the outside of the building to reach it
+var HFOOT=[-59.0,25.0,11.0,38.9], HCORN=[[-61,9.4],[27,9.4],[27,41],[-61,41]];
+function rectHit(ax,az,bx,bz,R){ for (var i=1;i<20;i++){ var t=i/20, x=ax+(bx-ax)*t, z=az+(bz-az)*t; if (x>R[0] && x<R[1] && z>R[2] && z<R[3]) return true; } return false; }
+function outDetour(e,g){ var R=HFOOT; if (e.x>R[0] && e.x<R[1] && e.z>R[2] && e.z<R[3]) return null; if (!rectHit(e.x,e.z,g.x,g.z,R)) return null; var best=null, bd=1e9;
+  HCORN.forEach(function(c){ var de=Math.hypot(e.x-c[0],e.z-c[1]); if (de<0.8 || rectHit(e.x,e.z,c[0],c[1],R)) return; var d=de+Math.hypot(c[0]-g.x,c[1]-g.z)+(rectHit(c[0],c[1],g.x,g.z,R)?30:0); if (d<bd){ bd=d; best={x:c[0],z:c[1]}; } }); return best; }
+function hotelBldNav(e,T){ var B=HOTEL.B, a=navRoom(e), b=navRoom(T);
+  if (a==='OUT' && b==='OUT') return outDetour(e,T);
+  if (a!=='OUT' && b!=='OUT') return null;
+  var outs=NAVL.filter(function(L){ return !L.stair && (L.a==='OUT' || L.b==='OUT'); }), best=null, bc=1e9;
+  outs.forEach(function(L){ var inner=L.a==='OUT'?L.b:L.a, sg=L.a==='OUT'?1:-1, pin={x:L.x+L.nx*sg*1.3,z:L.z+L.nz*sg*1.3}, pout={x:L.x-L.nx*sg*0.9,z:L.z-L.nz*sg*0.9};
+    var c=a==='OUT'?Math.hypot(e.x-pout.x,e.z-pout.z)+Math.hypot(pin.x-T.x,pin.z-T.z)+(inner===b?0:(Math.abs((T.y||0))>1?12:6)):Math.hypot(e.x-pin.x,e.z-pin.z)+(inner===a?0:6)+Math.hypot(pout.x-T.x,pout.z-T.z);
+    if (c<bc){ bc=c; best={L:L,inner:inner,pin:pin,pout:pout}; } });
+  if (!best) return null; var L=best.L, dL=Math.hypot(L.x-e.x,L.z-e.z);
+  if (a==='OUT'){ if (dL<1.1) return best.pin; return outDetour(e,best.pout)||best.pout; }
+  if (a!==best.inner) return bldNavCore(e,{x:best.pin.x,z:best.pin.z,y:0});
+  if (dL<1.1) return best.pout; return best.pin; }
+function bldNav(e,T){ if (WMAP==='hotel' && HOTEL && BLD.indexOf(HOTEL.B)>=0){ var B0=bldAt(e.x,e.z); if (!(B0 && B0.n>1 && onStair(B0,e.x,e.z,e.y||0))){ var hn=hotelBldNav(e,T); if (hn) return hn; } }
+  return bldNavCore(e,T); }
+function bldNavCore(e,T){
   if (!BLD.length) return null;
   var B=bldAt(e.x,e.z), s=B&&B.n>1?onStair(B,e.x,e.z,e.y||0):null;
   if (s){ var tY=T.y||0, up=Math.abs(tY-(s.lo+1)*s.H)<Math.abs(tY-s.lo*s.H), hiX=s.xb+(s.xb>s.xa?0.75:-0.75), loX=s.xa+(s.xb>s.xa?-0.75:0.75); return {x:up?hiX:loX,z:(s.z0+s.z1)/2}; }
@@ -3170,14 +3209,43 @@ function bldNav(e,T){
 
 secErase(__eastM); BLD.length=0; NAVL.length=0;
 // ---- moving things in and out of houses
+// finding the way around the lane: front yards by the main street (0), the row of houses with the yards behind them (1),
+// and the back streets with the second row of houses (2). You go between bands through the gaps between houses.
+function lzone(z){ var a=Math.abs(z); return a<13.6?0:(a<29.3?1:2); }
+function bestGate(ax,bx){ var best=140, bd=Math.abs(ax-140)+Math.abs(bx-140); for (var i=0;i<GATES.length;i++){ var f=GATES[i], d=Math.abs(ax-f)+Math.abs(bx-f); if (d<bd){ bd=d; best=f; } } return best; }
+function onGate(x){ if (Math.abs(x-140)<2) return true; for (var i=0;i<GATES.length;i++) if (Math.abs(x-GATES[i])<1.3) return true; return false; }
+function laneNav(e,T){
+  if (WMAP!=='lane' || (e.ih!=null && e.ih>=0)) return null;
+  var tx=T.x, tz=T.z, sT=tz<0?-1:1, se=e.z<0?-1:1;
+  // to and from the Mart's lot: through the main street or one of the back streets
+  if (tx<-73 && e.x>=-73){ var X=Math.abs(tz)<20?{x:-71,z:Math.max(-12,Math.min(12,tz))}:{x:-71,z:sT*33}; if (Math.hypot(e.x-X.x,e.z-X.z)>2.5) return laneNav(e,X)||X; return null; }
+  if (e.x<-73){ if (tx<-73) return null; var Y=lzone(tz)===0?{x:-70,z:Math.max(-12,Math.min(12,tz))}:{x:-70,z:sT*33}; return Math.hypot(e.x-Y.x,e.z-Y.z)>2.5?Y:null; }
+  var ze=lzone(e.z), zt=lzone(tz);
+  // tucked in among the houses: step back out to the open line first
+  if (ze===2 && Math.abs(e.z)>38 && Math.abs(e.x-tx)>3) return {x:e.x,z:se*33};
+  var inGap=ze===1 && Math.abs(e.z)<24.3 && onGate(e.x);
+  if (ze===1 && Math.abs(e.z)<24.3 && !(zt===1 && sT===se && Math.abs(e.x-tx)<3) && !(inGap && (zt===0 || sT!==se))) return {x:e.x,z:se*26.5};
+  if (ze===zt && (ze===0 || se===sT)){
+    if (zt===2 && Math.abs(tz)>38 && Math.abs(e.x-tx)>3) return {x:tx,z:sT*33};
+    if (zt===1 && Math.abs(tz)<24.3 && Math.abs(e.x-tx)>3) return {x:tx,z:sT*26.5};
+    return null; }
+  // out back to out back on the same side: the yards behind row A run straight onto the back street
+  if (ze>0 && zt>0 && se===sT){ if (zt===1) return Math.abs(tz)<24.3?{x:tx,z:sT*26.5}:null; return Math.abs(tz)>38?{x:tx,z:sT*33}:{x:tx,z:tz}; }
+  var f=inGap?bestGate(e.x,e.x):bestGate(e.x,tx);
+  if (ze===0){ if (Math.abs(e.x-f)>1.0 && !(Math.abs(e.z)>9.5 && se===sT && onGate(e.x))) return {x:f,z:sT*9}; return {x:f,z:sT*26.5}; }
+  // out back and need the main street (or the other side): to a gap, down it, out the front
+  if (Math.abs(e.x-f)>1.0) return {x:f,z:se*26.5};
+  if (Math.abs(e.z)>10) return {x:f,z:se*9};
+  return null;
+}
 function navGoal(e,T){
   var ef=(e.y||0)>1.4?1:0;
   if (e.ih!==T.ih){
     if (e.ih>=0){ if (stairNow(e)) return {x:IX+0.27,z:0.95}; if (e.fl|0) return houseNav(e,{x:IX,z:0,y:0}); return houseNav(e,{x:IX,z:3.45,y:0,exit:true}); }
-    var dp=doorPt(houses[T.ih]), hw2=hotelNav(e,dp); if (hw2) return hw2; return {x:dp.x,z:dp.z,enter:T.ih};
+    var dp=doorPt(houses[T.ih]), bw2=bldNav(e,dp); if (bw2) return bw2; var hw2=hotelNav(e,dp); if (hw2) return hw2; var lw2=laneNav(e,dp); if (lw2) return lw2; return {x:dp.x,z:dp.z,enter:T.ih,y:dp.y};
   }
   if (e.ih>=0) return houseNav(e,T);
-  if (e.ih<0){ var w=bldNav(e,T); if (w) return w; var hw=hotelNav(e,T); if (hw) return hw; }
+  if (e.ih<0){ var w=bldNav(e,T); if (w) return w; var hw=hotelNav(e,T); if (hw) return hw; var lw=laneNav(e,T); if (lw) return lw; }
   return {x:T.x,z:T.z};
 }
 // finding the way inside a house: up and down the stairs, round the stairwell, through the bedroom and bathroom doorways
@@ -3207,13 +3275,13 @@ function houseNav(e,T){
 function navStep(e,T,sp,dt,breaker){
   var g=navGoal(e,T), dx=g.x-e.x, dz=g.z-e.z, d=Math.hypot(dx,dz)||0.001;
   if (e.sideT>0 && (e.ih<0 || !stairNow(e))){ e.sideT-=dt; var ca=Math.cos(1.2*e.sideD), sa=Math.sin(1.2*e.sideD), tx=dx*ca-dz*sa; dz=dx*sa+dz*ca; dx=tx; }
-  if (g.exit && d<0.8){ var h=houses[e.ih], dp=doorPt(h); e.ih=-1; e.x=dp.x; e.z=dp.z-h.side*1.1; e.fl=0; e.y=groundY(e.x,e.z); h.open=1; setTimeout(function(){ h.open=0; },1500); return d; }
-  if (g.enter!==undefined && d<1.4){ var h2=houses[g.enter];
+  if (g.exit && d<0.8){ var h=houses[e.ih], dp=doorPt(h); e.ih=-1; e.x=dp.x; e.z=dp.z-h.side*1.1; e.fl=0; e.y=h.fy?h.fy:groundY(e.x,e.z); e.lv=h.fy?1:0; h.open=1; setTimeout(function(){ h.open=0; },1500); return d; }
+  if (g.enter!==undefined && d<1.4 && Math.abs((e.y||0)-(g.y||0))<1.2){ var h2=houses[g.enter];
     if (breaker && !h2.netBroke){ e.kicking=true; e.ry=Math.atan2(dx,dz); e.kick=(e.kick||0)+dt; var kn=Math.floor(e.kick/0.62);
       if (kn>(e.kickN||0)){ e.kickN=kn; h2.open=0.1; setTimeout(function(){ if (!h2.netBroke) h2.open=0; },150); var pd=Math.hypot(g.x-P.x,g.z-P.z); if (pd<35 && !(net && net.ih>=0)) thud(1.1*(1-pd/35)); }
       if (e.kick<1.9) return d; e.kick=0; e.kickN=0; breakDoorFx(h2); if (net.bd.indexOf(g.enter)<0) net.bd.push(g.enter); } e.ih=g.enter; e.x=IX; e.z=3.0; e.fl=0; e.y=0; h2.open=1; setTimeout(function(){ h2.open=0; },1500); return d; }
   var step=Math.min(d,sp*dt), p={x:e.x+dx/d*step,z:e.z+dz/d*step,fl:e.fl|0,y:e.y||0};
-  if (e.ih>=0) iFix(p,0.3); else { var inB=bldAt(p.x,p.z); if (!((e.stuck||0)>=2.5) || inB) lvFix(p,0.45); p.x=Math.max(-157,Math.min(148,p.x)); p.z=Math.max(-39,Math.min(39,p.z)); if (!(p.y>0.05)) p.y=groundY(p.x,p.z); }
+  if (e.ih>=0) iFix(p,0.3); else { var inB=bldAt(p.x,p.z); if (!((e.stuck||0)>=2.5) || inB) lvFix(p,0.45); p.x=Math.max(-157,Math.min(148,p.x)); p.z=Math.max(-56,Math.min(56,p.z)); if (!(p.y>0.05)) p.y=groundY(p.x,p.z); }
   var mv=Math.hypot(p.x-e.x,p.z-e.z), st=e.stuck||0; e.stuck=mv<step*0.35?st+dt:(st>=2.5?(st+dt>4.5?0:st+dt):0);
   if (e.ih<0 && e.stuck>0.8 && bldIn(e.x,e.z)){ e.sideT=0.9; e.sideD=e.sideD===1?-1:1; e.stuck=0; }
   if (e.ih>=0 && e.stuck>0.45 && !stairNow(e)){ e.sideT=0.7; e.sideD=e.sideD===1?-1:1; e.stuck=0; }   // furniture in the way: step round it
@@ -3239,7 +3307,7 @@ function doorSeqTick(dt){
     if (t<1.5){ k=ease(t/0.4); var x=D.x0+(D.sx-D.x0)*k, z=D.z0+(D.sz-D.z0)*k; turn(D.yaw,k);
       if (t>0.22 && D.st<1){ D.st=1; knobClick(); }
       if (t>0.32 && D.st<2){ D.st=2; h.open=1; h.hall.visible=true; if (!h.netBroke) creak(1); }
-      var m=ease((t-0.75)/0.65); x+=(D.tx-D.sx)*m; z+=(D.tz-D.sz)*m; P.x=x; P.z=z; P.y=0; P.bob+=dt*m*3;
+      var m=ease((t-0.75)/0.65); x+=(D.tx-D.sx)*m; z+=(D.tz-D.sz)*m; P.x=x; P.z=z; P.y=h.fy||0; P.bob+=dt*m*3;
       if (t>1.08 && D.st<3){ D.st=3; $('fade').style.opacity=1; } }
     else { if (D.st<4){ D.st=4; enterHouseNow(h); if (!h.netBroke) iDoorPose(-1.3); $('fade').style.opacity=0; D.ix=IX; P.yaw=0; P.pitch=0; }
       var m2=ease((t-1.5)/0.75); P.x=IX; P.z=3.3-0.6*m2;
@@ -3253,7 +3321,7 @@ function doorSeqTick(dt){
       var m3=ease((t-0.6)/0.6); P.z+=(3.65-2.75)*m3; P.bob+=dt*m3*3;
       if (t>0.95 && D.st<3){ D.st=3; $('fade').style.opacity=1; } }
     else { if (D.st<4){ D.st=4; leaveHouseNow(); iDoorPose(0); h.pivot.rotation.y=-1.35; h.open=1; h.hall.visible=true; $('fade').style.opacity=0; var dp=doorPt(h); D.ox=dp.x; D.oz=dp.z; P.yaw=h.side>0?0:Math.PI; P.pitch=0; }
-      var m4=ease((t-1.35)/0.7); P.x=D.ox; P.z=D.oz-h.side*(0.2+1.4*m4); P.y=0;
+      var m4=ease((t-1.35)/0.7); P.x=D.ox; P.z=D.oz-h.side*(0.2+1.4*m4); P.y=h.fy||0;
       if (t>1.75 && D.st<5){ D.st=5; h.open=0; }
       if (t>2.15 && D.st<6){ D.st=6; if (!h.netBroke){ thud(0.6); noise(0.08,0.15,900); } h.hall.visible=false; }
       if (t>2.2) doorSeq=null; }
@@ -3267,7 +3335,7 @@ function enterHouseNow(h){
   if (game.role!=='killer') toast(h.netDead?NEIGHBOURS[h.n].n+' is dead. The killer got here first.':h.netHid?'The house is quiet. The neighbour is hiding upstairs.':NEIGHBOURS[h.n].n+' lives here. Go and talk to them.',2600);
 }
 function leaveHouseNow(){
-  var N=net, h=houses[N.ih]; N.ih=-1; closeChat(); var dp=doorPt(h); P.x=dp.x; P.z=dp.z-h.side*1.1; P.fl=0; P.y=0; P.yaw=h.side>0?0:Math.PI; P.pitch=0;
+  var N=net, h=houses[N.ih]; N.ih=-1; closeChat(); var dp=doorPt(h); P.x=dp.x; P.z=dp.z-h.side*1.1; P.fl=0; P.y=h.fy||0; P.gy=P.y; P.yaw=h.side>0?0:Math.PI; P.pitch=0;
   moonLight.intensity=0.55; setLeaves(true); resident.g.visible=false; setPrompt(null);
 }
 function netHome(dt){ // the neighbour inside the house you are in
@@ -3337,7 +3405,7 @@ function netInteract(dt,pl){
   } else {
     if (!killer && (P.y||0)<0.8){ var ci=-1; chests.forEach(function(c,i){ if (!c.open && Math.hypot(c.x-P.x,c.z-P.z)<1.6) ci=i; }); if (ci>=0) N.near={k:'chest',i:ci,t:'Open the chest'}; }
     if (!N.near && !killer) N.near=storeNear();
-    if (!N.near && !killer){ var gB=-1, gD=WMAP==='hotel'?1.6:2.2; houses.forEach(function(hh,hi){ if (hh.power) return; var gd=Math.hypot(P.x-hh.gen.x,P.z-hh.gen.z); if (gd<gD){ gD=gd; gB=hi; } });
+    if (!N.near && !killer){ var gB=-1, gD=WMAP==='hotel'?1.6:2.2; houses.forEach(function(hh,hi){ if (hh.power || Math.abs((P.y||0)-(hh.gen.y||0))>1.3) return; var gd=Math.hypot(P.x-hh.gen.x,P.z-hh.gen.z); if (gd<gD){ gD=gd; gB=hi; } });
       var dh0=nearDoor(), dd0=dh0?Math.hypot(P.x-dh0.x,P.z-(dh0.z-dh0.side*4.9)):99; if (gB>=0 && gD<dd0) N.near={k:'wire',hi:gB,t:'Connect the generator wires'}; }
     if (!N.near){ var dh=nearDoor(); if (dh) N.near={k:'door',h:dh,t:killer?(dh.netBroke?'Open the door':'Break the door down'):((dh.power||dh.netBroke)?'Open the door':(WMAP==='hotel'?'Locked · fix the generator beside the door':'Locked · fix their generator out back'))}; }
     if (!N.near) OUTHIDES.forEach(function(s){ if (N.near || Math.abs((s.y||0)-(P.y||0))>0.8) return; if (Math.hypot(P.x-s.x,P.z-s.z)<s.r) N.near=killer?{k:'search',s:s,t:'Search the dumpster'}:{k:'hide',s:s,t:s.t}; });
@@ -3417,7 +3485,7 @@ function doorBreakFrame(dt){
 
 /* ---------- online: co-op stories and survival ---------- */
 var net=null, NR=null, NP={}, netMe='me', netCap=null, lobby=null, avatars={};
-var NIGHT=2400, CARNEED=42, GENNEED=15, SGENS=[1,4,9,6], PW_NEED=18;   // every generator
+var NIGHT=2400, CARNEED=42, GENNEED=15, SGENS=[1,4,9,6], PW_NEED=40;   // every generator
 var BOY={n:'Boy',rig:'m',top:0xb3261c,bottom:0x2a3550,hair:0x4a3020,beard:false,skin:0xffffff,s:0.9,look:{hd:'cap',hatc:0x2a4a8a,w:0.92}};
 var GIRL={n:'Girl',rig:'w',s:0.9,look:{sk:0xd8a888,hair:0x6a3a1a,top:0xe8e0d0,pants:0x4a6a9a,acc:0xd0a030,pat:0,w:0.94}};
 var WREN={n:'Wren',rig:'w',s:0.9,look:{sk:0xcfd4dc,hair:0xe8e8ee,top:0x8a8a9a,pants:0x2a2a34,acc:0x8a8a9a,pat:0,w:0.92}};
@@ -3664,7 +3732,7 @@ function netToLobby(){
 
 /* stages for the two co-op stories */
 function pwFix(N,hi){ N.pw=N.pw.filter(function(e){ return !(Array.isArray(e) && e[0]===hi); }); N.pw.push([hi,Math.round(N.el*10)/10]); }
-function genPt(i){ return {x:houses[i].gen.x,z:houses[i].gen.z}; }
+function genPt(i){ return {x:houses[i].gen.x,z:houses[i].gen.z,y:houses[i].gen.y||0,ih:-1}; }
 var COOP={
  b:{title:'Boy & Girl',gens:[2,7],spawn:{boy:[-61,-1.2],girl:[-61,1.4]},
   intro:function(){ return [
@@ -3979,7 +4047,7 @@ function netTick(dt){
   N.el=(performance.now()-N.t0)/1000;
   for (i=0;i<ps.length;i++){ var p=ps[i], pr=p.pr; if (pr.gi!==N.gid) continue;
     var role=p.me?N.role:(N.roles[p.id]||pr.r), q={id:p.id,me:p.me,role:role,pr:pr,alive:p.me?N.alive===1:pr.a===1,a:p.me?N.alive:num(pr.a,1)};
-    if (p.me){ q.x=P.x; q.z=P.z; q.ih=N.ih; q.y=P.y||0; q.hid=!!N.hide; me=q; } else { var pp=pr.p; if (!pp || !pp.length) continue; q.ih=Math.max(-1,Math.min(houses.length-1,num(pr.ih,-1)|0)); q.y=Math.max(0,Math.min(8,num(pr.fy,0))); q.hid=!!pr.hid; q.x=Math.max(-160,Math.min(410,num(pp[0],0))); q.z=Math.max(-40,Math.min(40,num(pp[1],0))); q.yaw=num(pp[2],0); q.an=num(pp[3],0)|0; }
+    if (p.me){ q.x=P.x; q.z=P.z; q.ih=N.ih; q.y=P.y||0; q.hid=!!N.hide; me=q; } else { var pp=pr.p; if (!pp || !pp.length) continue; q.ih=Math.max(-1,Math.min(houses.length-1,num(pr.ih,-1)|0)); q.y=Math.max(0,Math.min(8,num(pr.fy,0))); q.hid=!!pr.hid; q.x=Math.max(-160,Math.min(410,num(pp[0],0))); q.z=Math.max(-57,Math.min(57,num(pp[1],0))); q.yaw=num(pp[2],0); q.an=num(pp[3],0)|0; }
     if (hostId===null) hostId=p.id; pl.push(q); seen[p.id]=1;
     if (!p.me && pr.bl===1 && N.el>NIGHT*0.45) N.el=Math.max(N.el,NIGHT*0.5+0.01);
     if (!p.me){ maxSt=Math.max(maxSt,Math.min(99,num(pr.st,0)|0)); maxF=Math.max(maxF,num(pr.f,0)|0); maxEl=Math.max(maxEl,num(pr.el,0)); }
@@ -4110,7 +4178,7 @@ function botsHost(dt,pl,W){
   function hitPlayer(T,dx,dz){ if (T.bot) hurt(T.bot,dx,dz); else { N.ek[T.id]=(N.ek[T.id]||0)+1; if (!T.me) bloodBurst(T.x,(T.y||0)+1.2,T.z,dx,dz,40); } }
   function taken(s,ih,me){ var p=spotPos(s,ih); return pl.some(function(q){ return q.hid && q.alive && q.id!==me && (q.ih==null?-1:q.ih)===p.ih && Math.hypot(q.x-p.x,q.z-p.z)<1.4; }); }
   function patrolPts(){ if (W.done) return [CARSIDE,CARSIDE,{x:-66,z:3},{x:-60,z:8}];   // the job is done: wait by the cars
-    var b2=[]; houses.forEach(function(h,hi){ if (W.powered[hi] && choresOf(hi).some(function(t){ return !W.cleaned[choreId(hi,t)]; })){ var dp=doorPt(h); b2.push({x:dp.x,z:dp.z},{x:dp.x,z:dp.z}); } });
+    var b2=[]; houses.forEach(function(h,hi){ if (W.powered[hi] && choresOf(hi).some(function(t){ return !W.cleaned[choreId(hi,t)]; })){ var dp=doorPt(h); b2.push(dp,dp); } });
     var a=[CARSIDE,{x:-80,z:-12},{x:88,z:-9},{x:110,z:9},{x:20,z:9}].concat(b2); houses.forEach(function(h,hi){ if (!W.powered[hi] && hi%3===0) a.push(genPt(hi)); }); if (W.G===0) a.push(GAS); if (W.B===0) a.push(batPos());
     chests.forEach(function(c){ if (!c.open) a.push({x:c.x+1.2,z:c.z}); }); return a; }
   N.bots.forEach(function(b){
@@ -4167,14 +4235,14 @@ function botsHost(dt,pl,W){
             else { b.si++; b.st=0; } } }
         return; }
       // something just happened somewhere: a generator came on, a chore got done. Go and look.
-      if (N.alert && N.el-N.alert.t<30 && (N.alert.used||'').indexOf(b.id)<0 && Math.hypot(N.alert.x-b.x,N.alert.z-b.z)<90){ N.alert.used=(N.alert.used||'')+b.id+','; b.mem={x:N.alert.x,z:N.alert.z,ih:N.alert.ih,y:0,t:N.el}; return; }
+      if (N.alert && N.el-N.alert.t<30 && (N.alert.used||'').indexOf(b.id)<0 && Math.hypot(N.alert.x-b.x,N.alert.z-b.z)<90){ N.alert.used=(N.alert.used||'')+b.id+','; b.mem={x:N.alert.x,z:N.alert.z,ih:N.alert.ih,y:N.alert.y||0,t:N.el}; return; }
       // nobody to chase: walk the places survivors have to go
       b.mem=null; b.search=null; b.tgt=null;
       b.cutCd=(b.cutCd==null?30+Math.random()*15:b.cutCd)-dt;
       if (b.cutCd<=0){
         if (b.cutH==null || !W.powered[b.cutH]){ var occ=[], any=[]; houses.forEach(function(h,hi){ if (!W.powered[hi]) return; any.push(hi); if (targets.some(function(q){ return (q.ih==null?-1:q.ih)===hi; })) occ.push(hi); });
           var pool=occ.length?occ:any; b.cutH=pool.length?pool[(Math.random()*pool.length)|0]:null; b.cutT=0; if (b.cutH==null) b.cutCd=12; }
-        if (b.cutH!=null){ var gp=genPt(b.cutH); navStep(b,{x:gp.x,z:gp.z,ih:-1,y:0},3.9,dt,true); b.an=b.kicking?0:1;
+        if (b.cutH!=null){ var gp=genPt(b.cutH); navStep(b,{x:gp.x,z:gp.z,ih:-1,y:gp.y},3.9,dt,true); b.an=b.kicking?0:1;
           if (b.ih<0 && Math.hypot(gp.x-b.x,gp.z-b.z)<1.8){ b.an=0; b.ry=Math.atan2(gp.x-b.x,gp.z-b.z); b.cutT+=dt; if (b.cutT>=3){ N.cut[b.cutH]=Math.round(N.el*10)/10+0.05; b.cutH=null; b.cutCd=50+Math.random()*25; } }
           return; } }
       if (!b.pt || N.el>b.ptT || Math.hypot(b.pt.x-b.x,b.pt.z-b.z)<2.5 && b.ih<0 && Math.abs((b.pt.y||0)-(b.y||0))<1){ var pts=patrolPts(); b.pt=pts[(Math.random()*pts.length)|0]; b.ptT=N.el+22; }
@@ -4202,7 +4270,7 @@ function botsHost(dt,pl,W){
       if (b.ih>=0){ var kin=(K.ih==null?-1:K.ih)===b.ih, kclose=kin && Math.hypot(K.x-b.x,K.z-b.z)<4;
         if (!kclose){ if (!b.hide || taken(b.hide,b.ih,b.id)){ var opts2=HIDES.filter(function(s){ return !taken(s,b.ih,b.id); }).sort(function(a,c){ var pa=spotPos(a,b.ih), pc=spotPos(c,b.ih); return Math.hypot(pa.x-b.x,pa.z-b.z)+Math.abs(pa.y-(b.y||0))*3-Math.hypot(pc.x-b.x,pc.z-b.z)-Math.abs(pc.y-(b.y||0))*3; }); b.hide=opts2[0]||null; }
           if (b.hide){ var hp=spotPos(b.hide,b.ih); if (b.ih===hp.ih && Math.hypot(hp.x-b.x,hp.z-b.z)<b.hide.r*0.9 && Math.abs((b.y||0)-hp.y)<0.5){ b.hid=1; b.hidT=0; b.calm=0; b.x=hp.x; b.z=hp.z; b.y=hp.y; b.fl=b.hide.f; b.an=0; b.nz=0; return; } move(hp,4.0); } }
-        if (!goal){ if (N.el<(b.doorCd||0)){ var up=(K.y||0)>1.4; move({x:IX+(up?3.4:-3.0),z:up?2.6:-1.0,ih:b.ih,y:up?0:FLOOR2},fsp); } else { var hh=houses[b.ih], dpo=doorPt(hh); move({x:dpo.x,z:dpo.z-hh.side*8,ih:-1,y:0},fsp); } } }
+        if (!goal){ if (N.el<(b.doorCd||0)){ var up=(K.y||0)>1.4; move({x:IX+(up?3.4:-3.0),z:up?2.6:-1.0,ih:b.ih,y:up?0:FLOOR2},fsp); } else { var hh=houses[b.ih], dpo=doorPt(hh); move({x:dpo.x,z:dpo.z-hh.side*(hh.hotel?1.5:8),ih:-1,y:dpo.y||0},fsp); } } }
       else {
         // run for a house or a dumpster that is not back toward the killer
         if (b.flee!=null && b.flee.t>N.el){ move(b.flee.T,fsp); if (b.flee.T.out && Math.hypot(b.flee.T.x-b.x,b.flee.T.z-b.z)<0.9){ var od=b.flee.s; if (!taken(od,-1,b.id)){ b.hid=1; b.hidT=0; b.calm=0; b.hide=od; b.x=od.x; b.z=od.z; b.y=od.y||0; b.an=0; b.nz=0; b.flee=null; return; } b.flee=null; } }
@@ -4256,10 +4324,10 @@ function botsHost(dt,pl,W){
     if (work){ work.f(); b.an=0; return; }
     if (!sp){ b.an=0; return; }
     if (goal && (b.ih>=0 || goal.ih>=0 || bldIn(goal.x,goal.z) || bldIn(b.x,b.z) || (WMAP==='hotel' && (inHotel(goal.x,goal.z) || inHotel(b.x,b.z) || inHotel(goal.x,goal.z-1.5))))){ var ih0=b.ih; navStep(b,goal,sp,dt,false); if (b.ih!==ih0) b.doorCd=N.el+5; b.an=b.cr?1:(sp>5?2:1); return; }
-    if (goal){ vx=goal.x-b.x; vz=goal.z-b.z; }
+    if (goal){ var lgo=b.ih<0?laneNav(b,goal):null, gg=lgo||goal; vx=gg.x-b.x; vz=gg.z-b.z; }
     var n=Math.hypot(vx,vz)||1; vx/=n; vz/=n;
     if (b.jinkT>0){ b.jinkT-=dt; var c=Math.cos(1.35*b.jink), sn=Math.sin(1.35*b.jink), tx=vx*c-vz*sn; vz=vx*sn+vz*c; vx=tx; }
-    var p2={x:b.x+vx*sp*dt,z:b.z+vz*sp*dt,y:b.y||0}; lvFix(p2,0.4); p2.x=Math.max(-157,Math.min(147,p2.x)); p2.z=Math.max(-39,Math.min(39,p2.z));
+    var p2={x:b.x+vx*sp*dt,z:b.z+vz*sp*dt,y:b.y||0}; lvFix(p2,0.4); p2.x=Math.max(-157,Math.min(147,p2.x)); p2.z=Math.max(-56,Math.min(56,p2.z));
     b.acc+=dt; if (b.acc>0.7){ if (Math.hypot(p2.x-b.lx,p2.z-b.lz)<sp*0.7*0.3){ b.jink=Math.random()<0.5?1:-1; b.jinkT=1.3; } b.lx=p2.x; b.lz=p2.z; b.acc=0; }
     b.x=p2.x; b.z=p2.z; b.y=p2.y>0.05?p2.y:groundY(b.x,b.z); b.ry=Math.atan2(vx,vz); b.an=b.cr?1:(sp>5?2:1);
   });
@@ -4286,7 +4354,7 @@ function netSurvival(dt,pl,surv,killers,me){
   var pwSig=Object.keys(powered).sort().join(',');
   if (W.pwSig!==pwSig){ houses.forEach(function(hh,hi){ var on=!!powered[hi]; if (hh.power!==on){ setPower(hh,on); var nb=NEIGHBOURS[hh.n].n, near=Math.hypot(P.x-hh.gen.x,P.z-hh.gen.z)<30;
         if (N.ih===hi) iPowerSet(on);
-        if (W.pwSig!==undefined && on && N.isHost) N.alert={x:hh.gen.x,z:hh.gen.z,ih:-1,t:N.el};
+        if (W.pwSig!==undefined && on && N.isHost) N.alert={x:hh.gen.x,z:hh.gen.z,y:hh.gen.y||0,ih:-1,t:N.el};
         if (W.pwSig!==undefined && on){ if (near && N.ih!==hi) toast(nb+': “The lights are back! Thank you, come on in.”',3200); else if (N.ih===hi) toast('The lights come back on.',2200); tone(60,0.8,'sawtooth',0.1,95); }
         if (W.pwSig!==undefined && !on){ if (N.ih===hi){ toast('The lights just died. Somebody cut the generator. You can’t clean in the dark.',3800); choreUI.close(false); thud(0.9); }
           else if (near) toast('Sparks at '+nb+'’s '+(WMAP==='hotel'?'room':'house')+'. The killer cut their generator.',3200);
@@ -4389,7 +4457,7 @@ function preyTick(dt,others){
   var n=Math.hypot(vx,vz)||1; vx/=n; vz/=n;
   if (q.jinkT>0){ q.jinkT-=dt; var c=Math.cos(1.35*q.jink), s=Math.sin(1.35*q.jink), tx=vx*c-vz*s; vz=vx*s+vz*c; vx=tx; }
   var running=scared && q.tired<=0; if (running){ q.st-=dt/6.5; if (q.st<=0) q.tired=3.5; } else { q.st=Math.min(1,q.st+dt/8); q.tired-=dt; }
-  var sp=running?5.6:(scared?2.8:0), p={x:q.x+vx*sp*dt,z:q.z+vz*sp*dt}; resolve(p,0.4); p.x=Math.max(-157,Math.min(71,p.x)); p.z=Math.max(-39,Math.min(39,p.z));
+  var sp=running?5.6:(scared?2.8:0), p={x:q.x+vx*sp*dt,z:q.z+vz*sp*dt}; resolve(p,0.4); p.x=Math.max(-157,Math.min(71,p.x)); p.z=Math.max(-56,Math.min(56,p.z));
   q.acc+=dt; if (q.acc>0.7){ if (sp>0 && Math.hypot(p.x-q.lx,p.z-q.lz)<sp*0.7*0.3){ q.jink=Math.random()<0.5?1:-1; q.jinkT=1.1; } q.lx=p.x; q.lz=p.z; q.acc=0; }
   q.x=p.x; q.z=p.z; if (sp>0) q.ry=Math.atan2(vx,vz); q.an=running?2:(sp>0?1:0);
   var R=resident.g; R.visible=true; R.position.set(q.x,groundY(q.x,q.z),q.z); turnTo(R,q.ry,dt); residentAnim(q.an===2?'Run':(q.an===1?'Walk':'Idle'));
@@ -4660,8 +4728,9 @@ function teamTick(pl){ var tm=$('team'); if (!tm.hidden) tm.hidden=true; return;
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=72;
+var GAME_VER=73;
 var UPDATES=[
+  {v:73,t:'40 houses, a two-storey hotel',n:['Hollow Lane has 40 houses now. A second row sits behind the first on both sides, facing two new back streets that run straight into Hollow Mart’s parking lot. Walk between the houses to get from the main street to the back streets.','The Night Haven Hotel has 40 rooms on two floors: 101–120 downstairs, 201–220 upstairs. The hallways are almost twice as wide, and the stairs are at the west end of the main hallway.','The job grows with it: all 40 generators and all 80 chores.','The killer and the bots know their way around both: between the houses, up the stairs and into every room.']},
   {v:72,t:'Your phone',n:['You now carry a phone in your left hand. Press T (or tap Phone) to bring it up. Its lock screen shows the time, your heart rate and your cash.','Messages: text everyone in the match, with quick replies like “Killer here!” and “Where are you?”. Bots text too: when they fix a generator, when the killer finds them, and when you ask where they are. Like voice, the living text the living and the dead text the dead.','Pulse: a heartbeat sensor. The closer the killer gets, the faster your heart beats, and the screen tells you when to run.','Cash: your balance, what you earned from chores, what you spent at Hollow Mart, and every payment.']},
   {v:71,t:'Straight into your car',n:['The intro now ends inside your car: the last shot moves from behind it into the driver’s seat, and you start the match already behind the wheel.','Your car pulls away as soon as the intro ends.','Other players and bots are no longer shown standing where their car is while they are still inside it.']},
   {v:70,t:'Voice chat, Hollow Mart, better stairs',n:['Voice chat: talk to your team with your mic. Voices get quieter the further away someone is, and you can switch to the whole team at full volume, or off, in Settings.','Dead players can’t be heard by the living. Once you die you only hear, and are only heard by, the others who died.','The police and the police station are gone, and so is calling the police.','The gas station is now Hollow Mart, a bigger supermarket next door on both maps. 16 snacks and drinks from different brands: cheap ones by the register that don’t last long, better ones in the back that last up to a minute, combos that give two boosts, and gum and coffee that make the boosts you have last longer. Boosts of the same kind now stack.','The shelves are full of real packets, bottles and cans, each with its name on it.','Stairs rebuilt so the killer and the bots can get upstairs, around the stairwell and into every room. A carpet runner and a second handrail too.','Every house now has one chore upstairs: make the bed, scrub the tub, clean the bathroom mirror or tidy the kid’s room.','Too loud while hiding? The killer hears you, walks up to your hiding spot and drags you out.']},
@@ -4729,7 +4798,7 @@ window.addEventListener('appinstalled',function(){ installEvt=null; $('mInstall'
 })();
 
 /* ---------- the map: Hollow Lane ---------- */
-var MAPS=[{id:'lane',n:'Hollow Lane',d:'The neighbourhood: 18 houses and Hollow Mart, the supermarket at the end of the lane.'},{id:'hotel',n:'Night Haven Hotel',d:'A one-storey hotel with crossing hallways: 18 rooms, a generator beside every door, parking out front, Hollow Mart next door.'}];
+var MAPS=[{id:'lane',n:'Hollow Lane',d:'The neighbourhood: 40 houses on two rows, with back streets that all lead to Hollow Mart, the supermarket at the end of the lane.'},{id:'hotel',n:'Night Haven Hotel',d:'A two-storey hotel with wide crossing hallways: 40 rooms on two floors, stairs up at the west end, a generator beside every door, parking out front, Hollow Mart next door.'}];
 var applyMap, grassOff=false, curMap='lane', mapFogD=0.042, MAPT={}, OUTHIDES0=null;
 function mapName(id){ for (var i=0;i<MAPS.length;i++) if (MAPS[i].id===id) return MAPS[i].n; return MAPS[0].n; }
 (function(){
@@ -4804,61 +4873,88 @@ function mapName(id){ for (var i=0;i<MAPS.length;i++) if (MAPS[i].id===id) retur
 // One storey. Every room opens off a carpeted hallway that runs through the middle of the building,
 // each with its own generator beside its door. The lobby is at the west end, by the supermarket; parking out front.
 var WMAP='lane', LANE_HOUSES=null, HOTEL=null;
-var HOTEL_BOX={x0:-50.5,x1:15.5,z0:11.0,z1:37.7}, HOTEL_LOT={x0:-50,x1:15,z0:5.4,z1:11.0}, HUB={x:-14,z:25.5};
-function inHotel(x,z){ if (!(x>HOTEL_BOX.x0 && x<HOTEL_BOX.x1 && z>HOTEL_BOX.z0 && z<HOTEL_BOX.z1)) return false; return Math.abs(z-25.5)<1.4 || Math.abs(x+14)<1.45 || (z<16.2 && x>-20 && x<-8); }
+var HY=3.6;   // the hotel's second floor
+var HOTEL_BOX={x0:-58.6,x1:24.6,z0:11.0,z1:38.8}, HOTEL_LOT={x0:-58,x1:24,z0:5.4,z1:11.0}, HUB={x:-14,z:26.5};
+function inHotel(x,z){ if (!(x>HOTEL_BOX.x0 && x<HOTEL_BOX.x1 && z>HOTEL_BOX.z0 && z<HOTEL_BOX.z1)) return false; return Math.abs(z-26.5)<2.3 || (Math.abs(x+14)<2.2 && z>16.2) || (z<16.2 && x>-20 && x<-8); }
+// Two floors, 20 rooms on each, off one wide hallway that runs east-west. A second hallway crosses it on the ground floor:
+// south to the lobby, north to a back exit. The stairs are at the west end of the hallway.
 function buildHotel(){
-  var G=new THREE.Group(); G.visible=false; world.add(G); var cols=[], rooms=[];
-  function col(x,z,hx,hz){ var c={minX:x-hx,maxX:x+hx,minZ:z-hz,maxZ:z+hz}; cols.push(c); return c; }
+  var G=new THREE.Group(); G.visible=false; world.add(G); var cols=[], ucols=[], rooms=[];
+  function col(x,z,hx,hz,up){ var c={minX:x-hx,maxX:x+hx,minZ:z-hz,maxZ:z+hz}; (up?ucols:cols).push(c); return c; }
   var outM=new THREE.MeshStandardMaterial({map:rep(brickTex,6,2),color:lin(0xb89a86),roughness:.9}), hallM=mat(0xd8ccb0,{roughness:.9}), trimH=mat(0x3a2a20,{roughness:.6}),
       carpet=new THREE.MeshStandardMaterial({map:canvasTex(64,64,function(c){ c.fillStyle='#5a1a1e'; c.fillRect(0,0,64,64); c.fillStyle='#7a2a24'; for (var i=0;i<8;i++) for (var j=0;j<8;j++) if ((i+j)%2) c.fillRect(i*8+2,j*8+2,4,4); c.fillStyle='#c8a050'; c.fillRect(0,0,64,2); c.fillRect(0,62,64,2); }),roughness:1}),
-      doorM=mat(0x4a2a1a,{roughness:.45}), roofM2=mat(0x2a2a2e,{roughness:.9}), asph=mat(0x1c1d20,{roughness:.95}), lineM=mat(0xd8d4c4,{roughness:.8}), marble=mat(0xe0dcd0,{roughness:.25}), gold=mat(0xc8a050,{roughness:.3,metalness:.7});
+      doorM=mat(0x4a2a1a,{roughness:.45}), roofM2=mat(0x2a2a2e,{roughness:.9}), asph=mat(0x1c1d20,{roughness:.95}), lineM=mat(0xd8d4c4,{roughness:.8}), marble=mat(0xe0dcd0,{roughness:.25}), gold=mat(0xc8a050,{roughness:.3,metalness:.7}),
+      slabM=mat(0x8a7a6a,{roughness:.9}), ceilM=mat(0xe8e0d0,{roughness:1}), stepM=new THREE.MeshStandardMaterial({map:rep(plankTex,1,0.3),color:lin(0x5a3a24),roughness:.55}), riserM=mat(0xe8e0cc,{roughness:.8});
   var numTex=function(t){ return new THREE.MeshBasicMaterial({map:canvasTex(64,32,function(c){ c.fillStyle='#c8a050'; c.fillRect(0,0,64,32); c.fillStyle='#1a1008'; c.font='bold 22px monospace'; c.textAlign='center'; c.fillText(t,32,24); })}); };
-  // rooms on both sides of the long east-west hallway, split by the north-south hallway: 5 + 5 to the west, 4 + 4 to the east
-  var XS=[-46.8,-39.8,-32.8,-25.8,-18.8,-9.2,-2.2,4.8,11.8];
-  [-1,1].forEach(function(side){ XS.forEach(function(hx,i){
-    var idx=rooms.length, z=side>0?30.8:20.2, dx=hx+side*1.75, g=new THREE.Group(); g.position.set(dx,0,z); g.rotation.y=side>0?Math.PI:0; G.add(g);
-    box(7.0,3.4,8.0,hallM,1.75,1.7,0,g); box(7.02,0.14,8.02,trimH,1.75,0.07,0,g); box(7.06,0.3,8.06,outM,1.75,3.45,0,g);
-    var litWin=[], litFx=[];
-    box(1.5,2.5,0.1,trimH,0,1.27,4.0,g);
-    var pivot=new THREE.Group(); pivot.position.set(-0.575,1.2,4.05); g.add(pivot); box(1.15,2.3,0.1,doorM,0.575,0,0,pivot);
-    var knob=new THREE.Mesh(new THREE.SphereGeometry(0.05,8,6),gold); knob.position.set(0.995,-0.08,0.08); pivot.add(knob);
-    var hall=box(1.15,2.3,0.02,glow(0xc98a48),0,1.2,4.07,g); hall.visible=false;
-    var broken=box(1.15,0.1,2.3,doorM,0.55,0.12,5.0,g); broken.rotation.y=0.3; broken.visible=false;
-    var pl=new THREE.Mesh(new THREE.PlaneGeometry(0.4,0.2),numTex(String((side>0?201:101)+i))); pl.position.set(0.95,1.55,4.06); g.add(pl);
-    var lb=box(0.5,0.12,0.1,glow(0xffd9a0),0,2.75,4.06,g); litFx.push(lb); litFx.push(halo(0xffc880,2.4,0,2.65,4.3,g,.5));
-    var gen=new THREE.Group(); gen.position.set(2.75,0.04,4.48); g.add(gen);
-    box(1.05,0.08,0.5,ironM,0,0.04,0,gen); box(0.95,0.48,0.42,mat(0x8a2a1a,{roughness:.5,metalness:.3}),0,0.32,0,gen); box(0.45,0.2,0.4,mat(0x1a1b1f,{roughness:.4,metalness:.5}),-0.2,0.66,0,gen);
-    var glamp=new THREE.Mesh(new THREE.SphereGeometry(0.05,8,6),new THREE.MeshBasicMaterial({color:0x38ff6a})); glamp.position.set(0.3,0.42,0.22); gen.add(glamp);
-    var gwx=dx-side*2.75, gwz=z-side*4.48; col(gwx,gwz,0.52,0.25);
-    col(hx,z,3.5,4.0);
-    rooms.push({gen:{g:gen,lamp:glamp,x:gwx,z:gwz,broken:false},power:true,litWin:litWin,litFx:litFx,x:dx,z:z,side:side,g:g,pivot:pivot,hall:hall,broken:broken,cd:0,open:0,n:idx,breached:false,dead:false,hotel:true});
-  }); });
-  // the hallways: east-west and north-south, crossing at a hub in the middle, carpet, ceilings and lights
-  function carpetStrip(x,z,w,d,rot){ var t=carpet.clone(); t.map=carpet.map.clone(); t.map.wrapS=t.map.wrapT=THREE.RepeatWrapping; t.map.repeat.set(Math.max(w,d)/3.2,1); t.map.needsUpdate=true; var c=new THREE.Mesh(new THREE.PlaneGeometry(w,d),t); c.rotation.x=-Math.PI/2; if (rot) c.rotation.z=Math.PI/2; c.position.set(x,0.03,z); c.userData.noSnap=1; G.add(c); }
-  carpetStrip(-17.5,25.5,65.8,2.6); carpetStrip(-14,24.3,26.4,2.6,true);
-  box(66.1,0.25,3.0,roofM2,-17.5,3.55,25.5,G); box(3.0,0.25,26.6,roofM2,-14,3.55,24.3,G);
-  [-47,-40,-33,-26,-19,-9,-2,5,12].forEach(function(L){ box(1.2,0.05,0.5,glow(0xfff0d8),L,3.36,25.5,G); halo(0xffe8c0,3.2,L,3.1,25.5,G,.45); });
-  [19.5,31,36].forEach(function(L){ box(0.5,0.05,1.2,glow(0xfff0d8),-14,3.36,L,G); halo(0xffe8c0,3.2,-14,3.1,L,G,.45); });
-  // the hub: a chandelier, a rug and signs pointing down each hall
-  var hubRug=new THREE.Mesh(new THREE.CircleGeometry(1.25,20),mat(0x2a3a5a,{roughness:1})); hubRug.rotation.x=-Math.PI/2; hubRug.position.set(-14,0.04,25.5); hubRug.userData.noSnap=1; G.add(hubRug);
-  cyl(0.5,0.15,0.35,10,gold,-14,3.15,25.5,G); halo(0xffe0a0,4.5,-14,2.9,25.5,G,.6);
-  var signT=canvasTex(256,64,function(c){ c.fillStyle='#1a1008'; c.fillRect(0,0,256,64); c.fillStyle='#c8a050'; c.font='bold 22px monospace'; c.textAlign='center'; c.fillText('101-105 · 201-205 ←',128,26); c.fillText('→ 106-109 · 206-209',128,54); });
-  [[-15.29,Math.PI/2],[-12.71,-Math.PI/2]].forEach(function(p){ var m=new THREE.Mesh(new THREE.PlaneGeometry(1.5,0.38),new THREE.MeshBasicMaterial({map:signT})); m.position.set(p[0],2.5,21.5); m.rotation.y=p[1]; G.add(m); });
-  // the north arm runs out past the rooms to a back exit; each arm ends in an open doorway
-  box(0.3,3.4,2.9,outM,-15.45,1.7,36.2,G); col(-15.45,36.2,0.15,1.45); box(0.3,3.4,2.9,outM,-12.55,1.7,36.2,G); col(-12.55,36.2,0.15,1.45); box(3.2,0.8,0.3,outM,-14,3.0,37.6,G);
-  [[-50.4,25.5,0.3,3.2],[15.4,25.5,0.3,3.2]].forEach(function(e){ box(e[2],0.8,e[3],outM,e[0],3.0,e[1],G); });
-  [[-50.35,0.5*Math.PI],[15.35,-0.5*Math.PI],[-14,Math.PI*1.0]].forEach(function(e,k){ var ex=new THREE.Mesh(new THREE.PlaneGeometry(0.6,0.22),new THREE.MeshBasicMaterial({map:canvasTex(64,24,function(c){ c.fillStyle='#0a3a0a'; c.fillRect(0,0,64,24); c.fillStyle='#4aff6a'; c.font='bold 16px monospace'; c.fillText('EXIT',14,17); })}));
-    if (k<2){ ex.position.set(e[0]+(k?-0.2:0.2),2.9,25.5); ex.rotation.y=e[1]; } else { ex.position.set(-14,2.9,37.4); ex.rotation.y=Math.PI; } G.add(ex); });
+  var XS=[-48.5,-41.5,-34.5,-27.5,-20.5,-7.5,-0.5,6.5,13.5,20.5], ZS=20.2, ZN=32.8, HZ=26.5, HW=2.3, X0=-58.5, X1=24.5, NS0=-16.2, NS1=-11.8;
+  [0,1].forEach(function(fl){ var fy=fl*HY;
+    [-1,1].forEach(function(side){ XS.forEach(function(hx,i){
+      var idx=rooms.length, z=side>0?ZN:ZS, dx=hx+side*1.75, g=new THREE.Group(); g.position.set(dx,fy,z); g.rotation.y=side>0?Math.PI:0; G.add(g);
+      var num=(fl+1)*100+(side<0?i+1:11+i);
+      box(7.0,3.4,8.0,hallM,1.75,1.7,0,g); box(7.02,0.14,8.02,trimH,1.75,0.07,0,g); box(7.06,0.3,8.06,outM,1.75,3.45,0,g);
+      var litWin=[], litFx=[];
+      box(1.5,2.5,0.1,trimH,0,1.27,4.0,g);
+      var pivot=new THREE.Group(); pivot.position.set(-0.575,1.2,4.05); g.add(pivot); box(1.15,2.3,0.1,doorM,0.575,0,0,pivot);
+      var knob=new THREE.Mesh(new THREE.SphereGeometry(0.05,8,6),gold); knob.position.set(0.995,-0.08,0.08); pivot.add(knob);
+      var hall=box(1.15,2.3,0.02,glow(0xc98a48),0,1.2,4.07,g); hall.visible=false;
+      var broken=box(1.15,0.1,2.3,doorM,0.55,0.12,5.0,g); broken.rotation.y=0.3; broken.visible=false;
+      var pl=new THREE.Mesh(new THREE.PlaneGeometry(0.4,0.2),numTex(String(num))); pl.position.set(0.95,1.55,4.06); g.add(pl);
+      var lb=box(0.5,0.12,0.1,glow(0xffd9a0),0,2.75,4.06,g); litFx.push(lb); litFx.push(halo(0xffc880,2.4,0,2.65,4.3,g,.5));
+      var gen=new THREE.Group(); gen.position.set(2.75,0.04,4.48); g.add(gen);
+      box(1.05,0.08,0.5,ironM,0,0.04,0,gen); box(0.95,0.48,0.42,mat(0x8a2a1a,{roughness:.5,metalness:.3}),0,0.32,0,gen); box(0.45,0.2,0.4,mat(0x1a1b1f,{roughness:.4,metalness:.5}),-0.2,0.66,0,gen);
+      var glamp=new THREE.Mesh(new THREE.SphereGeometry(0.05,8,6),new THREE.MeshBasicMaterial({color:0x38ff6a})); glamp.position.set(0.3,0.42,0.22); gen.add(glamp);
+      var gwx=dx-side*2.75, gwz=z-side*4.48; col(gwx,gwz,0.52,0.25,fl);
+      col(hx,z,3.5,4.0,fl);
+      rooms.push({gen:{g:gen,lamp:glamp,x:gwx,z:gwz,y:fy,broken:false},power:true,litWin:litWin,litFx:litFx,x:dx,z:z,fy:fy,side:side,g:g,pivot:pivot,hall:hall,broken:broken,cd:0,open:0,n:idx,breached:false,dead:false,hotel:true,label:'Room '+num});
+    }); });
+  });
+  function carpetStrip(x,y,z,w,d,rot){ var t=carpet.clone(); t.map=carpet.map.clone(); t.map.wrapS=t.map.wrapT=THREE.RepeatWrapping; t.map.repeat.set(Math.max(w,d)/3.2,1); t.map.needsUpdate=true; var c=new THREE.Mesh(new THREE.PlaneGeometry(w,d),t); c.rotation.x=-Math.PI/2; if (rot) c.rotation.z=Math.PI/2; c.position.set(x,y,z); c.userData.noSnap=1; G.add(c); }
+  // the east-west hallway on both floors, 4.6 m wide
+  carpetStrip((X0+X1)/2,0.03,HZ,X1-X0,HW*2); carpetStrip(-14,0.03,(16.2+38.7)/2,38.7-16.2,NS1-NS0,true);
+  carpetStrip((-51.3+X1)/2,HY+0.03,HZ,X1+51.3,HW*2); carpetStrip((X0-51.3)/2,HY+0.03,27.4,-(X0+51.3),2.8); carpetStrip(-57.95,HY+0.03,25.1,1.1,1.8);
+  // the floor between the two storeys, open above the stairs
+  box(X1+51.3,0.2,HW*2,slabM,(X1-51.3)/2,HY-0.1,HZ,G); box(-(X0+51.3),0.2,2.8,slabM,(X0-51.3)/2,HY-0.1,27.4,G); box(1.1,0.2,1.8,slabM,-57.95,HY-0.1,25.1,G);
+  box(X1+51.3,0.06,HW*2,ceilM,(X1-51.3)/2,HY-0.21,HZ,G); box(-(X0+51.3),0.06,2.8,ceilM,(X0-51.3)/2,HY-0.21,27.4,G);
+  box(X1-X0+0.4,0.3,HW*2+0.6,roofM2,(X0+X1)/2,2*HY+0.05,HZ,G); box(X1-X0,0.06,HW*2,ceilM,(X0+X1)/2,2*HY-0.12,HZ,G);
+  box(NS1-NS0+0.4,0.25,22.6,roofM2,-14,3.55,27.5,G);
+  // walls where the hallway is not lined with rooms: the cross on the ground floor, both ends, the stairwell
+  [[NS0-0.4,20.2],[NS1+0.4,20.2],[NS0-0.4,33.75],[NS1+0.4,33.75]].forEach(function(w){ var len=w[1]<25?8:9.9; box(0.8,3.4,len,outM,w[0],1.7,w[1],G); col(w[0],w[1],0.4,len/2); });
+  [-1,1].forEach(function(sd){ var z=HZ+sd*(HW+0.15); box(NS1-NS0+1.6,3.4,0.3,outM,-14,HY+1.7,z,G); col(-14,z,(NS1-NS0+1.6)/2,0.15,1); });
+  box(6.5,3.4,0.3,outM,(X0-52)/2,1.7,HZ-HW-0.15,G); col((X0-52)/2,HZ-HW-0.15,3.25,0.15); box(6.5,3.4,0.3,outM,(X0-52)/2,1.7,HZ+HW+0.15,G); col((X0-52)/2,HZ+HW+0.15,3.25,0.15);
+  box(6.5,3.4,0.3,outM,(X0-52)/2,HY+1.7,HZ-HW-0.15,G); col((X0-52)/2,HZ-HW-0.15,3.25,0.15,1); box(6.5,3.4,0.3,outM,(X0-52)/2,HY+1.7,HZ+HW+0.15,G); col((X0-52)/2,HZ+HW+0.15,3.25,0.15,1);
+  box(0.3,3.4,1.8,outM,X0-0.15,1.7,25.1,G); col(X0-0.15,25.1,0.15,0.9); box(0.3,0.8,2.8,outM,X0-0.15,3.0,27.4,G);
+  box(0.3,3.4,HW*2,outM,X0-0.15,HY+1.7,HZ,G); col(X0-0.15,HZ,0.15,HW,1); box(0.3,3.4,HW*2,outM,X1+0.15,HY+1.7,HZ,G); col(X1+0.15,HZ,0.15,HW,1);
+  box(0.3,0.8,HW*2,outM,X1+0.15,3.0,HZ,G); box(NS1-NS0,0.8,0.3,outM,-14,3.0,38.85,G);
+  // the stairs: up from the hallway going west, against the south wall
+  var S={xa:-51.6,xb:-57.4,z0:24.4,z1:26.0,lo:0,H:HY,walls:[]}, NST=16;
+  for (var si=0;si<NST;si++){ var sx=-51.6-(si+0.5)*(5.8/NST), sh=(si+1)*HY/NST; box(5.8/NST,sh,1.6,riserM,sx,sh/2,25.2,G); box(5.8/NST+0.02,0.04,1.64,stepM,sx,sh+0.01,25.2,G); }
+  col(-54.75,25.1,2.65,0.9);   // under the stairs, downstairs
+  col(-54.1,25.12,2.8,0.93,1);   // the hole upstairs; the top two steps stay open so you can step onto them from the landing
+  var railM=mat(0x3a2a20,{roughness:.5});
+  var rl=box(5.9,0.06,0.06,railM,-54.5,HY/2+0.95,26.0,G); rl.rotation.z=Math.atan2(HY,5.8); box(5.9,0.06,0.06,railM,-54.2,HY+0.95,26.05,G);
+  for (var ri=0;ri<6;ri++){ box(0.04,0.95,0.04,railM,-51.6-ri*1.1,HY+0.47,26.05,G); }
+  // lights along both floors
+  for (var L=-55;L<=22;L+=7){ box(1.2,0.05,0.5,glow(0xfff0d8),L,HY-0.25,HZ,G); halo(0xffe8c0,3.2,L,HY-0.5,HZ,G,.45); box(1.2,0.05,0.5,glow(0xfff0d8),L,2*HY-0.16,HZ,G); halo(0xffe8c0,3.2,L,2*HY-0.4,HZ,G,.45); }
+  [19.5,33,37].forEach(function(L){ box(0.5,0.05,1.2,glow(0xfff0d8),-14,3.36,L,G); halo(0xffe8c0,3.2,-14,3.1,L,G,.45); });
+  // the crossing: a rug, a chandelier and signs
+  var hubRug=new THREE.Mesh(new THREE.CircleGeometry(1.8,20),mat(0x2a3a5a,{roughness:1})); hubRug.rotation.x=-Math.PI/2; hubRug.position.set(-14,0.04,HZ); hubRug.userData.noSnap=1; G.add(hubRug);
+  cyl(0.5,0.15,0.35,10,gold,-14,HY-0.45,HZ,G); halo(0xffe0a0,4.5,-14,HY-0.7,HZ,G,.6);
+  var signT=canvasTex(256,64,function(c){ c.fillStyle='#1a1008'; c.fillRect(0,0,256,64); c.fillStyle='#c8a050'; c.font='bold 21px monospace'; c.textAlign='center'; c.fillText('STAIRS · 2ND FLOOR ←',128,26); c.fillText('LOBBY ↓  ·  EXIT ↑',128,54); });
+  [[NS0-0.02,Math.PI/2],[NS1+0.02,-Math.PI/2]].forEach(function(p){ var m=new THREE.Mesh(new THREE.PlaneGeometry(1.5,0.38),new THREE.MeshBasicMaterial({map:signT})); m.position.set(p[0],2.5,22); m.rotation.y=p[1]; G.add(m); });
+  var s2T=canvasTex(256,40,function(c){ c.fillStyle='#1a1008'; c.fillRect(0,0,256,40); c.fillStyle='#c8a050'; c.font='bold 22px monospace'; c.textAlign='center'; c.fillText('2ND FLOOR · 201–220',128,28); });
+  var s2=new THREE.Mesh(new THREE.PlaneGeometry(1.6,0.25),new THREE.MeshBasicMaterial({map:s2T})); s2.position.set(-51.4,2.7,24.2+0.05); G.add(s2);
+  [[X0+0.05,0.5*Math.PI,27.4],[X1-0.05,-0.5*Math.PI,HZ]].forEach(function(e){ var ex=new THREE.Mesh(new THREE.PlaneGeometry(0.6,0.22),new THREE.MeshBasicMaterial({map:canvasTex(64,24,function(c){ c.fillStyle='#0a3a0a'; c.fillRect(0,0,64,24); c.fillStyle='#4aff6a'; c.font='bold 16px monospace'; c.fillText('EXIT',14,17); })})); ex.position.set(e[0],2.9,e[2]); ex.rotation.y=e[1]; G.add(ex); });
   // the lobby, out front of the south arm: glass doors, the desk, a sofa and a plant
   var lob=new THREE.Group(); G.add(lob);
   var lf=new THREE.Mesh(new THREE.PlaneGeometry(12,5.0),marble); lf.rotation.x=-Math.PI/2; lf.position.set(-14,0.03,13.7); lf.userData.noSnap=1; lob.add(lf);
   box(0.3,3.4,5.0,outM,-20,1.7,13.7,lob); col(-20,13.7,0.15,2.5); box(0.3,3.4,5.0,outM,-8,1.7,13.7,lob); col(-8,13.7,0.15,2.5);
   box(4.6,3.4,0.3,outM,-17.7,1.7,11.2,lob); col(-17.7,11.2,2.3,0.15); box(4.6,3.4,0.3,outM,-10.3,1.7,11.2,lob); col(-10.3,11.2,2.3,0.15); box(2.8,0.9,0.3,outM,-14,2.95,11.2,lob);
+  box(3.0,3.4,0.3,outM,-18.5,1.7,16.2,lob); col(-18.5,16.2,1.5,0.15); box(3.0,3.4,0.3,outM,-9.5,1.7,16.2,lob); col(-9.5,16.2,1.5,0.15);
   box(12.4,0.25,5.4,roofM2,-14,3.55,13.7,lob);
   var gl2=new THREE.MeshStandardMaterial({color:lin(0x9fc0d0),transparent:true,opacity:.25,roughness:.05,depthWrite:false});
-  [-1,1].forEach(function(s2){ box(1.0,2.4,0.06,gl2,-14+s2*1.4,1.2,11.05,lob); box(0.06,2.4,0.08,trimH,-14+s2*0.9,1.2,11.05,lob); });
-  box(3.4,1.1,1.0,mat(0x4a2a1a,{roughness:.4}),-17.6,0.55,14.8,lob); box(3.5,0.06,1.1,marble,-17.6,1.13,14.8,lob); col(-17.6,14.8,1.7,0.5);
-  var bell=new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6,0,Math.PI*2,0,Math.PI/2),gold); bell.position.set(-16.6,1.16,14.4); lob.add(bell);
+  [-1,1].forEach(function(s2b){ box(1.0,2.4,0.06,gl2,-14+s2b*1.4,1.2,11.05,lob); box(0.06,2.4,0.08,trimH,-14+s2b*0.9,1.2,11.05,lob); });
+  box(3.4,1.1,1.0,mat(0x4a2a1a,{roughness:.4}),-17.6,0.55,14.6,lob); box(3.5,0.06,1.1,marble,-17.6,1.13,14.6,lob); col(-17.6,14.6,1.7,0.5);
+  var bell=new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6,0,Math.PI*2,0,Math.PI/2),gold); bell.position.set(-16.6,1.16,14.2); lob.add(bell);
   box(2.4,0.45,0.9,mat(0x2a4a3a,{roughness:1}),-10.0,0.23,13.0,lob); box(2.4,0.55,0.22,mat(0x2a4a3a,{roughness:1}),-10.0,0.6,13.4,lob); col(-10.0,13.1,1.2,0.5);
   cyl(0.3,0.22,0.6,10,mat(0x6a4a32),-19.2,0.3,12.0,lob); var leaf=new THREE.Mesh(new THREE.IcosahedronGeometry(0.6,1),mat(0x2a5a2a,{roughness:1})); leaf.position.set(-19.2,1.1,12.0); lob.add(leaf); col(-19.2,12.0,0.35,0.35);
   box(6.0,0.05,1.0,glow(0xfff0d8),-14,3.36,13.7,lob); halo(0xfff0d0,6,-14,3.0,13.7,lob,.5);
@@ -4866,14 +4962,21 @@ function buildHotel(){
   var nm=new THREE.Mesh(new THREE.PlaneGeometry(11,1.75),new THREE.MeshBasicMaterial({map:nT})); nm.position.set(-14,4.6,10.9); nm.rotation.y=Math.PI; G.add(nm); box(11.4,2.0,0.2,mat(0x120a14),-14,4.6,11.05,G); halo(0xffcf6a,9,-14,4.6,10.3,G,.35);
   box(3.6,0.12,2.6,roofM2,-14,3.0,9.8,G); [-1,1].forEach(function(s3){ box(0.12,3.0,0.12,gold,-14+s3*1.7,1.5,8.6,G); col(-14+s3*1.7,8.6,0.08,0.08); });
   // parking in front
-  var a=new THREE.Mesh(new THREE.PlaneGeometry(65,5.4),asph); a.rotation.x=-Math.PI/2; a.position.set(-17.5,0.017,8.1); a.userData.noSnap=1; a.receiveShadow=true; G.add(a);
-  for (var x=-48;x<=14;x+=3.2) if (Math.abs(x+14)>2.6) box(0.1,0.01,4.4,lineM,x,0.026,8.3,G);
+  var a=new THREE.Mesh(new THREE.PlaneGeometry(82,5.4),asph); a.rotation.x=-Math.PI/2; a.position.set(-17,0.017,8.1); a.userData.noSnap=1; a.receiveShadow=true; G.add(a);
+  for (var x=-56;x<=22;x+=3.2) if (Math.abs(x+14)>2.6) box(0.1,0.01,4.4,lineM,x,0.026,8.3,G);
   G.traverse(function(o){ if (o.isMesh && !o.isInstancedMesh && o.material.isMeshStandardMaterial && !o.material.transparent){ o.castShadow=true; o.receiveShadow=true; } });
   function over(x,z,pad){ return (x>HOTEL_BOX.x0-pad && x<HOTEL_BOX.x1+pad && z>HOTEL_LOT.z0-pad && z<HOTEL_BOX.z1+pad); }
   var hideT=TREES.filter(function(t){ return over(t.g.position.x,t.g.position.z,2.5); });
   var hideF=FENCES.filter(function(f){ return over(f.m.position.x,f.m.position.z,0.5); });
   var gHide=[]; if (grassInst){ var m4=new THREE.Matrix4(), v=new THREE.Vector3(); for (var k=0;k<grassMax;k++){ grassInst.getMatrixAt(k,m4); v.setFromMatrixPosition(m4); if (over(v.x,v.z,0)) gHide.push([k,m4.clone()]); } }
-  HOTEL={g:G,cols:cols,rooms:rooms,hideT:hideT,hideF:hideF,gHide:gHide};
+  // for walking between the floors: the hotel is one of the "big buildings" with floors and stairs
+  var B={id:'hotel',x0:X0-0.4,x1:X1+0.4,z0:11.0,z1:38.8,H:HY,n:2,cols:[null,ucols],stairs:[S],lights:[],
+    rooms:[[['h0X',-51.6,X1-0.7,HZ-HW,HZ+HW],['h0W',X0+0.7,-51.6,26.0,HZ+HW],['h0S',NS0,NS1,16.2,HZ-HW],['h0L',-20,-8,11.8,16.2],['h0N',NS0,NS1,HZ+HW,38.1]],
+      [['h1X',-51.3,X1,HZ-HW,HZ+HW],['h1W',X0,-51.3,26.05,HZ+HW],['h1W',X0,-57.4,HZ-HW,HZ+HW]]]};
+  var links=[{a:'h0L',b:'h0S',x:-14,z:16.2,nx:0,nz:1},{a:'h0S',b:'h0X',x:-14,z:HZ-HW,nx:0,nz:1},{a:'h0X',b:'h0N',x:-14,z:HZ+HW,nx:0,nz:1},{a:'h0W',b:'h0X',x:-51.6,z:27.4,nx:1,nz:0},{a:'h1W',b:'h1X',x:-51.3,z:27.4,nx:1,nz:0},
+    {a:'OUT',b:'h0L',x:-14,z:11.2,nx:0,nz:1},{a:'h0N',b:'OUT',x:-14,z:38.8,nx:0,nz:1},{a:'OUT',b:'h0W',x:X0,z:27.4,nx:1,nz:0},{a:'h0X',b:'OUT',x:X1,z:HZ,nx:1,nz:0},
+    {a:'h0X',b:'h1W',stair:S,A:{m:{x:-51.0,z:25.2},g:{x:-50.9,z:27.0}},E:{m:{x:-57.85,z:25.2},g:{x:-57.95,z:27.0}}}];
+  HOTEL={g:G,cols:cols,ucols:ucols,rooms:rooms,hideT:hideT,hideF:hideF,gHide:gHide,B:B,links:links};
 }
 // inside each room: a one-storey hotel room instead of the two-storey house
 var HROOM=null, LANE_CHORES=null, LANE_HIDES=null;
@@ -4935,10 +5038,15 @@ function worldMap(id){
   HOTEL.hideT.forEach(function(t){ t.g.visible=!ho; cset([t.c],!ho); }); HOTEL.hideF.forEach(function(f){ f.m.visible=!ho; cset([f.c],!ho); });
   if (grassInst){ HOTEL.gHide.forEach(function(e){ grassInst.setMatrixAt(e[0],ho?zero:e[1]); }); grassInst.instanceMatrix.needsUpdate=true; }
   houses.length=0; (ho?HOTEL.rooms:LANE_HOUSES).forEach(function(h){ houses.push(h); });
+  // the hotel's two floors and stairs, and the north back street (it would run under the hotel)
+  var bi=BLD.indexOf(HOTEL.B); if (ho && bi<0) BLD.push(HOTEL.B); if (!ho && bi>=0) BLD.splice(bi,1);
+  HOTEL.links.forEach(function(L){ var k=NAVL.indexOf(L); if (ho && k<0) NAVL.push(L); if (!ho && k>=0) NAVL.splice(k,1); });
+  BACKN.forEach(function(e){ if (e.o) e.o.visible=!ho; if (e.c) cset([e.c],!ho); });
   hotelRoom(ho); WMAP=id; moonLight.shadow.needsUpdate=true;
 }
 // getting bots in, out and around: four doorways (lobby, north, west, east), and the hub where the halls cross
-function hotelNav(e,g){ if (WMAP!=='hotel' || e.ih>=0) return null;
+function hotelNav(e,g){ return null;   // the hotel now finds its way with the floors-and-stairs system
+  if (WMAP!=='hotel' || e.ih>=0) return null;
   var ein=inHotel(e.x,e.z), gin=inHotel(g.x,g.z), ENT=[{o:{x:-14,z:9.4},i:{x:-14,z:13.6}},{o:{x:-14,z:38.9},i:{x:-14,z:36.2}},{o:{x:-52.2,z:25.5},i:{x:-48.6,z:25.5}},{o:{x:17.2,z:25.5},i:{x:13.6,z:25.5}}];
   function arm(p){ if (Math.abs(p.z-25.5)<1.5 && Math.abs(p.x+14)>1.5) return p.x<-14?'w':'e'; if (Math.abs(p.x+14)<1.5 && p.z>26.9) return 'n'; if (Math.abs(p.x+14)<1.5 || p.z<16.2) return 's'; return 'hub'; }
   function armOfEnt(k){ return ['s','n','w','e'][k]; }
@@ -5053,7 +5161,7 @@ function simCar(C,dt,el,mine){
       thr=Math.max(-1,Math.min(1,thr)); st=Math.max(-1,Math.min(1,st)); var v0=drive(C,dt,thr,st);
       var p={x:C.x+Math.cos(C.yaw)*C.v*dt, z:C.z-Math.sin(C.yaw)*C.v*dt}; resolve(p,1.05); var want=Math.abs(C.v*dt), got=Math.hypot(p.x-C.x,p.z-C.z);
       if (want>0.01 && got<want*0.6){ C.v*=0.4; if (Math.abs(v0)>5){ thud(0.8); shake(); } }
-      C.x=Math.max(-150,Math.min(147,p.x)); C.z=Math.max(-38,Math.min(38,p.z));
+      C.x=Math.max(-150,Math.min(147,p.x)); C.z=Math.max(-55,Math.min(55,p.z));
       if (Math.hypot(C.x-C.stall.x,C.z-5.6)<4.6 || Math.hypot(C.x-C.stall.x,C.z-C.stall.z)<4) startPark(C,el); }
     else { if (!C.wp){ C.wp=arriveRoute(C); C.wi=0; } if (aiDrive(C,dt) || (C.wi>=2 && Math.hypot(C.x-C.stall.x,C.z-5.6)<3.2)) startPark(C,el); }
     return; }
@@ -5114,7 +5222,7 @@ function fleetNearLamp(px,pz){ var C=myCar(); if (!C || C.st===7) return null; r
 
 /* ---------- the job: cleaning the neighbours' houses ---------- */
 // Each house has two chores. Stand at one for 30 seconds to finish it; step away and it starts over.
-var CLEAN_NEED=36;   // both chores in all 18 houses or rooms
+var CLEAN_NEED=80;   // both chores in all 40 houses or rooms
 var CHORE_T=[
   {n:'Wash the dishes',v:'Washing the dishes',x:3.7,z:-2.75,f:0},
   {n:'Sweep the living room',v:'Sweeping',x:-2.0,z:-1.85,f:0},
@@ -5176,7 +5284,7 @@ var wireUI=(function(){
   $('wireClose').addEventListener('click',function(){ close(false); });
   window.addEventListener('keydown',function(e){ if (!st || st.fin) return; var n=['Digit1','Digit2','Digit3','Digit4'].indexOf(e.code); if (n<0) return; e.stopPropagation(); if (st.sel<0) { if (st.done[n]<0){ st.sel=n; draw(); } } else tryR(n); },true);
   function tick(dt){ if (!st) return; if (st.spark>0){ st.spark=Math.max(0,st.spark-dt*3); draw(); } var N=net, h=houses[st.hi];
-    if (!N || game.mode!=='play' || N.alive!==1 || Math.hypot(P.x-h.gen.x,P.z-h.gen.z)>3 || h.power) close(false); }
+    if (!N || game.mode!=='play' || N.alive!==1 || Math.hypot(P.x-h.gen.x,P.z-h.gen.z)>3 || Math.abs((P.y||0)-(h.gen.y||0))>1.3 || h.power) close(false); }
   function finish(){ var N=net, hi=st?st.hi:-1; close(true); if (!N || hi<0) return; pwFix(N,hi); netSend({pw:N.pw}); }
   function close(ok){ if (!st) return; st=null; $('wirePanel').hidden=true; if (net) net.wiring=null; if (!isTouch && game.mode==='play' && !document.pointerLockElement) lock(); }
   function open(hi){ var perm=[0,1,2,3]; for (var i=3;i>0;i--){ var j=(Math.random()*(i+1))|0, t=perm[i]; perm[i]=perm[j]; perm[j]=t; }
@@ -5387,7 +5495,7 @@ function update(dt){
   var speed=(vic?(wantRun?7.2:(P.crouch?2.1:4.2)):(wantRun?6.5:4.5))*(game.net?net.spd:1), f=fwd(), rx=Math.cos(P.yaw), rz=-Math.sin(P.yaw);
   P.x+=(rx*mx-f.x*mz)*speed*dt; P.z+=(rz*mx-f.z*mz)*speed*dt;
   if (game.net && net.ih>=0) iFix(P,0.3);
-  else { P.x=Math.max(-158.4,Math.min(148,P.x)); P.z=Math.max(-39.4,Math.min(39.4,P.z)); lvFix(P,0.45); P.fl=0; }
+  else { P.x=Math.max(-158.4,Math.min(148,P.x)); P.z=Math.max(-56,Math.min(56,P.z)); lvFix(P,0.45); P.fl=0; }
   if (game.net) vanTick(dt); wireUI.tick(dt); choreUI.tick(dt); micTick(dt); doorSeqTick(dt); SCARE3D.tick(dt);
   if (m>0.1){ P.bob+=dt*speed*1.9; P.step+=dt*speed; if (P.step>2.3){ P.step=0; if (!P.crouch) stepSound(wantRun,false); else noise(0.05,0.025,300); } }
   var bob=reduced?0:Math.sin(P.bob)*(wantRun?0.06:0.045);
