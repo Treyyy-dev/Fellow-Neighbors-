@@ -3207,7 +3207,8 @@ function netInteract(dt,pl){
   if (N.hide){ N.near={k:'unhide'}; return; }
   if (N.ih>=0){
     var h=houses[N.ih], lx=P.x-IX;
-    if (P.z>3.12 && Math.abs(lx)<0.75 && (P.y||0)<0.3){ netLeaveHouse(); return; }
+    if (P.z>3.42 && Math.abs(lx)<0.75 && (P.y||0)<0.3){ netLeaveHouse(); return; }
+    if (P.z>2.25 && Math.abs(lx)<1.0 && (P.y||0)<0.3){ N.near={k:'exitdoor',t:'Open the door'}; return; }
     if (!killer){
       var stN=stairNear();
       if (N.choreHere && !(N.cleaned||{})[N.choreHere.cid]) N.near={k:'chore',c:N.choreHere,t:'Clean up: '+CHORE_T[N.choreHere.t].n.toLowerCase()};
@@ -3226,7 +3227,7 @@ function netInteract(dt,pl){
     if (!N.near) OUTHIDES.forEach(function(s){ if (N.near || Math.abs((s.y||0)-(P.y||0))>0.8) return; if (Math.hypot(P.x-s.x,P.z-s.z)<s.r) N.near=killer?{k:'search',s:s,t:'Search the dumpster'}:{k:'hide',s:s,t:s.t}; });
   }
   if (N.chat && (!N.near || N.near.k!=='chat')) closeChat();
-  var lab={take:'Take',pay:'Pay',chore:'Clean',wire:'Fix',up:'Up',down:'Down',killnb:'Kill',chest:'Open',door:killer&&N.near&&N.near.h&&!N.near.h.netBroke?'Break':'Open',chat:'Chat',hide:'Hide',search:'Search',unhide:'Out'};
+  var lab={exitdoor:'Open',take:'Take',pay:'Pay',chore:'Clean',wire:'Fix',up:'Up',down:'Down',killnb:'Kill',chest:'Open',door:killer&&N.near&&N.near.h&&!N.near.h.netBroke?'Break':'Open',chat:'Chat',hide:'Hide',search:'Search',unhide:'Out'};
   if (N.near && !N.working) setPrompt(N.near.t,lab[N.near.k]); else if (curPrompt && !N.working && /^(Open the|Break the|Chat with|Hide|Search|Come out|Kill |Go up|Go down|Connect the|Locked|Clean up|Too dark|Take a|Ring up)/.test(curPrompt)) setPrompt(null);
 }
 // ---- police (run by one player's game, shown to everyone)
@@ -3335,7 +3336,7 @@ function doorBreakFrame(dt){
 
 /* ---------- online: co-op stories and survival ---------- */
 var net=null, NR=null, NP={}, netMe='me', netCap=null, lobby=null, avatars={};
-var NIGHT=480, CARNEED=42, GENNEED=15, SGENS=[1,4,9,6], PW_NEED=5;
+var NIGHT=2400, CARNEED=42, GENNEED=15, SGENS=[1,4,9,6], PW_NEED=18;   // every generator
 var BOY={n:'Boy',rig:'m',top:0xb3261c,bottom:0x2a3550,hair:0x4a3020,beard:false,skin:0xffffff,s:0.9,look:{hd:'cap',hatc:0x2a4a8a,w:0.92}};
 var GIRL={n:'Girl',rig:'w',s:0.9,look:{sk:0xd8a888,hair:0x6a3a1a,top:0xe8e0d0,pants:0x4a6a9a,acc:0xd0a030,pat:0,w:0.94}};
 var WREN={n:'Wren',rig:'w',s:0.9,look:{sk:0xcfd4dc,hair:0xe8e8ee,top:0x8a8a9a,pants:0x2a2a34,acc:0x8a8a9a,pat:0,w:0.92}};
@@ -3516,7 +3517,7 @@ function lobbyTick(){
   $('lobInfo').textContent=(lobby.note?lobby.note+' ':'')+M.t+' · '+mapName(lobby.map||'lane')+' · '+ps.length+' in the lobby'+' · 4 survivors against an AI killer'+'. Friends can find this room under Find Room, or join with the code '+lobby.code.toUpperCase()+'.';
   $('lobStart').disabled=!known;
   lobby.adT-=0.3; if (lobby.adT<=0 && !NR.solo){ lobby.adT=1.5; dirOpen(); dirSend({rm:{c:lobby.code,m:lobby.mode,n:ps.length,h:nick(ps[0].pr),g:0}}); }
-  if (best && (Date.now()-best.id<NIGHT*1000+600000)){ if (best.roles[netMe]) netBegin(best); else { lobby.gid=best.id; lobby.note='That game was full (4 survivors). You are in line for the next one.'; } }
+  if (best && (Date.now()-best.id<3600000)){ if (best.roles[netMe]) netBegin(best); else { lobby.gid=best.id; lobby.note='That game was full (4 survivors). You are in line for the next one.'; } }
 }
 function findOpen(){ netName(); dirOpen(); findKey=''; show('netFind'); if (findTimer) clearInterval(findTimer); findTimer=setInterval(findTick,500); findTick(); }
 function findTick(){
@@ -3915,9 +3916,9 @@ function botsHost(dt,pl,W){
         else { if (W.G===0) opts.push({k:'gas',pt:GAS,r:1.6,f:function(){ o.g=Math.max(o.g,1); }}); if (W.G===1) opts.push({k:'gas2',pt:CARSIDE,r:3.2,f:function(){ o.g=2; }});
           if (W.B===0) opts.push({k:'bat',pt:batPos(),r:1.6,f:function(){ o.b=Math.max(o.b,1); }}); if (W.B===1) opts.push({k:'bat2',pt:CARSIDE,r:3.2,f:function(){ o.b=2; }});
           if (W.G===2 && W.B===2 && !W.carOK) opts.push({k:'car',pt:CARSIDE,r:3.2,f:function(){ o.c=Math.min(CARNEED,o.c+dt); }});
-          var openCh=W.ncl<CLEAN_NEED && houses.some(function(hh,hi){ return (W.powered[hi]||hh.netBroke) && !hh.netDead && choresOf(hi).some(function(t){ return !W.cleaned[choreId(hi,t)]; }); });
+          var openCh=W.ncl<CLEAN_NEED && houses.some(function(hh,hi){ return (W.powered[hi]||hh.netBroke) && choresOf(hi).some(function(t){ return !W.cleaned[choreId(hi,t)]; }); });
           if (W.npw<PW_NEED || !openCh) houses.forEach(function(hh,hi){ if (W.powered[hi]) return; opts.push({k:'wire'+hi,pt:genPt(hi),r:2.0,f:function(){ if (b.wK!==hi){ b.wK=hi; b.wT=0; } b.wT+=dt; if (b.wT>=8){ pwFix(N,hi); b.wK=null; } }}); });
-          if (W.ncl<CLEAN_NEED) houses.forEach(function(hh,hi){ if (hh.netDead || !(W.powered[hi] || hh.netBroke)) return; choresOf(hi).forEach(function(t){ var cid=choreId(hi,t); if (W.cleaned[cid]) return; var CT=CHORE_T[t];
+          if (W.ncl<CLEAN_NEED) houses.forEach(function(hh,hi){ if (!(W.powered[hi] || hh.netBroke)) return; choresOf(hi).forEach(function(t){ var cid=choreId(hi,t); if (W.cleaned[cid]) return; var CT=CHORE_T[t];
             opts.push({k:'ch'+cid,pt:{x:IX+CT.x,z:CT.z,ih:hi,y:CT.f*FLOOR2},wp:doorPt(hh),r:1.25,f:function(){ if (b.chK!==cid){ b.chK=cid; b.chT=0; } b.chT+=dt; if (b.chT>=30){ if (N.cl.indexOf(cid)<0) N.cl.push(cid); b.chK=null; } }}); }); });
  }
         if (opts.length){
@@ -3955,7 +3956,7 @@ function netSurvival(dt,pl,surv,killers,me){
   for (var fk in fixT) if (fixT[fk]>(cutT[fk]===undefined?-1:cutT[fk])){ powered[fk]=1; npw++; } N.powered=powered;
   gens={}; houses.forEach(function(hh,hi){ gens[hi]=powered[hi]?GENNEED:0; });
   G=2; B=2; C=CARNEED;
-  var fixed=houses.filter(function(hh,hi){ return powered[hi]; }), carOK=true; done=ncl>=CLEAN_NEED && npw>=PW_NEED;
+  var fixed=houses.filter(function(hh,hi){ return powered[hi]; }), carOK=true; if (ncl>=CLEAN_NEED && npw>=PW_NEED) N.world.allDone=true; done=!!N.world.allDone;   // once it's all done, a cut generator can't undo it
   if (N.isHost && N.bots.length) botsHost(dt,pl,{G:G,B:B,C:C,gens:gens,carOK:carOK,done:done,cleaned:cleaned,ncl:ncl,powered:powered,npw:npw});
   itemsTick(dt,pl,killers); teamTick(pl); if (game.role!=='killer') storeTick(dt);
   if (N.isHost) polTick(dt,pl,killers); polDraw(dt); jailTick(dt,pl); netHome(dt); netInteract(dt,pl);
@@ -3973,7 +3974,7 @@ function netSurvival(dt,pl,surv,killers,me){
           if (near || N.ih===hi){ noise(0.5,0.5,2600); tone(90,0.6,'sawtooth',0.12,30); } } } }); moonLight.shadow.needsUpdate=true; W.pwSig=pwSig; W.fx=fixed.length; }
   
   if (done && !game.gateOpening){ openGate(); toast(game.role==='killer'?'The job is done. Stop them before they drive off.':'Every job is done. Get back to your car and go.',4500); }
-  var left=NIGHT-N.el, hr=22+N.el/NIGHT*8, h12=((Math.floor(hr)+11)%12)+1, mn=Math.floor((hr%1)*60), clockT=h12+':'+('0'+mn).slice(-2)+(hr>=24||hr<12?' AM':' PM');
+  var left=Math.max(81,NIGHT-N.el), hr=Math.min(29.98,22+N.el/NIGHT*8), h12=((Math.floor(hr)+11)%12)+1, mn=Math.floor((hr%1)*60), clockT=h12+':'+('0'+mn).slice(-2)+(hr>=24||hr<12?' AM':' PM');
   var dawn=Math.max(0,Math.min(1,1-left/80)); FX.hemi=(scene.environment?0.36:0.42)+dawn*0.9; scene.fog.color.copy(lin(N.blood?0x2a0709:FOG)).lerp(lin(0x5a6680),dawn*0.8);
   var alive=surv.filter(function(q){ return q.alive; }).length, out=surv.filter(function(q){ return q.a===2; }).length, lab=null, tgt=null;
   if (game.role==='killer'){
@@ -3984,7 +3985,7 @@ function netSurvival(dt,pl,surv,killers,me){
       else if (N.ih>=0 && nbKillable(houses[N.ih],true)) killNeighbour(houses[N.ih]);
       else noise(0.12,0.25,900); }
     var near=null, nd=1e9; surv.forEach(function(q){ if (!q.alive) return; var dd=Math.hypot(q.x-P.x,q.z-P.z); if (dd<nd){ nd=dd; near=q; } });
-    netObj('Kill Feast · '+clockT,(isTouch?'Tap Swing':'Click or press V')+' to swing your knife. Hunt them down before morning. '+alive+' alive'+(out?', '+out+' escaped':'')+'. Chores '+Math.min(ncl,CLEAN_NEED)+'/'+CLEAN_NEED+', generators '+Math.min(npw,PW_NEED)+'/'+PW_NEED+'.', done?CARSIDE:null);
+    netObj('Kill Feast · '+clockT,(isTouch?'Tap Swing':'Click or press V')+' to swing your knife. Hunt them down. '+alive+' alive'+(out?', '+out+' escaped':'')+'. Chores '+Math.min(ncl,CLEAN_NEED)+'/'+CLEAN_NEED+', generators '+Math.min(npw,PW_NEED)+'/'+PW_NEED+'.', done?CARSIDE:null);
     netSafe(vanPhase(N)?'They are driving in…':N.stun>0?(N.stunWhy==='hits'?'Stunned':'Stuck in a trap')+' · '+mmss(N.stun):(N.iv>0?'Unseen · '+Math.ceil(N.iv)+'s':(N.slow>0?'Got one':null)));
   } else if (N.alive===1){
     var o=N.o, myDoor=carDoorPt(netMe), car=nearP(myDoor,2.4);
@@ -4004,12 +4005,12 @@ function netSurvival(dt,pl,surv,killers,me){
     if (N.hp===1){ N.drip=(N.drip||0)-dt; if (N.drip<=0){ N.drip=2.2; bloodPool(P.x,P.gy,P.z,0.35); } }
     N.working=work; if (work){ N.tk=(N.tk||0)+dt; if (N.tk>0.8){ N.tk=0; tone(300+Math.random()*80,0.05,'square',0.07); } }
     var txt;
-    var chorePt=null; if (ncl<CLEAN_NEED){ var cb=1e9; houses.forEach(function(hh,hi){ if (!(powered[hi] || hh.netBroke) || hh.netDead) return; if (choresOf(hi).every(function(t){ return cleaned[choreId(hi,t)]; })) return; var dp=doorPt(hh), dd=Math.hypot(P.x-dp.x,P.z-dp.z); if (dd<cb){ cb=dd; chorePt=dp; } }); }
+    var chorePt=null; if (ncl<CLEAN_NEED){ var cb=1e9; houses.forEach(function(hh,hi){ if (!(powered[hi] || hh.netBroke)) return; if (choresOf(hi).every(function(t){ return cleaned[choreId(hi,t)]; })) return; var dp=doorPt(hh), dd=Math.hypot(P.x-dp.x,P.z-dp.z); if (dd<cb){ cb=dd; chorePt=dp; } }); }
     var genP=null, gb=1e9; houses.forEach(function(h2,hi2){ if (powered[hi2]) return; var dd=Math.hypot(P.x-h2.gen.x,P.z-h2.gen.z); if (dd<gb){ gb=dd; genP=genPt(hi2); } });
     if (done){ txt='Every job is done. Get back in your car in the lot and go.'; tgt=myDoor; }
     else if (N.ih>=0 && ncl<CLEAN_NEED && choresOf(N.ih).some(function(t){ return !cleaned[choreId(N.ih,t)]; })){ txt='Clean this house: go to a glowing spot and solve its chore puzzle.'; tgt=null; }
-    else if (chorePt && (npw>=PW_NEED || !genP || cb<gb)){ txt=WMAP==='motel'?'Go clean a room that has its lights on.':'Go clean a house that has its lights on.'; tgt=chorePt; }
-    else if (npw<PW_NEED || (ncl<CLEAN_NEED && !chorePt)){ txt=WMAP==='motel'?'Fix the generator beside a dark room’s door: match the coloured wires. Then the guest lets you in.':'Fix a generator behind a dark house: match the coloured wires. Then the neighbour lets you in.'; tgt=genP; }
+    else if (chorePt && (!genP || cb<gb)){ txt=WMAP==='motel'?'Go clean a room that has its lights on.':'Go clean a house that has its lights on.'; tgt=chorePt; }
+    else if (genP){ txt=WMAP==='motel'?'Fix the generator beside a dark room’s door: match the coloured wires. Then the guest lets you in.':'Fix a generator behind a dark house: match the coloured wires. Then the neighbour lets you in.'; tgt=genP; }
     else { txt='Finish the chores.'; tgt=chorePt; }
     if (N.ih>=0 && !houses[N.ih].power && !done){ txt='The power is out in here. Fix the generator '+(WMAP==='motel'?'beside the door':'out back')+' before you can clean.'; tgt=genPt(N.ih); }
     if (vanPhase(N) && myCar()){ txt='Drive to the parking lot at the far end of the lane. Pull into your glowing spot.'; tgt={x:myCar().stall.x,z:STALL_Z}; }
@@ -4018,7 +4019,7 @@ function netSurvival(dt,pl,surv,killers,me){
     var mc=myCar(); netSafe(vanPhase(N)&&mc?(mc.st===0?'Get ready':mc.st===1?(mc.auto?'Autopilot':'Driving · '+(isTouch?'push the stick':'W go · S brake · A/D steer')):mc.st===2?'Parking':'Getting out'):lab);
   } else { netObj('Kill Feast · '+clockT,(N.alive===2?'You escaped. ':'You are dead. ')+alive+' still alive.',null); netSafe(null); }
   if (N.el>6){
-    if (left<=0 || (surv.length && alive===0)){
+    if (surv.length && alive===0){
       var lived=surv.filter(function(q){ return q.alive || q.a===2; }).length;
       if (game.role==='killer') netOver(lived?'Morning':'Nobody left',lived?lived+' of them saw the sun come up.':'Hollow Lane is quiet again.',!lived);
       else if (N.alive===2) netOver('You got out','You drove off before the sun came up.',true);
@@ -4271,6 +4272,7 @@ function netAct(){
   var N=net; if (!N) return; var pl=N.pl||[]; if (N.alive!==1){ N.spec++; return; }
   if (N.mode!=='s' || N.fin) return; var n=N.near; if (!n) return;
   if (n.k==='unhide') return netUnhide();
+  if (n.k==='exitdoor') return netLeaveHouse();
   if (n.k==='take' || n.k==='pay') return storeAct(n);
   if (n.k==='wire'){ if (!wireUI.isOpen()) wireUI.open(n.hi); return; }
   if (n.k==='chore'){ if (!choreUI.isOpen()) choreUI.open(n.c.hi,n.c.t); return; }
@@ -4335,8 +4337,9 @@ function teamTick(pl){ var tm=$('team'); if (!tm.hidden) tm.hidden=true; return;
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=64;
+var GAME_VER=65;
 var UPDATES=[
+  {v:65,t:'Finish the whole job',n:['To win, every generator has to be running and every house or room fully cleaned: 18 generators and 36 chores. Then get back to your car.','Once the whole job is done, a cut generator can’t undo it.','No more surviving until 6:00 AM. The night doesn’t end: finish the job and drive out, or the killer gets you.','Inside a house or room, walk up to the front door and press E (or tap Open) to open it and step out.']},
   {v:64,t:'New map: Night Owl Motel',n:['Pick the map in the lobby: Hollow Lane or the new Night Owl Motel.','The motel has two rows of 9 rooms facing the road, each with its own generator right beside the door, motel parking out front, an office, a vending nook, a fenced pool and a big neon VACANCY sign.','You still drive in and park in the lot by the gas station next door, and the police station is still out back of it.','Rooms work like the houses: wire up the generator, the guest lets you in, then solve the chore puzzles inside.']},
   {v:63,t:'PC keybinds',n:['Settings has a PC keybinds tab. Click any action and press a new key to rebind it: moving, running, crouching, interacting, snacks, flashlight, pause and spectating. Picking a key that is already used swaps the two. Reset to defaults puts everything back.']},
   {v:62,t:'Stacked modes',n:['The mode cards are stacked on every screen now.']},
@@ -4704,7 +4707,7 @@ function fleetNearLamp(px,pz){ var C=myCar(); if (!C || C.st===7) return null; r
 
 /* ---------- the job: cleaning the neighbours' houses ---------- */
 // Each house has two chores. Stand at one for 30 seconds to finish it; step away and it starts over.
-var CLEAN_NEED=6;
+var CLEAN_NEED=36;   // both chores in all 18 houses or rooms
 var CHORE_T=[
   {n:'Wash the dishes',v:'Washing the dishes',x:3.7,z:-2.75,f:0},
   {n:'Sweep the living room',v:'Sweeping',x:-2.0,z:-1.85,f:0},
