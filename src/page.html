@@ -95,6 +95,8 @@ body.touch #team{bottom:auto;top:96px}
 #pad{position:absolute;right:16px;bottom:44px;display:flex;flex-direction:column;gap:12px}
 #pad button{width:68px;height:68px;border-radius:50%;font:inherit;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone);background:rgba(13,17,27,.55);border:1.5px solid rgba(231,226,210,.45);touch-action:none}
 #pad button.held{background:var(--ember);border-color:var(--pumpkin)}
+#pad #btnKnock{position:absolute;right:84px;bottom:0}#pad #btnUse{position:absolute;right:84px;bottom:80px}#pad #btnSwing{position:absolute;right:164px;bottom:0}
+@media (max-height:440px){#pad{bottom:24px;gap:9px}#pad button{width:60px!important;height:60px!important}#pad #btnKnock,#pad #btnUse{right:72px}#pad #btnUse{bottom:69px}#pad #btnSwing{right:141px}}
 
 .card{position:absolute;inset:0;display:flex;padding-block:24px;padding-inline:20px;text-align:center;background:rgba(4,5,10,.66);overflow:auto}
 .col{margin:auto;display:flex;flex-direction:column;align-items:center;gap:16px;width:min(100%,440px);min-width:0}
@@ -319,9 +321,6 @@ body{font-size:20px}
     <p id="lobInfo"></p>
     <ul class="plist" id="lobList"></ul>
     <div class="seg" id="lobMode" hidden></div>
-    <p class="lab">Map</p>
-    <div class="seg" id="lobMap"></div>
-    <p class="lab" id="lobMapInfo"></p>
     <p class="lab">Play as</p>
     <div class="seg" id="lobSeg"></div>
     <p class="lab" id="lobBotLab" hidden>Bots</p>
