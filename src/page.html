@@ -84,6 +84,12 @@ body.touch #team{bottom:auto;top:96px}
 #items{position:absolute;left:50%;bottom:50px;transform:translateX(-50%);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone);text-shadow:0 1px 4px #000;white-space:nowrap;pointer-events:none}
 #items button{font:inherit;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--bone);background:rgba(13,17,27,.66);border:1px solid rgba(231,226,210,.4);border-radius:2px;padding:6px 9px;cursor:pointer}
 #items button:disabled{opacity:.35;cursor:default}
+#micBar{position:absolute;left:16px;bottom:14px;display:flex;align-items:center;gap:8px;z-index:12;cursor:pointer;color:var(--osd,#eee);text-shadow:var(--chroma);font-size:14px;letter-spacing:.08em;user-select:none}
+#micBar span{position:relative;display:block;width:120px;height:9px;background:rgba(231,226,210,.12);border:1px solid rgba(0,0,0,.6)}
+#micBar i{position:absolute;left:0;top:0;bottom:0;width:0;background:#58d26c}
+#micBar.loud i{background:#e0322a;box-shadow:0 0 8px #e0322a}#micBar.loud b{color:#ff6a5a}
+#micBar em{position:absolute;left:45%;top:-3px;bottom:-3px;width:2px;background:rgba(255,255,255,.7)}
+#micBar.off{opacity:.55}
 #hpBar{left:50%;bottom:32px;transform:translateX(-50%);display:flex;gap:6px}
 #hpBar b{display:block;width:36px;height:9px;background:rgba(231,226,210,.14);border:1px solid rgba(0,0,0,.55);border-radius:2px}
 #hpBar b.on{background:#4fb862;box-shadow:0 0 6px rgba(79,184,98,.5)}
@@ -230,6 +236,7 @@ body{font-size:20px}
   <button class="chip" id="pauseBtn" type="button" hidden>Pause</button>
   <div class="hud" id="stamina" hidden><i></i></div>
   <div class="hud" id="hpBar" hidden aria-label="Health"><b></b><b></b><b></b></div>
+  <div id="micBar" hidden role="button" tabindex="0" aria-label="Microphone"><b id="micLab">MIC</b><span><i id="micFill"></i><em></em></span></div>
   <button type="button" id="senseBtn" hidden>Sense</button>
   <button type="button" id="scareBtn" class="kab" hidden>Scare</button>
   <button type="button" id="vanishBtn" class="kab" hidden>Vanish</button>
@@ -295,7 +302,7 @@ body{font-size:20px}
 
   <div class="card" id="online" hidden><div class="col">
     <h2>Play</h2>
-    <p>Kill Feast: up to 4 survivors against an AI killer. Drive in, wire up 5 generators, solve 6 chore puzzles in the neighbours’ houses, then drive out. Or last until morning. At 2:00 AM the Blood Moon rises. Create a room, or find one someone else has opened. Everyone waits in the lobby until someone presses Start.</p>
+    <p>Kill Feast: up to 4 survivors against an AI killer on a street of 18 houses. Drive in, wire up 5 generators, solve 6 chore puzzles, then drive out. Keep your voice down: your mic tells the killer where you are. Or last until morning. At 2:00 AM the Blood Moon rises. Create a room, or find one someone else has opened. Everyone waits in the lobby until someone presses Start.</p>
     <p class="lab">Your name</p>
     <input class="inp" id="netName" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Player" aria-label="Your name">
     <div class="list">
