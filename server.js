@@ -5,7 +5,7 @@ const { WebSocketServer } = require('ws');
 const PORT = process.env.PORT || 3000;
 const PUB = path.join(__dirname, 'public');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.ico': 'image/x-icon', '.json': 'application/json', '.webmanifest': 'application/manifest+json' };
-const MAX_ROOM = 12, MAX_MSG = 16384, MAX_PRESENCE = 6000, MAX_ROOMS = 200;
+const MAX_ROOM = 12, MAX_MSG = 16384, MAX_PRESENCE = 12000, MAX_ROOMS = 200;
 
 // Files are small in number, so compress each once and keep it in memory.
 const cache = new Map();

@@ -4468,7 +4468,7 @@ function phAdd(m){ PHONE.msgs.push(m); if (PHONE.msgs.length>60) PHONE.msgs.shif
 function phNote(m){ var el=$('phNote'); el.textContent=''; var b=document.createElement('b'); b.textContent=m.who+': '; el.appendChild(b); el.appendChild(document.createTextNode(m.txt)); el.hidden=false; PHONE.noteT=3.2;
   tone(1180,0.06,'square',0.035); tone(1180,0.06,'square',0.035,null,0.12); }
 function phRenderMsgs(){ if (!PHONE.dirty) return; PHONE.dirty=false; var L=$('phList'); L.textContent=''; var dead=phDead(); $('phMsgT').textContent=dead?'Ghost chat':'Messages';
-  var vis=PHONE.msgs; if (!vis.length){ var p=document.createElement('p'); p.className='phEmpty'; p.textContent=dead?'Only the dead can read this. Text the others who died.':'No messages yet. Text your team.'; L.appendChild(p); return; }
+  var vis=PHONE.msgs; if (!vis.length){ var p=document.createElement('p'); p.className='phEmpty'; p.textContent=dead?'You are dead: your texts only reach the others who died. You can still read the living.':'No messages yet. Text your team.'; L.appendChild(p); return; }
   vis.forEach(function(m){ var d=document.createElement('div'); d.className='phM'+(m.me?' me':'')+(m.bot?' bot':'')+(m.dead?' ghost':''); var s=document.createElement('small'); s.textContent=(m.me?'You':m.who)+' · '+m.t; d.appendChild(s); d.appendChild(document.createTextNode(m.txt)); L.appendChild(d); }); }
 function phClean(t){ return String(t||'').replace(/[\u0000-\u001f\u007f<>]/g,'').replace(/\s+/g,' ').trim().slice(0,80); }
 function phoneSend(t){ var N=net; t=phClean(t); if (!t || !N || N.mode!=='s') return; var now=performance.now(); if (now-PHONE.lastSend<900){ toast('Slow down.',900); return; } PHONE.lastSend=now;
@@ -4476,7 +4476,7 @@ function phoneSend(t){ var N=net; t=phClean(t); if (!t || !N || N.mode!=='s') re
   phAdd({who:'You',txt:t,me:true,dead:!!dead,t:clockStr(N)}); tone(900,0.05,'sine',0.04); if (N.isHost) botsHearText(t,dead); }
 // survivor bots on the host's game text too: when they fix a generator, when they see him, and when someone asks where they are
 function botText(b,t,dead){ var N=net; if (!N || !N.isHost) return; N.btxS=(N.btxS||0)+1; N.btx=(N.btx||[]); N.btx.push([N.btxS,N.bots.indexOf(b),phClean(t),dead?1:0,N.gid]); if (N.btx.length>6) N.btx.shift();
-  if (!!dead===phDead()) phAdd({who:b.name,txt:phClean(t),bot:true,dead:!!dead,t:clockStr(N)}); }
+  if (!dead || phDead()) phAdd({who:b.name,txt:phClean(t),bot:true,dead:!!dead,t:clockStr(N)}); }
 function botsHearText(t,dead){ var N=net; if (!N || !N.isHost || dead) return; var low=t.toLowerCase(), ask=/where|\?|help|anyone|status/.test(low); if (!ask) return;
   N.bots.forEach(function(b,i){ if (b.role!=='s' || b.a!==1 || Math.random()<0.25) return; setTimeout(function(){ if (!net || net!==N || b.a!==1) return;
     var at=placeName(b.x,b.z,b.ih==null?-1:b.ih); botText(b,/help/.test(low)?['Coming! I’m '+at+'.','On my way. I’m '+at+'.','Hang on, I’m '+at+'.'][(Math.random()*3)|0]:['I’m '+at+'.','I’m '+at+'. Fixing what I can.','Still alive, '+at+'.'][(Math.random()*3)|0],false); },1500+i*900+Math.random()*1500); }); }
@@ -4484,9 +4484,9 @@ function botsHearText(t,dead){ var N=net; if (!N || !N.isHost || dead) return; v
 function phoneRead(pl,hostId){ var N=net, mine=phDead();
   pl.forEach(function(q){ if (q.me || q.bot) return; var tx=q.pr.tx;
     if (Array.isArray(tx)) tx.forEach(function(e){ if (!Array.isArray(e) || e.length<4 || e[3]!==N.gid) return; var sq=num(e[0],0); if (sq<=(PHONE.seen[q.id]||0)) return; PHONE.seen[q.id]=sq;
-      var d=num(e[2],0)===1, t=phClean(e[1]); if (!t) return; if (N.isHost) botsHearText(t,d); if (d!==mine) return; phAdd({who:nick(q.pr),txt:t,dead:d,t:clockStr(N)}); });
+      var d=num(e[2],0)===1, t=phClean(e[1]); if (!t) return; if (N.isHost) botsHearText(t,d); if (d && !mine) return; phAdd({who:nick(q.pr),txt:t,dead:d,t:clockStr(N)}); });
     if (q.id===hostId && !N.isHost && Array.isArray(q.pr.btx)) q.pr.btx.forEach(function(e){ if (!Array.isArray(e) || e.length<5 || e[4]!==N.gid) return; var sq=num(e[0],0); if (sq<=(PHONE.seen['#bots']||0)) return; PHONE.seen['#bots']=sq;
-      var b=N.bots[num(e[1],-1)|0], d=num(e[3],0)===1, t=phClean(e[2]); if (!b || !t || d!==mine) return; phAdd({who:b.name,txt:t,bot:true,dead:d,t:clockStr(N)}); }); }); }
+      var b=N.bots[num(e[1],-1)|0], d=num(e[3],0)===1, t=phClean(e[2]); if (!b || !t || (d && !mine)) return; phAdd({who:b.name,txt:t,bot:true,dead:d,t:clockStr(N)}); }); }); }
 // money in and out, for the Cash app
 function cashLog(d,what){ var N=net; if (!N) return; N.cashLog=N.cashLog||[]; N.cashLog.unshift({d:d,n:what,t:clockStr(N)}); if (N.cashLog.length>40) N.cashLog.pop(); if (d>0) N.earned=(N.earned||0)+d; else N.spent=(N.spent||0)-d; if (PHONE.open && PHONE.app==='cash') phRenderCash(); }
 function phRenderCash(){ var N=net||{}; $('phBal').textContent='$'+(N.cash||0); $('phEarn').textContent='$'+(N.earned||0); $('phSpent').textContent='$'+(N.spent||0);
@@ -4602,7 +4602,7 @@ function netTick(dt){
     var A=N.acc[p.id]||(N.acc[p.id]={g:0,b:0,c:0,gn:{},k:0,ek:0,hold:[0,0],kb:{},cs:[],tp:[],tt:[],kh:{},khb:{},cl:[],pw:[]});
     if (N.mode==='s'){ var cs=p.me?N.cs:pr.cs, tp=p.me?N.traps:pr.tp, tt=p.me?N.tt:pr.tt, kh=p.me?N.kh:pr.kh;
       var pw=p.me?N.pw:pr.pw; if (Array.isArray(pw)) A.pw=pw.filter(function(e){ return Array.isArray(e) && typeof e[0]==='number' && e[0]>=0 && e[0]<houses.length && typeof e[1]==='number'; }).slice(0,houses.length);
-      var cl=p.me?N.cl:pr.cl; if (Array.isArray(cl)) A.cl=cl.filter(function(c){ return typeof c==='number' && c>=0 && c<200; }).slice(0,60);
+      var cl=p.me?N.cl:pr.cl; if (Array.isArray(cl)) A.cl=cl.filter(function(c){ return typeof c==='number' && c>=0 && c<houses.length*10; }).slice(0,houses.length*2+4);
       if (Array.isArray(cs)) A.cs=cs.filter(function(c){ return typeof c==='number' && c>=0 && c<CHEST_SPOTS.length; }).slice(0,20);
       if (Array.isArray(tp)) A.tp=tp.filter(function(t){ return Array.isArray(t) && t.length===3 && isFinite(t[1]) && isFinite(t[2]); }).slice(0,6);
       if (Array.isArray(tt)) A.tt=tt.filter(function(t){ return typeof t==='string'; }).slice(-40);
@@ -4688,7 +4688,7 @@ function netTick(dt){
   N.sendT-=dt; if (N.sendT<=0){ N.sendT=0.08;
     var patch={p:[Math.round(P.x*100)/100,Math.round(P.z*100)/100,Math.round(P.yaw*100)/100,N.an],a:N.alive,h:N.hp,cr:P.crouch?1:0,el:Math.round(N.el),st:N.st,f:N.f,hp:[N.hold[0],Math.round(N.hold[1]*10)/10]};
     if (N.mode==='s'){ if (game.role==='killer') patch.k=N.k; patch.o={g:N.o.g,b:N.o.b,c:Math.round(N.o.c*10)/10,gn:N.o.gn};
-      patch.bd=N.bd; patch.nd=N.nd; patch.ih=N.ih; patch.fy=Math.round((P.y||0)*100)/100; patch.hid=N.hide?1:0; if (host && N.yo) patch.yo=N.yo; if (host && N.btx) patch.btx=N.btx;
+      patch.bd=N.bd; patch.nd=N.nd; patch.ih=N.ih; patch.fy=Math.round((P.y||0)*100)/100; patch.hid=N.hide?1:0; if (host && N.yo) patch.yo=N.yo; if (host && N.btx) patch.btx=N.btx; if (PHONE.sent.length) patch.tx=PHONE.sent;
       patch.nz=game.role==='killer'?0:(N.nz||0); fleetPatch(patch,host); patch.gh=buffOn('ghost')?1:0; if (N.fate) patch.fate=N.fate; if (game.role==='killer'){ patch.sc=N.sc||0; patch.iv=N.iv>0?1:0; } if (host){ patch.bsc=N.bsc||0; patch.gcut=Object.keys(N.cut||{}).map(function(k){ return [+k,N.cut[k]]; }); } patch.bl=N.blood?1:0; patch.cs=N.cs; patch.cl=N.cl; patch.pw=N.pw; patch.tp=N.traps; patch.tt=N.tt; patch.kh=N.kh; if (N.kd) patch.kd=N.kd; if (game.role==='killer'){ patch.sn=N.stun>0?Math.ceil(N.stun):0; patch.hc=N.hc; }
       if (host && N.bots.length){ patch.bz=N.bots.map(function(b){ return [Math.round(b.x*100)/100,Math.round(b.z*100)/100,Math.round(b.ry*100)/100,b.an,b.a,b.hp,b.stun>0?Math.ceil(b.stun):0,b.hc||0,b.nz||0,b.ih==null?-1:b.ih,Math.round((b.y||0)*100)/100,b.hid?1:0,b.cr?1:0,b.iv>0?1:0]; }); patch.ek=N.ek; } }
     if (eliasOn && host){ patch.e=[Math.round(E.x*100)/100,Math.round(E.z*100)/100,Math.round(E.ry*100)/100,E.vis,E.mv]; patch.ek=N.ek; }
@@ -5276,8 +5276,9 @@ function teamTick(pl){ var tm=$('team'); if (!tm.hidden) tm.hidden=true; return;
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=78;
+var GAME_VER=79;
 var UPDATES=[
+  {v:79,t:'Texts reach everyone',n:['Fixed texts not reaching other players: your last few texts now go out with every update, so a dropped one can’t get lost.','The living’s texts now reach everyone, the dead included. Texts from the dead still only reach the dead.','Fixed chores in houses 21–40 not counting, which made the 40-house job impossible to finish.']},
   {v:78,t:'Phone light',n:['The flashlight is gone. Your phone is in your right hand now, and its light on the back is your light: F (or tap Light) turns it on and off.','The phone light is a little wider and whiter than the old flashlight, and does not reach quite as far.','Bring the phone up with T (or tap Phone): your right hand lifts it to your face.']},
   {v:77,t:'Studio card fix',n:['The Treyyy Studios card now always shows. The cards wait until the game has finished loading, so a slow phone can no longer skip past the first one while it is still busy.']},
   {v:76,t:'Unskippable intro',n:['The Treyyy Studios card and the notice can’t be skipped: every key, click and tap is ignored until both have played for their full 5 seconds.','If the game opens in a background tab, the cards wait until you are looking.']},
