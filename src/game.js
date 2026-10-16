@@ -4728,8 +4728,9 @@ function teamTick(pl){ var tm=$('team'); if (!tm.hidden) tm.hidden=true; return;
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=74;
+var GAME_VER=75;
 var UPDATES=[
+  {v:75,t:'Notice reworded',n:['The opening notice now reads: “All characters and environments are not based on any real-life events. Anything in this game that is close to a real tragedy is surely a mistake.”']},
   {v:74,t:'Treyyy Studios',n:['The game now opens with the Treyyy Studios card for 5 seconds, then a notice for 5 seconds, before the main screen.']},
   {v:73,t:'40 houses, a two-storey hotel',n:['Hollow Lane has 40 houses now. A second row sits behind the first on both sides, facing two new back streets that run straight into Hollow Mart’s parking lot. Walk between the houses to get from the main street to the back streets.','The Night Haven Hotel has 40 rooms on two floors: 101–120 downstairs, 201–220 upstairs. The hallways are almost twice as wide, and the stairs are at the west end of the main hallway.','The job grows with it: all 40 generators and all 80 chores.','The killer and the bots know their way around both: between the houses, up the stairs and into every room.']},
   {v:72,t:'Your phone',n:['You now carry a phone in your left hand. Press T (or tap Phone) to bring it up. Its lock screen shows the time, your heart rate and your cash.','Messages: text everyone in the match, with quick replies like “Killer here!” and “Where are you?”. Bots text too: when they fix a generator, when the killer finds them, and when you ask where they are. Like voice, the living text the living and the dead text the dead.','Pulse: a heartbeat sensor. The closer the killer gets, the faster your heart beats, and the screen tells you when to run.','Cash: your balance, what you earned from chores, what you spent at Hollow Mart, and every payment.']},
