@@ -5,7 +5,7 @@ const { WebSocketServer } = require('ws');
 const PORT = process.env.PORT || 3000;
 const PUB = path.join(__dirname, 'public');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.ico': 'image/x-icon', '.json': 'application/json', '.webmanifest': 'application/manifest+json' };
-const MAX_ROOM = 12, MAX_MSG = 8192, MAX_PRESENCE = 6000, MAX_ROOMS = 200;
+const MAX_ROOM = 12, MAX_MSG = 16384, MAX_PRESENCE = 6000, MAX_ROOMS = 200;
 
 // Files are small in number, so compress each once and keep it in memory.
 const cache = new Map();
@@ -64,6 +64,13 @@ wss.on('connection', (ws, req) => {
     const now = Date.now(); budget = Math.min(60, budget + (now - last) * 0.03); last = now;
     if (budget < 1) return; budget -= 1;
     let m; try { m = JSON.parse(data.toString()); } catch (e) { return; }
+    // voice chat set-up: passed to one other player in the same room, never stored
+    if (m && m.t === 's') {
+      if (typeof m.to !== 'string' || !m.d || typeof m.d !== 'object' || Array.isArray(m.d)) return;
+      const target = room.get(m.to);
+      if (target && m.to !== id) send(target.ws, { t: 's', from: id, d: m.d });
+      return;
+    }
     if (!m || m.t !== 'p' || !m.d || typeof m.d !== 'object' || Array.isArray(m.d)) return;
     const next = Object.assign({}, me.presence);
     for (const k of Object.keys(m.d)) { if (k.length > 16) return; if (m.d[k] === null) delete next[k]; else next[k] = m.d[k]; }

@@ -108,6 +108,9 @@ body.touch #team{bottom:auto;top:96px}
 #micBar.loud i{background:#e0322a;box-shadow:0 0 8px #e0322a}#micBar.loud b{color:#ff6a5a}
 #micBar em{position:absolute;left:45%;top:-3px;bottom:-3px;width:2px;background:rgba(255,255,255,.7)}
 #micBar.off{opacity:.55}
+#micBar.ghost i{background:#9ab0d8}#micBar.ghost em{display:none}#micBar.ghost b{color:#b8c8e8}
+#vcList{position:absolute;left:16px;bottom:40px;z-index:12;color:#7fe08a;text-shadow:var(--chroma);font-size:14px;letter-spacing:.08em;text-transform:uppercase;pointer-events:none;line-height:1.5}
+#vcList div::before{content:'\25B6\FE0E  ';font-size:10px}
 #hpBar{left:50%;bottom:32px;transform:translateX(-50%);display:flex;gap:6px}
 #hpBar b{display:block;width:36px;height:9px;background:rgba(231,226,210,.14);border:1px solid rgba(0,0,0,.55);border-radius:2px}
 #hpBar b.on{background:#4fb862;box-shadow:0 0 6px rgba(79,184,98,.5)}
@@ -258,10 +261,11 @@ body{font-size:20px}
   <div class="hud" id="stamina" hidden><i></i></div>
   <div class="hud" id="hpBar" hidden aria-label="Health"><b></b><b></b><b></b></div>
   <div id="micBar" hidden role="button" tabindex="0" aria-label="Microphone"><b id="micLab">MIC</b><span><i id="micFill"></i><em></em></span></div>
+  <div id="vcList" hidden aria-live="polite"></div>
   <button type="button" id="senseBtn" hidden>Sense</button>
   <button type="button" id="scareBtn" class="kab" hidden>Scare</button>
   <button type="button" id="vanishBtn" class="kab" hidden>Vanish</button>
-  <div id="chatBox" hidden><p class="lab">Talking to <b id="chatName"></b></p><div class="chatOpts"><button type="button" data-c="1">1 · Get to safety</button><button type="button" data-c="3">3 · Call the police</button><button type="button" data-c="0">Close</button></div></div>
+  <div id="chatBox" hidden><p class="lab">Talking to <b id="chatName"></b></p><div class="chatOpts"><button type="button" data-c="1">1 · Get to safety</button><button type="button" data-c="0">Close</button></div></div>
   <div id="wirePanel" class="pzPanel" hidden><p class="lab" id="wireTitle">Generator</p><canvas id="wireCv" width="380" height="250"></canvas><p class="lab" id="wireInfo"></p><button class="chip" id="wireClose" type="button">Step away</button></div>
   <div id="chorePanel" class="pzPanel" hidden><p class="lab" id="choreTitle">Chore</p><canvas id="choreCv" width="380" height="250"></canvas><p class="lab" id="choreInfo"></p><button class="chip" id="choreClose" type="button">Stop</button></div>
   <div id="specBar" hidden><button type="button" id="specPrev" aria-label="Previous">&#9664;</button><span id="specName">Spectating</span><button type="button" id="specNext" aria-label="Next">&#9654;</button></div>
@@ -389,6 +393,8 @@ body{font-size:20px}
     <div class="seg" id="fpsSeg"><button type="button" data-v="30">30</button><button type="button" data-v="60">60</button><button type="button" data-v="120">120</button></div>
     <p class="lab">Quality</p>
     <div class="seg" id="qSeg"><button type="button" data-v="0">Very low</button><button type="button" data-v="1">Low</button><button type="button" data-v="2">Medium</button><button type="button" data-v="3">High</button><button type="button" data-v="4">Very high</button></div>
+    <p class="lab">Voice chat</p>
+    <div class="seg" id="vcSeg"><button type="button" data-v="2">Fades with distance</button><button type="button" data-v="1">Whole team</button><button type="button" data-v="0">Off</button></div>
     </div>
     <div id="setKeys" class="setPane" hidden>
       <p class="lab">Click a key, then press the new one. Esc cancels. Arrow keys always move too.</p>
