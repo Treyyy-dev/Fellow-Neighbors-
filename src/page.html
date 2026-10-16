@@ -49,7 +49,11 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
 #stamina i{display:block;height:100%;width:100%;background:var(--bone)}
 #stamina.low i{background:var(--blood)}
 #senseBtn{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);font:inherit;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone);background:rgba(90,10,10,.6);border:1px solid rgba(255,80,60,.6);border-radius:2px;padding:7px 14px;cursor:pointer}
-#senseBtn:disabled{opacity:.45;cursor:default}
+#senseBtn:disabled,.kab:disabled{opacity:.45;cursor:default}
+.kab{position:absolute;bottom:34px;transform:translateX(-50%);font:inherit;font-size:18px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone);background:rgba(90,10,10,.6);border:1px solid rgba(255,80,60,.6);border-radius:0;padding:7px 14px;cursor:pointer}
+#scareBtn{left:calc(50% - 150px)} #vanishBtn{left:calc(50% + 150px)}
+@media (max-width:640px){#scareBtn{left:calc(50% - 116px)} #vanishBtn{left:calc(50% + 116px)} .kab{font-size:15px;padding:6px 9px}}
+#game.vanished #vignette{background:radial-gradient(ellipse at center,rgba(40,70,140,.08) 30%,rgba(30,60,150,.62) 100%)}
 #chatBox{position:absolute;left:50%;bottom:90px;transform:translateX(-50%);background:rgba(7,9,15,.86);border:1px solid rgba(231,226,210,.3);border-radius:3px;padding:10px 12px;width:min(92%,420px);text-align:center}
 #chatBox p{margin:0 0 8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}#chatBox b{color:var(--pumpkin);font-weight:400}
 .chatOpts{display:flex;flex-direction:column;gap:6px}.chatOpts button{font:inherit;font-size:14px;color:var(--bone);background:rgba(13,17,27,.8);border:1px solid rgba(231,226,210,.35);border-radius:2px;padding:8px 10px;cursor:pointer;text-align:left}
@@ -219,6 +223,8 @@ body{font-size:20px}
   <div class="hud" id="stamina" hidden><i></i></div>
   <div class="hud" id="hpBar" hidden aria-label="Health"><b></b><b></b><b></b></div>
   <button type="button" id="senseBtn" hidden>Sense</button>
+  <button type="button" id="scareBtn" class="kab" hidden>Scare</button>
+  <button type="button" id="vanishBtn" class="kab" hidden>Vanish</button>
   <div id="chatBox" hidden><p class="lab">Talking to <b id="chatName"></b></p><div class="chatOpts"><button type="button" data-c="1">1 · Get to safety</button><button type="button" data-c="2">2 · Do you have anything?</button><button type="button" data-c="3">3 · Call the police</button><button type="button" data-c="0">Close</button></div></div>
   <div id="updBar" hidden><span>A new update is out.</span><button type="button" id="updReload">Update now</button><button type="button" id="updLater">Later</button></div>
   <div id="team" hidden aria-label="Teammates"></div>
@@ -254,8 +260,7 @@ body{font-size:20px}
     <h2>Fellow Neighbors</h2>
     <p class="tok"><span class="tokN">0</span> tokens</p>
     <div class="list">
-      <button class="mbtn" id="mStory" type="button">Story Mode</button>
-      <button class="mbtn" id="mOnline" type="button">Online</button>
+      <button class="mbtn" id="mOnline" type="button">Play</button>
       <button class="mbtn" id="mSettings" type="button">Settings</button>
       <button class="mbtn" id="mShop" type="button">Shop</button>
       <button class="mbtn" id="mNews" type="button">What&rsquo;s new</button>
@@ -279,7 +284,7 @@ body{font-size:20px}
   </div></div>
 
   <div class="card" id="online" hidden><div class="col">
-    <h2>Online</h2>
+    <h2>Play</h2>
     <p>Kill Feast: up to 2 killers and 5 survivors. Survivors fix the car and four generators, or last until morning. At 2:00 AM the Blood Moon rises. Create a room, or find one someone else has opened. Everyone waits in the lobby until someone presses Start.</p>
     <p class="lab">Your name</p>
     <input class="inp" id="netName" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Player" aria-label="Your name">
@@ -307,6 +312,9 @@ body{font-size:20px}
     <p id="lobInfo"></p>
     <ul class="plist" id="lobList"></ul>
     <div class="seg" id="lobMode" hidden></div>
+    <p class="lab">Map</p>
+    <div class="seg" id="lobMap"></div>
+    <p class="lab" id="lobMapInfo"></p>
     <p class="lab">Play as</p>
     <div class="seg" id="lobSeg"></div>
     <p class="lab" id="lobBotLab" hidden>Bots</p>
@@ -327,7 +335,7 @@ body{font-size:20px}
     <div class="seg" id="fpsSeg"><button type="button" data-v="30">30</button><button type="button" data-v="60">60</button><button type="button" data-v="120">120</button></div>
     <p class="lab">Quality</p>
     <div class="seg" id="qSeg"><button type="button" data-v="0">Very low</button><button type="button" data-v="1">Low</button><button type="button" data-v="2">Medium</button><button type="button" data-v="3">High</button><button type="button" data-v="4">Very high</button></div>
-    <p class="lab" id="keysHelp">W A S D move &middot; Mouse look &middot; Shift run &middot; C crouch &middot; F flashlight &middot; E use &middot; Esc pause &middot; Online: click or R uses what is in your left hand, killers click or V to swing, Q sense</p>
+    <p class="lab" id="keysHelp">W A S D move &middot; Mouse look &middot; Shift run &middot; C crouch &middot; F flashlight &middot; E use &middot; Esc pause &middot; Online: click or R uses what is in your left hand, killers click or V to swing, Q sense, Z scare, X vanish</p>
     <div class="list"><button class="mbtn" id="setDone" type="button">Done</button></div>
   </div></div>
 
