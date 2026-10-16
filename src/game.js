@@ -3709,6 +3709,49 @@ function netStageWorld(){
 function netHurt(){ gore(); stabSound(); shake(); var hf=fwd(); bloodBurst(camera.position.x+hf.x*0.5,camera.position.y-0.2,camera.position.z+hf.z*0.5,-hf.x,-hf.z,60); bloodPool(P.x,(P.y||P.gy||0),P.z,0.7); $('flash').style.opacity=0.5; setTimeout(function(){ $('flash').style.opacity=0; },260); }
 
 /* the frame */
+/* ---------- spectating, and fate cards for the dead ---------- */
+var FATE=[{id:'spd',n:'Swift',d:'Faster for 20 s',g:1,i:'»'},{id:'shield',n:'Guardian',d:'Blocks the next hit',g:1,i:'◈'},{id:'stam',n:'Second Wind',d:'Endless stamina 20 s',g:1,i:'∞'},{id:'ghost',n:'Shroud',d:'Unseen for 15 s',g:1,i:'◌'},{id:'heal',n:'Mend',d:'+1 health',g:1,i:'+'},{id:'cash',n:'Lucky Find',d:'+$5',g:1,i:'$'},
+  {id:'slow',n:'Lead Feet',d:'Slowed for 6 s',g:0,i:'↓'},{id:'noisy',n:'Loud Mouth',d:'The killer hears them 10 s',g:0,i:'!'},{id:'dark',n:'Dead Battery',d:'Flashlight dies',g:0,i:'×'},{id:'broke',n:'Pickpocket',d:'Lose $5',g:0,i:'¢'}];
+function fateOf(id){ for (var i=0;i<FATE.length;i++) if (FATE[i].id===id) return FATE[i]; return null; }
+function specTick(dt,surv,pl){ var N=net, bar=$('specBar'), fp=$('fatePanel'), dead=N.alive!==1 && game.mode==='play' && N.mode==='s';
+  if (bar.hidden===dead) bar.hidden=!dead; if (!dead){ if (!fp.hidden) fp.hidden=true; N.specId=null; return; }
+  var cands=surv.filter(function(q){ return !q.me && q.alive && q.av; }); if (!cands.length) cands=pl.filter(function(q){ return !q.me && q.av && q.role!=='k'; });
+  cands.sort(function(a,b){ return a.id<b.id?-1:1; });
+  if (cands.length){ var i0=((N.spec%cands.length)+cands.length)%cands.length, w=cands[i0], a=w.av, y0=a.g.position.y, bx=Math.sin(a.ry), bz=Math.cos(a.ry);
+    if (N.specId!==w.id){ N.specId=w.id; N.specCam=null; $('specName').textContent='Spectating · '+(w.bot?w.bot.name.replace(' bot',''):nick(w.pr)); renderFate(); }
+    var back=w.ih>=0?1.9:3.0, tx=a.x-bx*back, tz=a.z-bz*back, ty=y0+(w.ih>=0?1.7:2.2); if (!N.specCam) N.specCam={x:tx,y:ty,z:tz};
+    var C=N.specCam, k=Math.min(1,dt*6); C.x+=(tx-C.x)*k; C.y+=(ty-C.y)*k; C.z+=(tz-C.z)*k; camera.position.set(C.x,C.y,C.z); camera.lookAt(a.x,y0+1.35,a.z); }
+  else { if (N.specId!=='none'){ N.specId='none'; $('specName').textContent='Nobody left to watch'; } camera.position.set(P.x,7,P.z+6); camera.lookAt(P.x,0,P.z); }
+  vm.visible=false; vmL.visible=false;
+  // a fresh hand of five face-down cards every 25 seconds
+  N.fateCd=(N.fateCd==null?3:N.fateCd)-dt; var live=cands.length && N.specId && N.specId!=='none' && (cands.some(function(q){ return q.id===N.specId && q.alive; }));
+  if (fp.hidden===!!live) fp.hidden=!live;
+  if (live && !N.hand && N.fateCd<=0){ var shuf=function(a){ for (var i=a.length-1;i>0;i--){ var j=(Math.random()*(i+1))|0, t=a[i]; a[i]=a[j]; a[j]=t; } return a; };
+    var good=shuf(FATE.filter(function(f){ return f.g; })).slice(0,3), bad=shuf(FATE.filter(function(f){ return !f.g; })).slice(0,2);
+    N.hand=shuf(good.concat(bad)).map(function(f){ return f.id; }); N.picked=-1; renderFate(); tone(660,0.1,'triangle',0.06); }
+  var inf=$('fateInfo'), t=N.hand?(N.picked>=0?'Played on '+$('specName').textContent.replace('Spectating · ',''):'Pick a card for '+$('specName').textContent.replace('Spectating · ','')+' · 3 help, 2 hurt'):'Next hand in '+Math.max(0,Math.ceil(N.fateCd))+' s';
+  if (inf.textContent!==t) inf.textContent=t; }
+function renderFate(){ var N=net, box0=$('fateCards'); if (!N) return; box0.textContent=''; if (!N.hand) return;
+  N.hand.forEach(function(id,i){ var f=fateOf(id), b=document.createElement('button'); b.type='button'; b.className='fcard'; var shown=N.picked===i;
+    if (shown){ b.classList.add(f.g?'good':'bad','picked'); b.innerHTML='<b></b><span></span><small></small>'; b.children[0].textContent=f.i; b.children[1].textContent=f.n; b.children[2].textContent=f.d; }
+    else { b.innerHTML='<b>?</b><span>Fate</span>'; }
+    if (N.picked>=0) b.disabled=true;
+    b.addEventListener('click',function(){ playFate(i); }); box0.appendChild(b); }); }
+function playFate(i){ var N=net; if (!N || !N.hand || N.picked>=0 || !N.specId || N.specId==='none') return; var id=N.hand[i], f=fateOf(id); N.picked=i; N.fateSeq=(N.fateSeq||0)+1;
+  N.fate=[N.specId,id,N.fateSeq]; netSend({fate:N.fate}); renderFate(); if (f.g){ tone(880,0.15,'triangle',0.08); tone(1320,0.2,'triangle',0.06,null,0.1); } else { tone(140,0.3,'sawtooth',0.08,70); }
+  if (/^bots/.test(N.specId) && N.isHost) fateBot(N.specId,id,'You');
+  setTimeout(function(){ if (net && net.picked===i){ net.hand=null; net.picked=-1; net.fateCd=25; renderFate(); } },2200); }
+function fateApply(id,from){ var N=net, f=fateOf(id); if (!f || N.alive!==1) return; N.buff=N.buff||{};
+  if (id==='spd') N.buff.spd=20; else if (id==='shield') N.buff.shield=30; else if (id==='stam') N.buff.stam=20; else if (id==='ghost') N.buff.ghost=15; else if (id==='heal') N.hp=Math.min(3,N.hp+1); else if (id==='cash') N.cash=(N.cash||0)+5;
+  else if (id==='slow') N.slow=6; else if (id==='noisy') N.reveal=10; else if (id==='dark') setLight(false); else if (id==='broke') N.cash=Math.max(0,(N.cash||0)-5);
+  toast((f.g?'A ghost is helping you: ':'A ghost cursed you: ')+f.n+' · '+f.d+' ('+from+')',3200); if (f.g) tone(990,0.2,'sine',0.06); else { noise(0.3,0.15,600); tone(90,0.4,'sawtooth',0.06,50); } }
+function fateBot(bid,id,from){ var b=null; net.bots.forEach(function(x){ if (x.id===bid) b=x; }); if (!b || b.a!==1) return;
+  if (id==='heal' || id==='shield') b.hp=Math.min(3,b.hp+1); else if (id==='slow') b.frozen=Math.max(b.frozen||0,2); else if (id==='noisy') b.nzF=10; }
+function fateRead(pl){ var N=net; N.fateSeen=N.fateSeen||{};
+  pl.forEach(function(q){ if (q.me) return; var f=q.pr.fate; if (!Array.isArray(f) || f.length<3) return; var seq=num(f[2],0); if (!(seq>(N.fateSeen[q.id]||0))) return; N.fateSeen[q.id]=seq;
+    if (N.fateSeen[q.id+'#init']===undefined){ N.fateSeen[q.id+'#init']=1; if (N.el<2) return; }
+    var who=nick(q.pr); if (f[0]===netMe) fateApply(String(f[1]),who); else if (N.isHost && /^bots/.test(String(f[0]))) fateBot(String(f[0]),String(f[1]),who); }); }
+(function(){ $('specPrev').addEventListener('click',function(){ if (net){ net.spec--; } }); $('specNext').addEventListener('click',function(){ if (net){ net.spec++; } }); })();
 function netTick(dt){
   var N=net; if (!N || N.over) return;
   var ps=netPeers(), i, maxSt=N.st, maxF=N.f, maxEl=0, hostId=null, pl=[], me=null, hitsK=0, hitsE=0, seen={};
@@ -3739,7 +3782,7 @@ function netTick(dt){
     if (!host){ var bz=null; for (i=0;i<pl.length;i++) if (pl[i].id===hostId) bz=pl[i].pr.bz; if (bz && bz.length===N.bots.length) for (i=0;i<bz.length;i++){ var z=bz[i], bb=N.bots[i]; if (!z || z.length<6) continue; bb.x=num(z[0],bb.x); bb.z=num(z[1],bb.z); bb.ry=num(z[2],bb.ry); bb.an=num(z[3],0)|0; bb.a=num(z[4],1)|0; bb.hp=num(z[5],bb.hp); bb.sn=num(z[6],0); bb.hc=num(z[7],0); bb.nz=num(z[8],0); bb.ih=Math.max(-1,Math.min(houses.length-1,num(z[9],-1)|0)); bb.y=num(z[10],0); bb.hid=num(z[11],0); bb.cr=num(z[12],0); bb.iv=num(z[13],0); } }
     N.bots.forEach(function(bb){ seen[bb.id]=1; pl.push({id:bb.id,me:false,bot:bb,role:bb.role,pr:{n:bb.name,sk:bb.sk,sn:host?(bb.stun>0?1:0):bb.sn,hc:bb.hc,cr:bb.cr?1:0,nz:bb.nz||0},alive:bb.a===1,a:bb.a,x:bb.x,z:bb.z,yaw:bb.ry-Math.PI,an:bb.an,ih:bb.ih==null?-1:bb.ih,y:bb.y||0,hid:!!bb.hid}); });
   }
-  N.isHost=host; vanRead(pl,hostId);
+  N.isHost=host; vanRead(pl,hostId); fateRead(pl);
   if (N.mode==='s'){ N.scSeen=N.scSeen||{}; pl.forEach(function(q){ if (q.me || q.bot) return; var c=q.role==='k'?num(q.pr.sc,0):-1, b=q.id===hostId?num(q.pr.bsc,0):-1;
       if (c>=0){ if (N.scSeen[q.id]===undefined) N.scSeen[q.id]=c; else if (c>N.scSeen[q.id]){ N.scSeen[q.id]=c; scared(); if (host) scareBots(); } }
       if (b>=0 && !host){ if (N.scSeen.bots===undefined) N.scSeen.bots=b; else if (b>N.scSeen.bots){ N.scSeen.bots=b; scared(); } } }); }
@@ -3796,22 +3839,20 @@ function netTick(dt){
   var H=hitsK+hitsE;
   if (H>N.hits && buffOn('shield') && N.alive===1 && N.inv<=0){ N.hits=H; N.buff.shield=0; N.inv=2.5; noise(0.3,0.4,1800); tone(220,0.4,'square',0.1,90); shake(); toast('Your shield took the hit. It’s gone now.',2600); }
   if (H>N.hits){ N.hits=H; if (N.alive===1 && N.inv<=0 && game.role!=='killer'){ N.inv=2.5; netHurt(); if (N.mode==='s') jumpFace(N.kNear&&N.kNear.girl&&N.kNear.d<6?'girl':'man'); N.killRev=1.4; wireUI.close(false); choreUI.close(false); if (N.hide){ netUnhide(); toast('He found you!',2000); } closeChat();
-      if (N.mode==='s'){ N.hp--; if (N.hp<=0){ N.alive=0; vm.visible=false; setLight(false); toast('You are dead. You can watch the others.',4000); } else { N.boost=4; toast(N.hp===1?'You are badly hurt. One more hit and you are dead.':'You are hurt. Two more hits and you are dead.',3500); } }
+      if (N.mode==='s'){ N.hp--; if (N.hp<=0){ N.alive=0; vm.visible=false; setLight(false); toast('You are dead. Watch the others, and play fate cards to help or curse them.',4200); N.fateCd=4; N.hand=null; } else { N.boost=4; toast(N.hp===1?'You are badly hurt. One more hit and you are dead.':'You are hurt. Two more hits and you are dead.',3500); } }
       else { N.f=maxF=Math.max(maxF,N.f)+1; N.failMine=true; } } }
   if (N.mode==='s') netSurvival(dt,pl,surv,killers,me); else netCoop(dt,pl,maxSt,maxF,me,host);
   if (!net || net.over) return;
   N.spd = (function(v){ return v>0 && buffOn('spd') ? v*1.3 : v; })((N.alive!==1 || N.stun>0 || N.fright>0 || vanPhase(N) || N.wiring || doorSeq) ? 0 : (game.role==='killer' && N.blood && N.slow<=0) ? 1.12 : (N.slow>0 ? 0.45 : (N.boost>0 ? 1.15 : (N.mode==='s' && N.hp<3 && game.role!=='killer' ? (N.hp<2?0.86:0.94) : 1))));
   // spectating
-  if (N.alive!==1){ var cands=surv.filter(function(q){ return !q.me && q.alive && q.av; }); if (!cands.length) cands=pl.filter(function(q){ return !q.me && q.av; });
-    if (cands.length){ var w=cands[N.spec%cands.length], a=w.av, bx=Math.sin(a.ry), bz=Math.cos(a.ry); camera.position.set(a.x-bx*3.2,2.4,a.z-bz*3.2); camera.lookAt(a.x,1.4,a.z); }
-    else { camera.position.set(P.x,7,P.z+6); camera.lookAt(P.x,0,P.z); } vm.visible=false; vmL.visible=false; }
+  specTick(dt,surv,pl);
   // tell the others
   N.adT=(N.adT||0)-dt; if (N.adT<=0 && !NR.solo){ N.adT=2; dirSend({rm:{c:N.code,m:N.mode,n:pl.length,h:nick(pl[0].pr),g:1}}); }
   N.sendT-=dt; if (N.sendT<=0){ N.sendT=0.08;
     var patch={p:[Math.round(P.x*100)/100,Math.round(P.z*100)/100,Math.round(P.yaw*100)/100,N.an],a:N.alive,h:N.hp,cr:P.crouch?1:0,el:Math.round(N.el),st:N.st,f:N.f,hp:[N.hold[0],Math.round(N.hold[1]*10)/10]};
     if (N.mode==='s'){ if (game.role==='killer') patch.k=N.k; patch.o={g:N.o.g,b:N.o.b,c:Math.round(N.o.c*10)/10,gn:N.o.gn};
       patch.bd=N.bd; patch.nd=N.nd; patch.ih=N.ih; patch.fy=Math.round((P.y||0)*100)/100; patch.hid=N.hide?1:0; if (N.pc) patch.pc=N.pc; if (host){ patch.pol=N.polView||[0]; patch.jl=N.jl||[]; }
-      patch.nz=game.role==='killer'?0:(N.nz||0); fleetPatch(patch,host); patch.gh=buffOn('ghost')?1:0; if (game.role==='killer'){ patch.sc=N.sc||0; patch.iv=N.iv>0?1:0; } if (host){ patch.bsc=N.bsc||0; patch.gcut=Object.keys(N.cut||{}).map(function(k){ return [+k,N.cut[k]]; }); } patch.bl=N.blood?1:0; patch.cs=N.cs; patch.cl=N.cl; patch.pw=N.pw; patch.tp=N.traps; patch.tt=N.tt; patch.kh=N.kh; if (N.kd) patch.kd=N.kd; if (game.role==='killer'){ patch.sn=N.stun>0?Math.ceil(N.stun):0; patch.hc=N.hc; }
+      patch.nz=game.role==='killer'?0:(N.nz||0); fleetPatch(patch,host); patch.gh=buffOn('ghost')?1:0; if (N.fate) patch.fate=N.fate; if (game.role==='killer'){ patch.sc=N.sc||0; patch.iv=N.iv>0?1:0; } if (host){ patch.bsc=N.bsc||0; patch.gcut=Object.keys(N.cut||{}).map(function(k){ return [+k,N.cut[k]]; }); } patch.bl=N.blood?1:0; patch.cs=N.cs; patch.cl=N.cl; patch.pw=N.pw; patch.tp=N.traps; patch.tt=N.tt; patch.kh=N.kh; if (N.kd) patch.kd=N.kd; if (game.role==='killer'){ patch.sn=N.stun>0?Math.ceil(N.stun):0; patch.hc=N.hc; }
       if (host && N.bots.length){ patch.bz=N.bots.map(function(b){ return [Math.round(b.x*100)/100,Math.round(b.z*100)/100,Math.round(b.ry*100)/100,b.an,b.a,b.hp,b.stun>0?Math.ceil(b.stun):0,b.hc||0,b.nz||0,b.ih==null?-1:b.ih,Math.round((b.y||0)*100)/100,b.hid?1:0,b.cr?1:0,b.iv>0?1:0]; }); patch.ek=N.ek; } }
     if (eliasOn && host){ patch.e=[Math.round(E.x*100)/100,Math.round(E.z*100)/100,Math.round(E.ry*100)/100,E.vis,E.mv]; patch.ek=N.ek; }
     if (N.prey) patch.pv=[Math.round(N.prey.x*100)/100,Math.round(N.prey.z*100)/100,Math.round(N.prey.ry*100)/100,N.prey.an,N.prey.who,N.prey.dead?1:0,N.st];
@@ -3847,7 +3888,9 @@ function botsHost(dt,pl,W){
   function hurt(b,dx,dz){ if (b.a!==1 || b.inv>0) return; b.inv=2.5; b.hp--; b.hid=0; b.hide=null; b.scare=6; bloodBurst(b.x,(b.y||0)+1.2,b.z,dx,dz,45); if (b.hp<=0){ b.a=0; b.an=0; bloodPool(b.x,b.ih>=0?(b.y||0):groundY(b.x,b.z),b.z,0.9); toast(b.name+' is dead.',2600); } }
   function hitPlayer(T,dx,dz){ if (T.bot) hurt(T.bot,dx,dz); else { N.ek[T.id]=(N.ek[T.id]||0)+1; if (!T.me) bloodBurst(T.x,(T.y||0)+1.2,T.z,dx,dz,40); } }
   function taken(s,ih,me){ var p=spotPos(s,ih); return pl.some(function(q){ return q.hid && q.alive && q.id!==me && (q.ih==null?-1:q.ih)===p.ih && Math.hypot(q.x-p.x,q.z-p.z)<1.4; }); }
-  function patrolPts(){ var a=[CARSIDE,{x:-80,z:-12},{x:88,z:-9},{x:110,z:9},{x:20,z:9}]; houses.forEach(function(h,hi){ if (!W.powered[hi] && hi%3===0) a.push(genPt(hi)); }); if (W.G===0) a.push(GAS); if (W.B===0) a.push(batPos());
+  function patrolPts(){ if (W.done) return [CARSIDE,CARSIDE,{x:-66,z:3},{x:-60,z:8}];   // the job is done: wait by the cars
+    var b2=[]; houses.forEach(function(h,hi){ if (W.powered[hi] && choresOf(hi).some(function(t){ return !W.cleaned[choreId(hi,t)]; })){ var dp=doorPt(h); b2.push({x:dp.x,z:dp.z},{x:dp.x,z:dp.z}); } });
+    var a=[CARSIDE,{x:-80,z:-12},{x:88,z:-9},{x:110,z:9},{x:20,z:9}].concat(b2); houses.forEach(function(h,hi){ if (!W.powered[hi] && hi%3===0) a.push(genPt(hi)); }); if (W.G===0) a.push(GAS); if (W.B===0) a.push(batPos());
     chests.forEach(function(c){ if (!c.open) a.push({x:c.x+1.2,z:c.z}); }); return a; }
   N.bots.forEach(function(b){
     if (b.ih==null) b.ih=-1;
@@ -3872,7 +3915,9 @@ function botsHost(dt,pl,W){
         return; }
       if (T){ b.tgt=T.id; b.mem={x:T.x,z:T.z,ih:T.ih==null?-1:T.ih,y:T.y||0,t:N.el}; b.search=null;
         if (b.scCd<=0 && d>7 && d<32){ b.scCd=40; N.bsc=(N.bsc||0)+1; scared(); scareBots(); }
-        navStep(b,{x:T.x,z:T.z,ih:T.ih==null?-1:T.ih,y:T.y||0},sp,dt,true); b.an=b.kicking?0:(sp>4?2:1); d=Math.hypot(T.x-b.x,T.z-b.z);
+        b.tv=b.tv||{}; var tvv=b.tv[T.id]||{x:T.x,z:T.z,vx:0,vz:0}; if (dt>0){ tvv.vx+=(((T.x-tvv.x)/dt)-tvv.vx)*Math.min(1,dt*4); tvv.vz+=(((T.z-tvv.z)/dt)-tvv.vz)*Math.min(1,dt*4); } tvv.x=T.x; tvv.z=T.z; b.tv[T.id]=tvv;
+        var lead=(b.ih===(T.ih==null?-1:T.ih) && b.ih<0 && d>3)?Math.min(0.8,d/9):0, vmag=Math.hypot(tvv.vx,tvv.vz); if (vmag>9) lead=0;
+        navStep(b,{x:T.x+tvv.vx*lead,z:T.z+tvv.vz*lead,ih:T.ih==null?-1:T.ih,y:T.y||0},sp,dt,true); b.an=b.kicking?0:(sp>4?2:1); d=Math.hypot(T.x-b.x,T.z-b.z);
         if (!b.kicking && d<1.5 && b.cd<=0 && b.ih===(T.ih==null?-1:T.ih) && Math.abs((b.y||0)-(T.y||0))<1.2){ b.sw=0.38; b.swT=T.id; b.an=0; b.iv=0; }
         return; }
       // lost them: go to where they were last seen, then look in the hiding places there
@@ -3891,6 +3936,8 @@ function botsHost(dt,pl,W){
             if (found){ hitPlayer(found,0,1); b.tgt=found.id; b.cd=2.4; b.mem={x:found.x,z:found.z,ih:S.p.ih,y:found.y||0,t:N.el}; b.search=null; }
             else { b.si++; b.st=0; } } }
         return; }
+      // something just happened somewhere: a generator came on, a chore got done. Go and look.
+      if (N.alert && N.el-N.alert.t<30 && (N.alert.used||'').indexOf(b.id)<0 && Math.hypot(N.alert.x-b.x,N.alert.z-b.z)<90){ N.alert.used=(N.alert.used||'')+b.id+','; b.mem={x:N.alert.x,z:N.alert.z,ih:N.alert.ih,y:0,t:N.el}; return; }
       // nobody to chase: walk the places survivors have to go
       b.mem=null; b.search=null; b.tgt=null;
       b.cutCd=(b.cutCd==null?30+Math.random()*15:b.cutCd)-dt;
@@ -3966,7 +4013,8 @@ function botsHost(dt,pl,W){
         if (opts.length){
           // nearest job, spread out so they don't all crowd one generator
           var O=null, os=1e9, here=bwp(b); opts.forEach(function(op){ var crowd=0; N.bots.forEach(function(o2){ if (o2!==b && o2.role==='s' && o2.a===1 && o2.job===op.k) crowd++; });
-            var tp=op.wp||op.pt, sc=Math.hypot(tp.x-here.x,tp.z-here.z)+crowd*(op.k==='car'||op.k==='esc'?0:22)+(b.job===op.k?-8:0); if (sc<os){ os=sc; O=op; } });
+            var tp=op.wp||op.pt, dng=0; killers.forEach(function(q){ var kp=bwp(q), kd2=Math.hypot(kp.x-tp.x,kp.z-tp.z); if (kd2<16) dng+=(16-kd2)*4; });
+            var sc=Math.hypot(tp.x-here.x,tp.z-here.z)+crowd*(op.k==='car'||op.k==='esc'?0:22)+(b.job===op.k?-8:0)+(op.k==='esc'?0:dng); if (sc<os){ os=sc; O=op; } });
           b.job=O.k; var gx=O.pt.x-b.x, gz=O.pt.z-b.z, gd=Math.hypot(gx,gz)||1;
           var oih=O.pt.ih==null?-1:O.pt.ih, sameP=b.ih===oih && Math.abs((b.y||0)-(O.pt.y||0))<0.6;
           if (sameP && gd<O.r*0.85){ if (!(wary && kd<18) || oih>=0){ work=O; b.ry=Math.atan2(gx,gz); } else b.cr=1; }
@@ -3993,7 +4041,7 @@ function netSurvival(dt,pl,surv,killers,me){
   hpBar(game.role!=='killer' && net.alive===1 && game.mode==='play',net.hp);
   var N=net, G=0, B=0, C=0, gens={}, done, i;
   for (var id in N.acc){ var A=N.acc[id]; G=Math.max(G,A.g); B=Math.max(B,A.b); C+=A.c; SGENS.forEach(function(h){ gens[h]=(gens[h]||0)+(A.gn[h]||0); }); }
-  var cleaned={}, ncl=0; for (var id3 in N.acc) (N.acc[id3].cl||[]).forEach(function(c){ if (!cleaned[c]){ cleaned[c]=1; ncl++; } }); N.cleaned=cleaned; N.ncl=ncl; choreFxUpdate(cleaned);
+  var cleaned={}, ncl=0; for (var id3 in N.acc) (N.acc[id3].cl||[]).forEach(function(c){ if (!cleaned[c]){ cleaned[c]=1; ncl++; } }); N.cleaned=cleaned; if (N.isHost && N.ncl!==undefined && ncl>N.ncl){ var nhi=-1; for (var ck in cleaned) if (!N.clPrev || !N.clPrev[ck]) nhi=Math.floor(ck/10); if (nhi>=0 && houses[nhi]) N.alert={x:IX,z:0,ih:nhi,t:N.el}; } N.clPrev=cleaned; N.ncl=ncl; choreFxUpdate(cleaned);
   var powered={}, npw=0, fixT={}, cutT=N.cutView||{}; for (var id4 in N.acc) (N.acc[id4].pw||[]).forEach(function(e){ if (!(fixT[e[0]]>=e[1])) fixT[e[0]]=e[1]; });
   for (var fk in fixT) if (fixT[fk]>(cutT[fk]===undefined?-1:cutT[fk])){ powered[fk]=1; npw++; } N.powered=powered;
   gens={}; houses.forEach(function(hh,hi){ gens[hi]=powered[hi]?GENNEED:0; });
@@ -4010,6 +4058,7 @@ function netSurvival(dt,pl,surv,killers,me){
   var pwSig=Object.keys(powered).sort().join(',');
   if (W.pwSig!==pwSig){ houses.forEach(function(hh,hi){ var on=!!powered[hi]; if (hh.power!==on){ setPower(hh,on); var nb=NEIGHBOURS[hh.n].n, near=Math.hypot(P.x-hh.gen.x,P.z-hh.gen.z)<30;
         if (N.ih===hi) iPowerSet(on);
+        if (W.pwSig!==undefined && on && N.isHost) N.alert={x:hh.gen.x,z:hh.gen.z,ih:-1,t:N.el};
         if (W.pwSig!==undefined && on){ if (near && N.ih!==hi) toast(nb+': “The lights are back! Thank you, come on in.”',3200); else if (N.ih===hi) toast('The lights come back on.',2200); tone(60,0.8,'sawtooth',0.1,95); }
         if (W.pwSig!==undefined && !on){ if (N.ih===hi){ toast('The lights just died. Somebody cut the generator. You can’t clean in the dark.',3800); choreUI.close(false); thud(0.9); }
           else if (near) toast('Sparks at '+nb+'’s '+(WMAP==='hotel'?'room':'house')+'. The killer cut their generator.',3200);
@@ -4129,7 +4178,7 @@ function preyTick(dt,others){
   $('lobLeave').addEventListener('click',function(){ netLeave(); show('online'); });
   $('neLobby').addEventListener('click',netToLobby);
   $('neLeave').addEventListener('click',leaveToMenu);
-  window.addEventListener('keydown',function(e){ if (!net || game.mode!=='play') return; if (net.alive!==1 && e.code==='Space') net.spec++;
+  window.addEventListener('keydown',function(e){ if (!net || game.mode!=='play') return; if (net.alive!==1 && (e.code==='Space' || e.code==='ArrowRight')) net.spec++; if (net.alive!==1 && e.code==='ArrowLeft') net.spec--;
     if (e.code==='KeyQ') useSense();
     if (e.code==='KeyZ') useScare();
     if (e.code==='KeyX') useVanish();
@@ -4379,8 +4428,9 @@ function teamTick(pl){ var tm=$('team'); if (!tm.hidden) tm.hidden=true; return;
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=68;
+var GAME_VER=69;
 var UPDATES=[
+  {v:69,t:'Ghosts and smarter AI',n:['When you die you spectate: the camera follows a teammate from behind. Switch with the arrows on screen, the arrow keys or Space.','Fate cards: while you spectate, every 25 seconds you get 5 face-down cards. 3 help and 2 hurt, but you can’t tell which. Pick one and it hits the person you’re watching: speed, a shield, endless stamina, unseen, +1 health or +$5, or slowed, noisy, a dead flashlight or losing $5.','Dead players’ mics no longer do anything, so the killer can’t hear you once you’re dead.','The killer is smarter: it cuts you off instead of chasing your back, goes to check when a generator comes on or a chore gets finished nearby, patrols the houses with lights on, and waits by the cars once the job is done.','Survivor bots avoid jobs the killer is standing near.']},
   {v:68,t:'A bigger hotel with crossing halls',n:['The Night Haven Hotel is wider and deeper now. Its hallways form a cross: a long east-west hall with rooms on both sides, crossed by a north-south hall, meeting at a hub with a chandelier and signs to each wing.','Four ways in and out: the lobby doors facing the parking, a back exit at the end of the north hall, and open exits at both ends of the east-west hall.','Generators sit in the hall beside each room’s door, never at the very end of a hall.']},
   {v:67,t:'The Girl',n:['A new killer: the Girl. White dress, grey skin, long black hair hanging over her face.','She walks slowly, but she twitches: her head snaps to new angles, her body shudders, her walk stutters and freezes, and then she lunges.','She has her own jump scare: her face, hair parting, mouth stretching open too far. Get close and look at her and she’ll do it again.','Choose who hunts you in the lobby: the Masked Man, the Girl, or both at once.']},
   {v:66,t:'Night Haven Hotel',n:['The motel is gone. In its place: the Night Haven Hotel, a one-storey hotel with all 18 rooms off one long carpeted hallway and a generator beside every door. Pick it in the lobby.','Walk in through the lobby (front desk, sofa, glass doors) from the hotel parking out front, or through the open exit at the far end of the hallway. The gas station is right next door.','Hotel rooms are real hotel rooms now: one floor, a king bed, nightstand, a dresser with a TV, a desk under the window, a closet, luggage and a bathroom with a tub.','Hotel chores: wash the glasses, vacuum, mop the bathroom, dust the dresser, take out the trash, make the bed, scrub the tub. Hide under the bed, in the closet or behind the shower curtain.','The tree standing in the parking lot by the gas station is gone.']},
