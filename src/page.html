@@ -517,7 +517,7 @@ body{font-size:20px}
 <!-- before the main screen: the studio card for 5 seconds, then the notice for 5 seconds -->
 <style>
 #splash{position:fixed;inset:0;z-index:9999;background:#000;cursor:default;transition:opacity .5s}
-#splash .spc{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;animation:splashCard 5s ease both}
+#splash .spc{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;animation:splashCard 5s ease both;animation-play-state:paused}
 #splash .spc+.spc{animation-delay:5s}
 #splash p.spc{display:flex;align-items:center;justify-content:center;margin:0;padding:0 8vw;box-sizing:border-box;text-align:center;color:#f2f2f2;font:600 clamp(18px,3.1vw,36px)/1.6 'Pixelify Sans','VT323',ui-monospace,monospace;letter-spacing:.02em;text-shadow:0 0 6px rgba(255,255,255,.18)}
 #splash.gone{opacity:0;pointer-events:none}
@@ -531,8 +531,14 @@ body{font-size:20px}
   function block(e){ if (!on) return; e.stopImmediatePropagation(); if (e.cancelable) e.preventDefault(); }
   EV.forEach(function(t){ window.addEventListener(t,block,{capture:true,passive:false}); });
   function done(){ on=false; EV.forEach(function(t){ window.removeEventListener(t,block,{capture:true,passive:false}); }); s.classList.add('gone'); setTimeout(function(){ if (s.parentNode) s.parentNode.removeChild(s); },600); }
-  // the 10 seconds only count while the page is on screen, so a tab opened in the background still shows both cards
-  function run(){ var cards=s.querySelectorAll('.spc'); Array.prototype.forEach.call(cards,function(c){ c.style.animation='none'; void c.offsetWidth; c.style.animation=''; }); setTimeout(done,10000); }
-  if (document.hidden){ var w=function(){ if (!document.hidden){ document.removeEventListener('visibilitychange',w); run(); } }; document.addEventListener('visibilitychange',w); } else run(); })();</script>
+  // The cards wait until the game has finished building and drawn its first frame, and the studio picture is decoded,
+  // so the phone is free to show them for their full 5 seconds each. They also wait for the page to be on screen.
+  var started=false;
+  function run(){ if (started) return; started=true; var cards=s.querySelectorAll('.spc'); Array.prototype.forEach.call(cards,function(c){ c.style.animation='none'; void c.offsetWidth; c.style.animation=''; c.style.animationPlayState='running'; }); setTimeout(done,10000); }
+  function whenVisible(){ if (!document.hidden) return run(); var w=function(){ if (!document.hidden){ document.removeEventListener('visibilitychange',w); run(); } }; document.addEventListener('visibilitychange',w); }
+  var ready=false; window.__splashGo=function(){ if (ready) return; ready=true; var im=s.querySelector('img.spc'), go=function(){ requestAnimationFrame(function(){ requestAnimationFrame(whenVisible); }); };
+    if (im && im.decode) im.decode().then(go,go); else go(); };
+  setTimeout(function(){ window.__splashGo(); },25000);   // if the game never says it is ready, show them anyway
+})();</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>

@@ -4728,8 +4728,9 @@ function teamTick(pl){ var tm=$('team'); if (!tm.hidden) tm.hidden=true; return;
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=76;
+var GAME_VER=77;
 var UPDATES=[
+  {v:77,t:'Studio card fix',n:['The Treyyy Studios card now always shows. The cards wait until the game has finished loading, so a slow phone can no longer skip past the first one while it is still busy.']},
   {v:76,t:'Unskippable intro',n:['The Treyyy Studios card and the notice can’t be skipped: every key, click and tap is ignored until both have played for their full 5 seconds.','If the game opens in a background tab, the cards wait until you are looking.']},
   {v:75,t:'Notice reworded',n:['The opening notice now reads: “All characters and environments are not based on any real-life events. Anything in this game that is close to a real tragedy is surely a mistake.”']},
   {v:74,t:'Treyyy Studios',n:['The game now opens with the Treyyy Studios card for 5 seconds, then a notice for 5 seconds, before the main screen.']},
@@ -5648,4 +5649,6 @@ placeFuses();
 moonLight.shadow.needsUpdate=true;
 buildPips(); backdrop(); applyQuality(); applySkin(); syncSeg(); save(); show('start');
 frame();
+// the game is built and drawing: let the intro cards play now
+requestAnimationFrame(function(){ requestAnimationFrame(function(){ if (window.__splashGo) window.__splashGo(); }); });
 })();
