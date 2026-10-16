@@ -3824,7 +3824,7 @@ function micTick(dt){ var bar=$('micBar'), N=net, show=!!(N && N.mode==='s' && g
 // The living hear the living. Once you die you only hear, and are only heard by, the others who died.
 // Links are set up through the game server (WebRTC); the audio itself goes player to player.
 var VOICE={pcs:{}, warned:false}, VC_ICE=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}];
-function vcMode(){ var v=SAVE.vc; return v===0||v===1||v===2?v:2; }   // 2 fades with distance (default), 1 the whole team at full volume, 0 off
+function vcMode(){ return SAVE.vc===0?0:2; }   // on (voices always fade with distance) or off
 function vcCan(){ return !!(net && net.mode==='s' && NR && NR.signal && window.RTCPeerConnection && vcMode()>0); }
 function vcSend(to,d){ try { NR.signal(to,d); } catch(e){} }
 function vcTrack(){ return MIC.stream && MIC.stream.getAudioTracks ? MIC.stream.getAudioTracks()[0]||null : null; }
@@ -4729,8 +4729,9 @@ function teamTick(pl){ var tm=$('team'); if (!tm.hidden) tm.hidden=true; return;
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=79;
+var GAME_VER=80;
 var UPDATES=[
+  {v:80,t:'Voice chat: on or off',n:['Voice chat always fades with distance now: the further away someone is, the quieter they are. The setting is just On or Off.']},
   {v:79,t:'Texts reach everyone',n:['Fixed texts not reaching other players: your last few texts now go out with every update, so a dropped one can’t get lost.','The living’s texts now reach everyone, the dead included. Texts from the dead still only reach the dead.','Fixed chores in houses 21–40 not counting, which made the 40-house job impossible to finish.']},
   {v:78,t:'Phone light',n:['The flashlight is gone. Your phone is in your right hand now, and its light on the back is your light: F (or tap Light) turns it on and off.','The phone light is a little wider and whiter than the old flashlight, and does not reach quite as far.','Bring the phone up with T (or tap Phone): your right hand lifts it to your face.']},
   {v:77,t:'Studio card fix',n:['The Treyyy Studios card now always shows. The cards wait until the game has finished loading, so a slow phone can no longer skip past the first one while it is still busy.']},
