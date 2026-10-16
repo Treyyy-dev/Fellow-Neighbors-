@@ -64,6 +64,12 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
 #wirePanel,#chorePanel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:35;width:min(92vw,440px,calc((100vh - 150px)*1.52 + 24px));box-sizing:border-box;background:rgba(8,12,40,.94);border:2px solid var(--osd,#eee);padding:12px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;text-shadow:var(--chroma)}
 #wirePanel canvas,#chorePanel canvas{position:static!important;display:block;width:100%!important;height:auto!important;image-rendering:pixelated;touch-action:none;cursor:pointer;border:1px solid #333}
 #wirePanel p,#chorePanel p{margin:0;font-size:18px;line-height:1.15}
+.modeGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;margin:6px 0 14px}
+.modeCard{font:inherit;color:var(--osd,#eee);text-shadow:var(--chroma);background:rgba(8,12,40,.78);border:2px solid var(--osd,#eee);padding:18px 14px;min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;text-align:center}
+.modeCard b{font-size:26px;letter-spacing:.06em;text-transform:uppercase}.modeCard span{font-size:15px;opacity:.85;line-height:1.3}
+.modeCard:hover,.modeCard:focus-visible{background:var(--vcr,#1a2a8a)}
+.modeCard.locked{opacity:.45;cursor:not-allowed;border-style:dashed}.modeCard.locked:hover{background:rgba(8,12,40,.78)}
+@media (max-width:560px){.modeGrid{grid-template-columns:1fr}.modeCard{min-height:110px}}
 #newsList{display:flex;flex-direction:column;gap:10px;width:min(100%,460px);text-align:left}
 .upd{border:1px solid rgba(154,150,138,.45);background:rgba(13,17,27,.72);border-radius:2px;padding:10px 14px}
 .upd.new{border-color:var(--pumpkin)}
@@ -304,15 +310,25 @@ body{font-size:20px}
     <div class="list"><button class="mbtn back" data-to="story" type="button">Back</button></div>
   </div></div>
 
-  <div class="card" id="online" hidden><div class="col">
+  <div class="card" id="modes" hidden><div class="col">
     <h2>Play</h2>
+    <p class="lab">Choose a mode</p>
+    <div class="modeGrid">
+      <button class="modeCard" id="modeFeast" type="button"><b>Kill Feast</b><span>Up to 4 survivors against the AI killer. Fix the generators, clean the houses, drive out alive.</span></button>
+      <button class="modeCard locked" id="modeSoon" type="button" aria-disabled="true"><svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path fill="currentColor" d="M7 10V7a5 5 0 0 1 10 0v3h1.5A1.5 1.5 0 0 1 20 11.5v9A1.5 1.5 0 0 1 18.5 22h-13A1.5 1.5 0 0 1 4 20.5v-9A1.5 1.5 0 0 1 5.5 10H7zm2 0h6V7a3 3 0 0 0-6 0v3z"/></svg><b>Coming soon</b><span>Locked for now.</span></button>
+    </div>
+    <div class="list"><button class="mbtn back" data-to="menu" type="button">Back</button></div>
+  </div></div>
+
+  <div class="card" id="online" hidden><div class="col">
+    <h2>Kill Feast</h2>
     <p>Kill Feast: up to 4 survivors against an AI killer on a street of 18 houses. Drive in, wire up 5 generators, solve 6 chore puzzles, then drive out. Keep your voice down: your mic tells the killer where you are. Or last until morning. At 2:00 AM the Blood Moon rises. Create a room, or find one someone else has opened. Everyone waits in the lobby until someone presses Start.</p>
     <p class="lab">Your name</p>
     <input class="inp" id="netName" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Player" aria-label="Your name">
     <div class="list">
       <button class="mbtn" id="netCreateBtn" type="button">Create Room</button>
       <button class="mbtn" id="netFindBtn" type="button">Find Room</button>
-      <button class="mbtn back" data-to="menu" type="button">Back</button>
+      <button class="mbtn back" data-to="modes" type="button">Back</button>
     </div>
   </div></div>
 
@@ -1990,7 +2006,7 @@ var PARTS={
     {name:'Last One Standing',desc:'They only need 4 fuses, and they are quick.',fuses:4,run:5.8,walk:3.4,reward:100}]
 };
 var cfg=PARTS.victim[1], lastFrame=0, qLeaves=true, settingsBack='menu';
-var SCREENS=['start','menu','news','story','parts','online','netFind','lobby','netEnd','settings','shop','pause','dead','win'];
+var SCREENS=['start','menu','modes','news','story','parts','online','netFind','lobby','netEnd','settings','shop','pause','dead','win'];
 var tjT=0; function show(id){ var was=null; SCREENS.forEach(function(s){ if (!$(s).hidden) was=s; $(s).hidden = s!==id; }); if (id && id!==was && !reduced){ wrap.classList.remove('tapejump'); void wrap.offsetWidth; wrap.classList.add('tapejump'); clearTimeout(tjT); tjT=setTimeout(function(){ wrap.classList.remove('tapejump'); },360); } }
 function setLeaves(v){ leafPts.p.visible = v && qLeaves; }
 
@@ -2241,7 +2257,9 @@ function pause(){
 }
 function resume(){ game.paused=false; if (master) master.gain.value=0.9; show(null); if (!isTouch) lock(); }
 $('play').addEventListener('click',function(){ initAudio(); save(); if ((SAVE.seenVer||0)<GAME_VER) openNews(); else show('menu'); $('mNews').classList.remove('dot'); });
-$('mOnline').addEventListener('click',function(){ show('online'); });
+$('mOnline').addEventListener('click',function(){ show('modes'); });
+$('modeFeast').addEventListener('click',function(){ show('online'); });
+$('modeSoon').addEventListener('click',function(){ toast('This mode is locked. It’s coming soon.',1800); });
 $('mSettings').addEventListener('click',function(){ openSettings('menu'); });
 $('mShop').addEventListener('click',function(){ game.mode='shop'; stalker.g.visible=false; renderShop(); show('shop'); });
 $('shop').querySelector('.back').addEventListener('click',function(){ game.mode='menu'; hideKillerPreview(); backdrop(); });
@@ -4698,8 +4716,9 @@ function teamTick(pl){ var tm=$('team'); if (!tm.hidden) tm.hidden=true; return;
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=60;
+var GAME_VER=61;
 var UPDATES=[
+  {v:61,t:'Pick a mode',n:['Play now opens a mode screen: Kill Feast, plus a locked mode that is coming soon.']},
   {v:60,t:'Cash and the corner store',n:['Every chore you finish pays $5. Your cash shows next to the chores and generators.','The gas station store is bigger, with two glass doors side by side that swing open as you walk up.','Felix works the register. Grab a snack or drink right by the counter, ring it up, and keep it in your pocket (up to 3). Press R (or tap Use) to have it.','Bolt Energy $5: faster for 30 s. Marathon Bar $5: run without tiring for 30 s. Iron Jerky $10: a shield that takes the next hit. Midnight Cola $10: the killer can’t see or hear you for 30 s.','Walk out without paying and Felix makes you put it back.','The killer no longer vanishes and pops up somewhere else, and Elias no longer appears at the Blood Moon.']},
   {v:59,t:'Music instead of red, a Tokens tab',n:['No more red at the edges of the screen when the killer is near. Instead a low, dissonant score creeps in and gets louder and faster the closer it gets, with a shriek when it is right on you.','Chests are gone, and so are the knives, first aid kits and bear traps. Neighbours don’t hand out items any more either.','The shop has a Tokens tab: your balance and a history of every token you earned and spent. Token packs you can buy are coming soon.']},
   {v:58,t:'Mics, cut generators, a bigger street',n:['Your microphone is in the game. The bar in the bottom-left shows how loud you are; past the white line the killer hears you and comes for you. Tap the bar to turn the mic on or mute it.','The killer sneaks round the back and cuts generators, often at a house with someone inside. The lights die, and you can’t clean until someone wires it back up.','The map is just the neighbourhood now, with the gas station and the police station. The park, churchyard, hospital and supermarket are gone, and the street goes on with 6 more houses: 18 in all.','10 new characters: Jax, Tess, Moe, Kiko, Zeke, Lou, Rudy, Bea, Ike and Zora. There is no default skin any more: everyone starts as Jax, and the shop always shows the characters you own.','The teammate cards on the left of the screen are gone, and the lobby no longer lists the AI killer.','The intro no longer clips through a house when it shows the parking lot, and bots start in their own cars instead of standing in the lot first.']},

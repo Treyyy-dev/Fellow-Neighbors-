@@ -1595,7 +1595,7 @@ var PARTS={
     {name:'Last One Standing',desc:'They only need 4 fuses, and they are quick.',fuses:4,run:5.8,walk:3.4,reward:100}]
 };
 var cfg=PARTS.victim[1], lastFrame=0, qLeaves=true, settingsBack='menu';
-var SCREENS=['start','menu','news','story','parts','online','netFind','lobby','netEnd','settings','shop','pause','dead','win'];
+var SCREENS=['start','menu','modes','news','story','parts','online','netFind','lobby','netEnd','settings','shop','pause','dead','win'];
 var tjT=0; function show(id){ var was=null; SCREENS.forEach(function(s){ if (!$(s).hidden) was=s; $(s).hidden = s!==id; }); if (id && id!==was && !reduced){ wrap.classList.remove('tapejump'); void wrap.offsetWidth; wrap.classList.add('tapejump'); clearTimeout(tjT); tjT=setTimeout(function(){ wrap.classList.remove('tapejump'); },360); } }
 function setLeaves(v){ leafPts.p.visible = v && qLeaves; }
 
@@ -1846,7 +1846,9 @@ function pause(){
 }
 function resume(){ game.paused=false; if (master) master.gain.value=0.9; show(null); if (!isTouch) lock(); }
 $('play').addEventListener('click',function(){ initAudio(); save(); if ((SAVE.seenVer||0)<GAME_VER) openNews(); else show('menu'); $('mNews').classList.remove('dot'); });
-$('mOnline').addEventListener('click',function(){ show('online'); });
+$('mOnline').addEventListener('click',function(){ show('modes'); });
+$('modeFeast').addEventListener('click',function(){ show('online'); });
+$('modeSoon').addEventListener('click',function(){ toast('This mode is locked. It’s coming soon.',1800); });
 $('mSettings').addEventListener('click',function(){ openSettings('menu'); });
 $('mShop').addEventListener('click',function(){ game.mode='shop'; stalker.g.visible=false; renderShop(); show('shop'); });
 $('shop').querySelector('.back').addEventListener('click',function(){ game.mode='menu'; hideKillerPreview(); backdrop(); });
@@ -4303,8 +4305,9 @@ function teamTick(pl){ var tm=$('team'); if (!tm.hidden) tm.hidden=true; return;
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=60;
+var GAME_VER=61;
 var UPDATES=[
+  {v:61,t:'Pick a mode',n:['Play now opens a mode screen: Kill Feast, plus a locked mode that is coming soon.']},
   {v:60,t:'Cash and the corner store',n:['Every chore you finish pays $5. Your cash shows next to the chores and generators.','The gas station store is bigger, with two glass doors side by side that swing open as you walk up.','Felix works the register. Grab a snack or drink right by the counter, ring it up, and keep it in your pocket (up to 3). Press R (or tap Use) to have it.','Bolt Energy $5: faster for 30 s. Marathon Bar $5: run without tiring for 30 s. Iron Jerky $10: a shield that takes the next hit. Midnight Cola $10: the killer can’t see or hear you for 30 s.','Walk out without paying and Felix makes you put it back.','The killer no longer vanishes and pops up somewhere else, and Elias no longer appears at the Blood Moon.']},
   {v:59,t:'Music instead of red, a Tokens tab',n:['No more red at the edges of the screen when the killer is near. Instead a low, dissonant score creeps in and gets louder and faster the closer it gets, with a shriek when it is right on you.','Chests are gone, and so are the knives, first aid kits and bear traps. Neighbours don’t hand out items any more either.','The shop has a Tokens tab: your balance and a history of every token you earned and spent. Token packs you can buy are coming soon.']},
   {v:58,t:'Mics, cut generators, a bigger street',n:['Your microphone is in the game. The bar in the bottom-left shows how loud you are; past the white line the killer hears you and comes for you. Tap the bar to turn the mic on or mute it.','The killer sneaks round the back and cuts generators, often at a house with someone inside. The lights die, and you can’t clean until someone wires it back up.','The map is just the neighbourhood now, with the gas station and the police station. The park, churchyard, hospital and supermarket are gone, and the street goes on with 6 more houses: 18 in all.','10 new characters: Jax, Tess, Moe, Kiko, Zeke, Lou, Rudy, Bea, Ike and Zora. There is no default skin any more: everyone starts as Jax, and the shop always shows the characters you own.','The teammate cards on the left of the screen are gone, and the lobby no longer lists the AI killer.','The intro no longer clips through a house when it shows the parking lot, and bots start in their own cars instead of standing in the lot first.']},
