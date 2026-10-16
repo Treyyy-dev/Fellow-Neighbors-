@@ -26,6 +26,8 @@ body{background:var(--night);color:var(--bone);font-family:var(--body);overflow:
 #flash{position:absolute;inset:0;pointer-events:none;opacity:0;background:var(--blood)}
 #gore{position:absolute;inset:0;pointer-events:none;opacity:0;background-size:100% 100%}
 #jump{position:absolute;inset:0;pointer-events:none;background:#000 center/auto 120% no-repeat}
+#scareFx{position:absolute;inset:0;z-index:45;pointer-events:none;background:#000;overflow:hidden}
+#scareFx i{position:absolute;inset:-12%;background:center/contain no-repeat;will-change:transform}
 @keyframes jump{0%{transform:scale(.7);opacity:1}100%{transform:scale(1.25);opacity:1}}
 #game.shake canvas{animation:shake .4s}
 @keyframes shake{0%,100%{transform:translate(0,0)}15%{transform:translate(-14px,8px)}30%{transform:translate(12px,-10px)}45%{transform:translate(-10px,-6px)}60%{transform:translate(9px,7px)}80%{transform:translate(-5px,3px)}}
@@ -210,6 +212,7 @@ body{font-size:20px}
   <div id="flash"></div>
   <div id="gore"></div>
   <div id="jump" hidden></div>
+  <div id="scareFx" hidden><i></i></div>
   <div id="inside" hidden></div>
   <div id="peep" hidden></div>
   <div id="vhsUi" aria-hidden="true"></div>
