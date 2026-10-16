@@ -2674,24 +2674,39 @@ var SCARE3D=(function(){
     for (var f=0;f<4;f++){ var fg=new THREE.Group(); fg.position.set(-0.033+f*0.022,0,0.05); g.add(fg); var p1=new THREE.Mesh(new THREE.BoxGeometry(0.015,0.015,0.06),hand); p1.position.z=0.03; fg.add(p1); var p2=new THREE.Mesh(new THREE.BoxGeometry(0.013,0.013,0.05),hand); p2.position.set(0,-0.012,0.07); p2.rotation.x=0.8; fg.add(p2); var nl=new THREE.Mesh(new THREE.BoxGeometry(0.012,0.004,0.014),blood); nl.position.set(0,-0.03,0.09); fg.add(nl); fg.rotation.x=0.5; }
     var arm=new THREE.Mesh(new THREE.BoxGeometry(0.07,0.07,0.5),cloth); arm.position.z=-0.29; g.add(arm); sc.add(g); hands.push({g:g,sd:sd}); });
   sc.add(head);
+  var gHead=new THREE.Group(), gJaw=new THREE.Group(); sc.add(gHead); gHead.visible=false;
+  var gSkinT=canvasTex(128,160,function(g){ var gr=g.createRadialGradient(64,70,8,64,80,90); gr.addColorStop(0,'#d8dcd4'); gr.addColorStop(.7,'#9aa098'); gr.addColorStop(1,'#3a4038'); g.fillStyle=gr; g.fillRect(0,0,128,160);
+    for (var i=0;i<30;i++){ g.strokeStyle='rgba(40,60,70,'+(0.15+Math.random()*0.3)+')'; g.lineWidth=0.6+Math.random(); g.beginPath(); var x=Math.random()*128, y=Math.random()*160; g.moveTo(x,y); for (var k=0;k<5;k++){ x+=(Math.random()-.5)*18; y+=Math.random()*14; g.lineTo(x,y); } g.stroke(); }
+    for (i=0;i<6;i++){ g.fillStyle='rgba(30,0,0,'+(0.4+Math.random()*0.4)+')'; g.fillRect(30+Math.random()*70,70+Math.random()*50,2,30+Math.random()*50); } });
+  var gSkin=new THREE.MeshStandardMaterial({map:gSkinT,roughness:.9}), gHairM=new THREE.MeshStandardMaterial({color:lin(0x050505),roughness:.8,side:THREE.DoubleSide});
+  var rim=new THREE.PointLight(0xc8e0ff,0,1.6,1.4); sc.add(rim);
+  var gsk=new THREE.SphereGeometry(0.15,16,14), gp=gsk.attributes.position, gv=new THREE.Vector3(); for (var gi=0;gi<gp.count;gi++){ gv.fromBufferAttribute(gp,gi); gp.setXYZ(gi,gv.x*0.92,gv.y*1.3,gv.z*0.95); } gsk.computeVertexNormals();
+  gHead.add(new THREE.Mesh(gsk,gSkin));
+  [-1,1].forEach(function(sd){ var so=new THREE.Mesh(new THREE.SphereGeometry(0.04,10,8),black); so.scale.set(1,0.75,0.5); so.position.set(sd*0.052,0.03,0.128); gHead.add(so);
+    var pu=new THREE.Mesh(new THREE.SphereGeometry(0.006,6,5),eye); pu.position.set(sd*0.05,0.025,0.148); gHead.add(pu); });
+  gJaw.position.set(0,-0.08,0.11); gHead.add(gJaw); var gm=new THREE.Mesh(new THREE.SphereGeometry(0.05,12,8),black); gm.scale.set(0.8,1,0.4); gJaw.add(gm);
+  for (var hs=0;hs<30;hs++){ var ang=(hs/29-0.5)*Math.PI*2, front=Math.abs(ang)<0.75; if (front && hs%5!==0) continue; var len=(front?0.42:0.5)+((hs*31)%9)*0.035, strand=new THREE.Mesh(new THREE.PlaneGeometry(front?0.014:0.05,len),gHairM); strand.position.set(Math.sin(ang)*0.15,0.15-len/2,Math.cos(ang)*0.15+(front?0.02:0)); strand.rotation.y=ang; gHead.add(strand); }
+  var gcap=new THREE.Mesh(new THREE.SphereGeometry(0.162,12,10,0,Math.PI*2,0,Math.PI*0.5),gHairM); gcap.position.y=0.04; gHead.add(gcap);
+  gHead.traverse(function(o){ if (o.isMesh) o.frustumCulled=false; });
+  var cur=head, curJaw=jaw, kindNow='man';
   head.traverse(function(o){ if (o.isMesh) o.frustumCulled=false; }); hands.forEach(function(hh){ hh.g.traverse(function(o){ if (o.isMesh) o.frustumCulled=false; }); });
   head.visible=false; hands.forEach(function(hh){ hh.g.visible=false; });
   var q=new THREE.Quaternion(), fw=new THREE.Vector3(), up=new THREE.Vector3(), rt2=new THREE.Vector3(), tmp=new THREE.Vector3(), eul=new THREE.Euler();
   function place(obj,dist,ox,oy){ camera.getWorldDirection(fw); up.set(0,1,0).applyQuaternion(camera.quaternion); rt2.set(1,0,0).applyQuaternion(camera.quaternion);
     obj.position.copy(camera.position).addScaledVector(fw,dist).addScaledVector(rt2,ox).addScaledVector(up,oy); obj.quaternion.copy(camera.quaternion); }
-  function start(){ on=true; t=0; seed=Math.random()*10; head.visible=true; hands.forEach(function(hh){ hh.g.visible=true; }); }
+  function start(kind){ on=true; t=0; seed=Math.random()*10; kindNow=kind==='girl'?'girl':'man'; cur=kindNow==='girl'?gHead:head; curJaw=kindNow==='girl'?gJaw:jaw; head.visible=kindNow!=='girl'; gHead.visible=kindNow==='girl'; hands.forEach(function(hh){ hh.g.visible=true; }); }
   function tick(dt){ if (!on) return; t+=dt; var D=1.45;
-    if (t>D){ on=false; head.visible=false; hands.forEach(function(hh){ hh.g.visible=false; }); red.intensity=0; flash.intensity=0; return; }
+    if (t>D){ on=false; head.visible=false; gHead.visible=false; hands.forEach(function(hh){ hh.g.visible=false; }); red.intensity=0; flash.intensity=0; return; }
     // lunge, a jerk back, then a second lunge right into the lens
     var dist = t<0.1 ? 1.7-1.32*(1-Math.pow(1-t/0.1,3)) : (t<0.42 ? 0.38+Math.sin((t-0.1)*30)*0.012 : (t<0.52 ? 0.38+(t-0.42)*1.5 : Math.max(0.27,0.53-(t-0.52)*3)));
     var sh=reduced?0:(t<0.08?0:0.022), j=Math.sin(t*90+seed)*sh, j2=Math.cos(t*77+seed*2)*sh;
-    place(head,dist,j+Math.sin(t*9)*0.01,-0.03+j2);
-    eul.set(Math.sin(t*31)*0.12*(sh?1:0), Math.sin(t*23+seed)*0.1*(sh?1:0), Math.sin(t*13)*0.35*(sh?1:0)+(t>0.42&&t<0.55?0.6:0)); q.setFromEuler(eul); head.quaternion.multiply(q);
-    var op=Math.min(1,Math.max(0,(t-0.06)/0.25)); jaw.scale.set(1+op*0.3,0.6+op*1.6+Math.sin(t*60)*0.12*op,1); teeth.forEach(function(T){ T.m.position.set(Math.cos(T.a)*0.05*(1+op*0.3),Math.sin(T.a)*0.05*0.55*(0.6+op*1.6),0.02); });
+    place(cur,dist,j+Math.sin(t*9)*0.01,-0.03+j2);
+    eul.set(Math.sin(t*31)*0.12*(sh?1:0), Math.sin(t*23+seed)*0.1*(sh?1:0), Math.sin(t*13)*0.35*(sh?1:0)+(t>0.42&&t<0.55?0.6:0)+(kindNow==='girl'?(Math.random()<0.15?(Math.random()-0.5)*1.8:0.9):0)); q.setFromEuler(eul); cur.quaternion.multiply(q);
+    var op=Math.min(1,Math.max(0,(t-0.06)/0.25)); if (kindNow==='girl') gJaw.scale.set(1+op*0.2,1+op*3.2+Math.sin(t*40)*0.3*op,1); jaw.scale.set(1+op*0.3,0.6+op*1.6+Math.sin(t*60)*0.12*op,1); teeth.forEach(function(T){ T.m.position.set(Math.cos(T.a)*0.05*(1+op*0.3),Math.sin(T.a)*0.05*0.55*(0.6+op*1.6),0.02); });
     hands.forEach(function(hh,i){ var k=Math.min(1,Math.max(0,(t-0.18-i*0.05)/0.22)); k=1-Math.pow(1-k,3); place(hh.g,0.55-k*0.25,hh.sd*(0.42-k*0.2),-0.38+k*0.14); eul.set(-0.3,hh.sd*-0.5,hh.sd*0.4); q.setFromEuler(eul); hh.g.quaternion.multiply(q); });
     // light: a red glow from below, and a strobe like a dying flashlight
-    tmp.set(0,-0.25,0.18).applyQuaternion(head.quaternion).add(head.position); red.position.copy(tmp); red.intensity=3.5+Math.random()*2;
-    flash.position.copy(camera.position); flash.intensity=(Math.sin(t*70)>0.3 || t<0.1)?2.6:0.15;
+    tmp.set(0,-0.25,0.18).applyQuaternion(cur.quaternion).add(cur.position); red.position.copy(tmp); red.intensity=3.5+Math.random()*2;
+    flash.position.copy(camera.position); flash.intensity=(Math.sin(t*70)>0.3 || t<0.1)?2.6:0.15; rim.intensity=kindNow==='girl'?2.2:0; if (kindNow==='girl'){ tmp.set(0.15,0.25,0.3).applyQuaternion(cur.quaternion).add(cur.position); rim.position.copy(tmp); red.intensity*=0.35; }
     VHSGLITCH=Math.max(VHSGLITCH,t<0.1?0.5:(t>1.2?1.5:0.8)); }
   return {scene:sc,start:start,tick:tick,isOn:function(){ return on; }};
 })();
@@ -2702,8 +2717,8 @@ function scareSound(){
   [0.18,0.42,0.7].forEach(function(w){ tone(520,0.35,'sawtooth',0.22,1900,w); noise(0.2,0.6,4200,w); });
   tone(4100,2.6,'sine',0.05,3900,0.9);
 }
-function jumpFace(){
-  if (SCARE3D.isOn()) return; SCARE3D.start(); scareSound(); shake(); VHSGLITCH=1.2;
+function jumpFace(kind){
+  if (SCARE3D.isOn()) return; SCARE3D.start(kind); scareSound(); if (kind==='girl' && AC){ tone(1400,1.1,'sawtooth',0.18,2300); tone(1480,1.1,'square',0.08,900,0.1); for (var gc=0;gc<6;gc++) noise(0.05,0.4,3500,0.1+gc*0.11); } shake(); VHSGLITCH=1.2;
   try { if (navigator.vibrate) navigator.vibrate([220,60,320,60,160]); } catch(e){}
   // a single white frame as it hits, and black as the tape cuts out
   var el=$('scareFx'); if (!el) return; var img=el.firstElementChild; if (img) img.style.opacity=0;
@@ -3398,6 +3413,21 @@ function nameSprite(text){
   var t=canvasTex(256,64,function(g){ g.clearRect(0,0,256,64); g.font='bold 30px Georgia,serif'; g.textAlign='center'; g.textBaseline='middle'; g.lineWidth=6; g.strokeStyle='rgba(0,0,0,.85)'; g.strokeText(text,128,34); g.fillStyle='#ffd9a8'; g.fillText(text,128,34); });
   var s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false,fog:true})); s.scale.set(1.5,0.375,1); s.position.y=2.15; return s;
 }
+var GIRLK={n:'The Girl',rig:'w',tint:0xffffff,s:0.9,hand:0xc8ccc4,sleeve:0xe8e4dc,look:{sk:0xc8ccc4,hair:0x060606,top:0xe6e2d8,pants:0xe6e2d8,acc:0x5a0a0a,pat:0,w:0.9}};
+function girlHair(av){ var m=av.rig&&av.rig.m; if (!m || av.hairOn) return; var hd=m.getObjectByName('mixamorigHead')||m.getObjectByName('Head'); if (!hd) return; av.hairOn=true;
+  m.updateMatrixWorld(true); var ws=new THREE.Vector3(); hd.getWorldScale(ws); var g=new THREE.Group(); g.scale.setScalar(1/ws.x); hd.add(g); var hm=mat(0x050505,{roughness:.9});
+  for (var i=0;i<16;i++){ var a=(i/15-0.5)*2.4, len=0.45+((i*37)%7)*0.04, st=new THREE.Mesh(new THREE.BoxGeometry(0.035,len,0.02),hm); st.position.set(Math.sin(a)*0.1,0.14-len/2,Math.cos(a)*0.1+0.02); st.rotation.x=0.08; g.add(st); }
+  for (var j=0;j<10;j++){ var b=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.6,0.03),hm); var a2=Math.PI+(j/9-0.5)*2.6; b.position.set(Math.sin(a2)*0.11,-0.12,Math.cos(a2)*0.11); g.add(b); }
+  var cap=new THREE.Mesh(new THREE.SphereGeometry(0.115,10,8,0,Math.PI*2,0,Math.PI*0.55),hm); cap.position.y=0.06; g.add(cap); }
+// she walks, then jerks: the head snaps to new angles, the body shudders, the walk stutters and freezes
+function girlTwitch(av,dt){ var m=av.rig&&av.rig.m; if (!m) return; girlHair(av);
+  var T=av.tw; if (!T){ var pre=m.getObjectByName('mixamorigHead')?'mixamorig':''; T=av.tw={head:m.getObjectByName(pre+'Head'),neck:m.getObjectByName(pre+'Neck'),sp:m.getObjectByName(pre+'Spine2')||m.getObjectByName(pre+'Spine1'),la:m.getObjectByName(pre+'LeftArm'),ra:m.getObjectByName(pre+'RightArm'),t:0,h:[0,0,0],b:[0,0],fz:0}; }
+  T.t-=dt; if (T.t<=0){ T.t=0.08+Math.random()*(Math.random()<0.3?0.9:0.3); var big=Math.random()<0.25;
+    T.h=[(Math.random()-0.5)*(big?1.1:0.35),(Math.random()-0.5)*(big?1.4:0.4),(Math.random()-0.5)*(big?1.6:0.5)]; T.b=[(Math.random()-0.5)*(big?0.35:0.08),(Math.random()-0.5)*0.12]; if (Math.random()<0.12) T.fz=0.25+Math.random()*0.5; }
+  if (T.head){ T.head.rotation.x+=T.h[0]; T.head.rotation.y+=T.h[1]; T.head.rotation.z+=T.h[2]; }
+  if (T.neck) T.neck.rotation.z+=T.h[2]*0.4; if (T.sp){ T.sp.rotation.z+=T.b[0]; T.sp.rotation.x+=0.25+T.b[1]; }
+  if (T.la) T.la.rotation.z+=0.9; if (T.ra) T.ra.rotation.z-=0.9;   // arms hang straight down
+  av.g.rotation.z=T.b[0]*0.5; av.g.position.x+=(Math.random()-0.5)*0.02; }
 function avatarFor(id,kind,sp,label,ks){
   var key=kind+':'+(sp?sp.n:'')+':'+(label||'')+':'+(ks|0), a=avatars[id];
   if (a && a.key===key && (a.rig || !NETTPL.m)) return a;
@@ -3466,7 +3496,7 @@ function netJoin(code,mode){
   var nm=netName(); code=String(code||'').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,10); if (!code || lobby || net) return;
   if (findTimer){ clearInterval(findTimer); findTimer=0; }
   var go=function(R,note){ NR=R; NP={}; netMe=R.solo?'solo':'me';
-    lobby={mode:'s',code:code,gid:0,want:null,note:note||'',timer:0,mt:mode?Date.now():0,adT:0,fill:true,bt:0,map:'lane',mpt:0}; lobby.want=NETMODES[lobby.mode].roles[0];
+    lobby={mode:'s',code:code,gid:0,want:null,note:note||'',timer:0,mt:mode?Date.now():0,adT:0,fill:true,bt:0,map:'lane',mpt:0,kt:'man',ktt:0}; lobby.want=NETMODES[lobby.mode].roles[0];
     var p={n:nm,sk:SAVE.equipped,w:lobby.want,v:2}; if (mode) p.md={m:'s',t:lobby.mt}; netSend(p);
     lobbyUI(); show('lobby'); lobby.timer=setInterval(lobbyTick,300); lobbyTick(); };
   toast('Connecting…',2500);
@@ -3477,7 +3507,8 @@ function netJoin(code,mode){
   else go(soloRoom(),'Online is not available from here, so you are playing alone.');
 }
 function setLobbyMode(m,t){ lobby.mode=m; lobby.mt=t; if (NETMODES[m].roles.indexOf(lobby.want)<0) lobby.want=NETMODES[m].roles[0]; netSend({md:{m:m,t:t},w:lobby.want}); lobbyUI(); }
-var FEAST_K=1, FEAST_S=4;
+var FEAST_K=2, FEAST_S=4;
+function setKiller(k,t,quiet){ lobby.kt=k; lobby.ktt=t; netSend({kt:{k:k,t:t}}); if (!quiet){ lobbyUI(); lobbyTick(); } }
 function setMap(m,t,quiet){ lobby.map=m; lobby.mpt=t; netSend({mp:{m:m,t:t}}); if (!quiet){ lobbyUI(); lobbyTick(); } }
 function setFill(f,t,quiet){ lobby.fill=!!f; lobby.bt=t; netSend({bt:{f:f?1:0,t:t}}); if (!quiet){ lobbyUI(); lobbyTick(); } }
 // Every real player is a survivor (at most 4); the killer is always the AI.
@@ -3485,7 +3516,7 @@ function feastRoles(ps,fill){
   // every player is a survivor; the killer is always the AI
   ps=ps.slice().sort(function(a,b){ return a.id<b.id?-1:(a.id>b.id?1:0); }).slice(0,FEAST_S);
   var roles={}; ps.forEach(function(p){ roles[p.id]='s'; });
-  return {roles:roles, bots:{k:FEAST_K, s:fill?FEAST_S-ps.length:0}};
+  return {roles:roles, bots:{k:(lobby&&lobby.kt==='both')?2:1, s:fill?FEAST_S-ps.length:0}};
 }
 function lobbyUI(){
   var bs=$('lobBots'); bs.textContent=''; bs.hidden=false; $('lobBotLab').hidden=false;
@@ -3495,6 +3526,9 @@ function lobbyUI(){
   var mp=$('lobMap'); mp.textContent=''; MAPS.forEach(function(d){ var b=document.createElement('button'); b.type='button'; b.textContent=d.n; b.setAttribute('aria-pressed',String((lobby.map||'lane')===d.id));
     b.addEventListener('click',function(){ if (lobby && lobby.map!==d.id) setMap(d.id,Date.now()); }); mp.appendChild(b); });
   var md=MAPS.filter(function(d){ return d.id===(lobby.map||'lane'); })[0]; $('lobMapInfo').textContent=md?md.d:'';
+  var kp=$('lobKill'); kp.textContent=''; [['man','The Masked Man'],['girl','The Girl'],['both','Both']].forEach(function(d){ var b=document.createElement('button'); b.type='button'; b.textContent=d[1]; b.setAttribute('aria-pressed',String((lobby.kt||'man')===d[0]));
+    b.addEventListener('click',function(){ if (lobby && lobby.kt!==d[0]) setKiller(d[0],Date.now()); }); kp.appendChild(b); });
+  $('lobKillInfo').textContent={man:'The Masked Man: fast, cuts generators, hears everything.',girl:'The Girl: walks slow, twitching, then lunges. Don’t look at her up close.',both:'Both of them, hunting at once.'}[lobby.kt||'man'];
   var M=NETMODES[lobby.mode], seg=$('lobSeg'), ms=$('lobMode'); seg.textContent=''; ms.textContent='';
   ['s'].forEach(function(m){ var b=document.createElement('button'); b.type='button'; b.textContent=NETMODES[m].t; b.setAttribute('aria-pressed',String(lobby.mode===m));
     b.addEventListener('click',function(){ if (lobby && lobby.mode!==m){ setLobbyMode(m,Date.now()); lobbyTick(); } }); ms.appendChild(b); });
@@ -3506,6 +3540,7 @@ function lobbyTick(){
   if (nm) setLobbyMode(nm,nt);
   var nb=null, nbt=lobby.bt; ps.forEach(function(p){ var d=p.pr.bt; if (!p.me && d && typeof d==='object' && num(d.t,0)>nbt){ nbt=d.t; nb=d; } });
   if (nb){ setFill(nb.f!==0,nbt,true); lobbyUI(); }
+  var nkt=null, nktt=lobby.ktt||0; ps.forEach(function(p){ var d=p.pr.kt; if (!p.me && d && typeof d==='object' && num(d.t,0)>nktt && (d.k==='man'||d.k==='girl'||d.k==='both')){ nktt=d.t; nkt=d.k; } }); if (nkt){ setKiller(nkt,nktt,true); lobbyUI(); }
   var nmp=null, nmpt=lobby.mpt||0; ps.forEach(function(p){ var d=p.pr.mp; if (!p.me && d && typeof d==='object' && num(d.t,0)>nmpt && MAPS.some(function(x){ return x.id===d.m; })){ nmpt=d.t; nmp=d.m; } });
   if (nmp){ setMap(nmp,nmpt,true); lobbyUI(); }
   var M=NETMODES[lobby.mode]; ul.textContent='';
@@ -3514,7 +3549,7 @@ function lobbyTick(){
     if (p.me && p.known===false && !NR.solo) known=false;
     var g=p.pr.go; if (g && typeof g==='object' && num(g.id,0)>lobby.gid && g.roles && typeof g.roles==='object' && (!best || g.id>best.id)) best=g; });
   var pv=feastRoles(ps.filter(function(p){ return !p.pr.gi; }),lobby.fill); lobby.bots=pv.bots;
-  if (ps.length>FEAST_K+FEAST_S){ var full=document.createElement('li'); full.textContent=(ps.length-FEAST_K-FEAST_S)+' waiting: the game holds 4 players'; ul.appendChild(full); }
+  if (ps.length>FEAST_S){ var full=document.createElement('li'); full.textContent=(ps.length-FEAST_K-FEAST_S)+' waiting: the game holds 4 players'; ul.appendChild(full); }
   if (lobby.mode==='s'){ var bi; for (bi=0;bi<lobby.bots.s;bi++){ var ls=document.createElement('li'); ls.textContent='Bot · Survivor'; ul.appendChild(ls); } }
   $('lobInfo').textContent=(lobby.note?lobby.note+' ':'')+M.t+' · '+mapName(lobby.map||'lane')+' · '+ps.length+' in the lobby'+' · 4 survivors against an AI killer'+'. Friends can find this room under Find Room, or join with the code '+lobby.code.toUpperCase()+'.';
   $('lobStart').disabled=!known;
@@ -3538,7 +3573,7 @@ function lobbyStart(){
     ps.forEach(function(p){ var w=p.pr.w===b?b:a; if (!used[w]){ used[w]=1; roles[p.id]=w; } });
     ps.forEach(function(p){ if (!roles[p.id]){ var r=!used[a]?a:b; used[r]=1; roles[p.id]=r; } });
     if (ps.length===1 && lobby.mode==='k') roles[ps[0].id]='killer'; }
-  netSend({go:{id:Date.now(),mode:lobby.mode,roles:roles,bots:bots,map:lobby.map||'lane'}}); lobbyTick();
+  netSend({go:{id:Date.now(),mode:lobby.mode,roles:roles,bots:bots,map:lobby.map||'lane',kt:lobby.kt||'man'}}); lobbyTick();
 }
 function netLeave(){
   worldMap('lane');
@@ -3558,7 +3593,7 @@ function netToLobby(){
   FX.hemi=scene.environment?0.36:0.42; scene.fog.color.copy(lin(FOG)); resident.g.visible=false; resident.dead=false; beacon.visible=false; if (net.ih>=0){ moonLight.intensity=0.55; setLeaves(true); } stairsOpen(false); polCar.visible=false; if (polCop) polCop.g.visible=false; closeChat(); net=null; game.net=null; applyMap('lane'); vanReset();
   game.role='victim'; reset(); stalkerOff(14); game.mode='menu'; setHud(false); backdrop();
   netSend({gi:null,go:null,a:null,st:null,f:null,hp:null,o:null,k:null,ek:null,e:null,pv:null,p:null,el:null,r:null});
-  lobby={mode:mode,code:code,gid:gid,want:NP.w||NETMODES[mode].roles[0],note:'',timer:0,mt:(NP.md&&NP.md.t)||0,adT:0,fill:!(NP.bt&&NP.bt.f===0),bt:(NP.bt&&NP.bt.t)||0,map:(NP.mp&&NP.mp.m)||'lane',mpt:(NP.mp&&NP.mp.t)||0}; lobbyUI(); show('lobby'); lobby.timer=setInterval(lobbyTick,300); lobbyTick();
+  lobby={mode:mode,code:code,gid:gid,want:NP.w||NETMODES[mode].roles[0],note:'',timer:0,mt:(NP.md&&NP.md.t)||0,adT:0,fill:!(NP.bt&&NP.bt.f===0),bt:(NP.bt&&NP.bt.t)||0,map:(NP.mp&&NP.mp.m)||'lane',mpt:(NP.mp&&NP.mp.t)||0,kt:(NP.kt&&NP.kt.k)||'man',ktt:(NP.kt&&NP.kt.t)||0}; lobbyUI(); show('lobby'); lobby.timer=setInterval(lobbyTick,300); lobbyTick();
 }
 
 /* stages for the two co-op stories */
@@ -3617,7 +3652,7 @@ function netBegin(go){
   clearItems(); applyMap('lane'); buildChests(); applyMap('lane'); net.map=WMAP;
   net.vanOut=false; net.vanBots=false; net.lastCy=null; vanReset();
   if (mode==='s' && go.bots && typeof go.bots==='object'){ var hk2=0, hs2=0; for (var rid in go.roles){ if (go.roles[rid]==='k') hk2++; else hs2++; }
-    botsInit(net,Math.max(0,Math.min(FEAST_K-hk2,num(go.bots.k,0)|0)),Math.max(0,Math.min(FEAST_S-hs2,num(go.bots.s,0)|0))); }
+    botsInit(net,Math.max(0,Math.min(FEAST_K-hk2,num(go.bots.k,0)|0)),Math.max(0,Math.min(FEAST_S-hs2,num(go.bots.s,0)|0)),go.kt==='girl'||go.kt==='both'?go.kt:'man'); }
   game.net=net; game.role=(role==='k'||role==='killer')?'killer':'victim'; initAudio(); reset(); stairsOpen(true); if (net.mode==='s') gateOpenNow(); net.ih=-1; P.fl=0; P.y=0; houses.forEach(function(h){ h.netHid=false; h.netAsked=false; h.netBroke=false; h.netDead=false; h.netPool=false; }); polCar.visible=false; if (polCop) polCop.g.visible=false; closeChat(); story.hold=null; story.tearH=null; surv.active=false; setChain(false); stalkerOff(1e9);
   gasCan.visible=battery.visible=keysG.visible=leverG.visible=truckG.visible=boxG.visible=false; moveCar(-64,2.6); allPower(true); resident.g.visible=false; resident.dead=false;
   var ids=Object.keys(go.roles).sort(), idx=Math.max(0,ids.indexOf(netMe)), sp;
@@ -3717,19 +3752,24 @@ function netTick(dt){
   for (var id in N.acc){ hitsK+=N.acc[id].k; hitsE=Math.max(hitsE,N.acc[id].ek); }
   // other players' bodies
   for (i=0;i<pl.length;i++){ var o2=pl[i]; if (o2.me) continue;
-    var kind=(o2.role==='k'||o2.role==='killer')?'k':'p', sp=null;
-    if (kind==='p'){ if (o2.role==='boy') sp=BOY; else if (o2.role==='girl') sp=N.mode==='k'?WREN:GIRL; else { var si=num(o2.pr.sk,-1)|0; if (si<0||si>=NEIGHBOURS.length){ si=0; for (var c=0;c<o2.id.length;c++) si=(si*31+o2.id.charCodeAt(c))%NEIGHBOURS.length; } sp=NEIGHBOURS[si]; } }
-    var mate=(kind==='k')===(game.role==='killer') || N.mode!=='s';
+    var isK=(o2.role==='k'||o2.role==='killer'), girl=isK && !!(o2.bot && o2.bot.kt==='girl'), kind=isK && !girl?'k':'p', sp=girl?GIRLK:null;
+    if (kind==='p' && !girl){ if (o2.role==='boy') sp=BOY; else if (o2.role==='girl') sp=N.mode==='k'?WREN:GIRL; else { var si=num(o2.pr.sk,-1)|0; if (si<0||si>=NEIGHBOURS.length){ si=0; for (var c=0;c<o2.id.length;c++) si=(si*31+o2.id.charCodeAt(c))%NEIGHBOURS.length; } sp=NEIGHBOURS[si]; } }
+    var mate=!isK && game.role!=='killer' || N.mode!=='s';
     var av=avatarFor(o2.id,kind,sp,mate?nick(o2.pr):'',kind==='k'?Math.max(0,Math.min(KSKINS.length-1,num(o2.bot?o2.bot.ks:o2.pr.ks,0)|0)):0); av.g.visible=o2.a!==2 && o2.ih===N.ih && !o2.hid && !(kind==='k' && game.role!=='killer' && (o2.bot?o2.bot.iv>0:num(o2.pr.iv,0)>0));
     if (N.fin && N.fin.q.id===o2.id) av.g.visible=false;
-    if (kind==='k' && game.role!=='killer' && (vanPhase(N) || !N.allParked)) av.g.visible=false;   // nobody sees the killer while the cars are still coming in
+    if (isK && game.role!=='killer' && (vanPhase(N) || !N.allParked)) av.g.visible=false;
+    if (isK && av.g.visible && o2.a===1){ var kdd=Math.hypot(o2.x-P.x,o2.z-P.z); if (kdd<(N.kNear?N.kNear.d:1e9) || !N.kNearF){ N.kNear={d:kdd,girl:girl}; N.kNearF=1; } }   // nobody sees the killer while the cars are still coming in
     if (o2.a===0 && !av.pooled && av.g.visible){ av.pooled=true; bloodPool(o2.x,((o2.ih>=0||o2.y>0.3)?o2.y:groundY(o2.x,o2.z)),o2.z,1.5); bloodBurst(o2.x,(o2.y||0)+0.3,o2.z,0,0,40); }
-    av.scared=kind==='p' && !(N.mode==='k'); var dz=kind==='k' && num(o2.pr.sn,0)>0; avatarStep(av,dt,o2.x,o2.z,o2.yaw+Math.PI,dz?0:o2.an,o2.a===0,(o2.ih>=0||o2.y>0.3)?o2.y:undefined);
+    av.scared=kind==='p' && !girl && !(N.mode==='k'); var dz=kind==='k' && num(o2.pr.sn,0)>0; avatarStep(av,(girl && av.tw && av.tw.fz>0)?0:dt,o2.x,o2.z,o2.yaw+Math.PI,dz?0:(girl&&o2.an>0?1:o2.an),o2.a===0,(o2.ih>=0||o2.y>0.3)?o2.y:undefined);
+    if (girl){ if (av.tw && av.tw.fz>0) av.tw.fz-=dt; girlTwitch(av,dt);
+      var gd=Math.hypot(o2.x-P.x,o2.z-P.z), fw2=fwd(), dot=((o2.x-P.x)*fw2.x+(o2.z-P.z)*fw2.z)/(gd||1); N.girlCd=(N.girlCd||0)-dt;
+      if (game.role!=='killer' && N.alive===1 && !vanPhase(N) && o2.ih===N.ih && gd<4.5 && dot>0.55 && N.girlCd<=0 && !N.hide){ N.girlCd=24; jumpFace('girl'); N.fright=0.9; } }
     if (kind==='p' && N.mode==='s'){ var loud=game.role==='killer' && o2.a===1 && (N.sense>0 || (o2.bot?o2.bot.nz:num(o2.pr.nz,0)));
       if (loud && !av.ping) av.ping=halo(0xff2020,1.4,0,2.75,0,av.g,0.9);
       if (av.ping){ av.ping.visible=!!loud; if (loud){ av.ping.material.opacity=0.45+Math.sin(clock.elapsedTime*7)*0.35; av.ping.material.depthTest=false; } } }
     var crc=kind==='p' && num(o2.pr.cr,0) && o2.a===1; av.cr=(av.cr||0)+((crc?1:0)-(av.cr||0))*Math.min(1,dt*8); av.g.scale.y=1-av.cr*0.32; if (av.cr>0.01) av.g.rotation.x=av.cr*0.18;
     if (dz){ av.g.rotation.x=0.28+Math.sin(clock.elapsedTime*2.2)*0.06; av.g.rotation.z=Math.sin(clock.elapsedTime*1.7)*0.12; } else av.g.rotation.z=0; o2.av=av; }
+  N.kNearF=0;
   for (var aid in avatars) if (!seen[aid]) dropAvatar(aid);
   // my own motion
   var mvd=Math.hypot(P.x-N.lx,P.z-N.lz)/Math.max(dt,0.001); N.lx=P.x; N.lz=P.z; N.an=N.alive!==1?0:(mvd>5.4?2:(mvd>0.6?1:0));
@@ -3755,7 +3795,7 @@ function netTick(dt){
   // being hit
   var H=hitsK+hitsE;
   if (H>N.hits && buffOn('shield') && N.alive===1 && N.inv<=0){ N.hits=H; N.buff.shield=0; N.inv=2.5; noise(0.3,0.4,1800); tone(220,0.4,'square',0.1,90); shake(); toast('Your shield took the hit. It’s gone now.',2600); }
-  if (H>N.hits){ N.hits=H; if (N.alive===1 && N.inv<=0 && game.role!=='killer'){ N.inv=2.5; netHurt(); if (N.mode==='s') jumpFace(); N.killRev=1.4; wireUI.close(false); choreUI.close(false); if (N.hide){ netUnhide(); toast('He found you!',2000); } closeChat();
+  if (H>N.hits){ N.hits=H; if (N.alive===1 && N.inv<=0 && game.role!=='killer'){ N.inv=2.5; netHurt(); if (N.mode==='s') jumpFace(N.kNear&&N.kNear.girl&&N.kNear.d<6?'girl':'man'); N.killRev=1.4; wireUI.close(false); choreUI.close(false); if (N.hide){ netUnhide(); toast('He found you!',2000); } closeChat();
       if (N.mode==='s'){ N.hp--; if (N.hp<=0){ N.alive=0; vm.visible=false; setLight(false); toast('You are dead. You can watch the others.',4000); } else { N.boost=4; toast(N.hp===1?'You are badly hurt. One more hit and you are dead.':'You are hurt. Two more hits and you are dead.',3500); } }
       else { N.f=maxF=Math.max(maxF,N.f)+1; N.failMine=true; } } }
   if (N.mode==='s') netSurvival(dt,pl,surv,killers,me); else netCoop(dt,pl,maxSt,maxF,me,host);
@@ -3791,8 +3831,8 @@ function netElias(dt,tg){
   if (d>46){ E.lost+=dt; if (E.lost>4){ E.vis=0; E.cool=3; } } else E.lost=0;
   if (d<1.2){ N.ek[T.id]=(N.ek[T.id]||0)+1; E.vis=0; E.cool=N.mode==='s'?16:10; if (!T.me) bloodBurst(T.x,1.2,T.z,dx,dz,40); }
 }
-function botsInit(N,nk,ns){
-  var i; for (i=0;i<nk;i++) N.bots.push({ks:(N.gid+i*3)%KSKINS.length,id:'botk'+i,role:'k',name:'Killer bot',x:60-i*4,z:i%2?4:-4,ry:-Math.PI/2,an:0,a:1,hp:9,cd:4+i*2,slow:0,stuck:0});
+function botsInit(N,nk,ns,kt){
+  var i; for (i=0;i<nk;i++) N.bots.push({kt:kt==='girl'?'girl':(kt==='both'&&i===1?'girl':'man'),ks:(N.gid+i*3)%KSKINS.length,id:'botk'+i,role:'k',name:'Killer bot',x:60-i*4,z:i%2?4:-4,ry:-Math.PI/2,an:0,a:1,hp:9,cd:4+i*2,slow:0,stuck:0});
   for (i=0;i<ns;i++){ var sk=(i*5+3)%NEIGHBOURS.length; N.bots.push({id:'bots'+i,role:'s',name:NEIGHBOURS[sk].n+' bot',sk:sk,x:-57+i*1.6,z:(i%2?-3.2:3.4),ry:Math.PI/2,an:0,a:1,hp:3,st:1,tired:0,jink:0,jinkT:0,acc:0,lx:0,lz:0,inv:0,hits:0,esc:0,ti:i}); }
 }
 // Bots are driven by one player's game and shown to everyone else. They play by the same rules people do.
@@ -3826,7 +3866,7 @@ function botsHost(dt,pl,W){
         var see=same && Math.abs((q.y||0)-(b.y||0))<2 && (b.ih>=0 ? dd<14 : dd<(cr?8:28)), hear=loud && dd<(cr?20:42);
         if (!(see || hear || b.sense>0 || (b.tgt===q.id && dd<14))) return;
         var sc=dd*(loud?0.75:1)*(b.tgt===q.id?0.7:1); if (sc<best){ best=sc; d=dd; T=q; } });
-      var sp=b.slow>0?1.6:(N.blood?5.1:4.5);
+      var sp=b.slow>0?1.6:(N.blood?5.1:4.5); if (b.kt==='girl'){ b.lg=(b.lg||0)-dt; if (b.lg<-2.5-Math.random()*2) b.lg=0.45; sp=b.slow>0?1.4:(b.lg>0?8.2:(N.blood?3.9:3.4)); }
       if (b.sw>0){ b.sw-=dt; b.an=0; if (T) b.ry=Math.atan2(T.x-b.x,T.z-b.z);
         if (b.sw<=0){ b.cd=2.6; b.slow=1.1; var V=null; pl.forEach(function(q){ if (q.id===b.swT && q.alive && !q.hid) V=q; }); if (V && (V.ih==null?-1:V.ih)===b.ih && !V.hid && Math.hypot(V.x-b.x,V.z-b.z)<1.9 && Math.abs((b.y||0)-(V.y||0))<1.2) hitPlayer(V,(V.x-b.x)/1.5,(V.z-b.z)/1.5); b.swT=null; }
         return; }
@@ -4185,7 +4225,7 @@ function useScare(){ var N=net; if (!N || N.mode!=='s' || game.role!=='killer' |
 function useVanish(){ var N=net; if (!N || N.mode!=='s' || game.role!=='killer' || game.mode!=='play' || N.stun>0 || N.jailed) return; if (vanPhase(N)){ toast('Wait until they are out of the car.',1600); return; }
   if (N.vanCd>0){ toast('Vanish is ready in '+Math.ceil(N.vanCd)+' s.',1400); return; } N.vanCd=40; N.iv=8; tone(70,1.0,'sine',0.14,40); noise(0.4,0.15,300); toast('You fade into the dark. Nobody can see you for 8 seconds, until you swing.',2600); }
 // every survivor gets the jump scare, freezes for a moment, and gives away where they are
-function scared(){ var N=net; if (!N || game.role==='killer' || N.alive!==1 || game.mode!=='play') return; jumpFace(); scream(1.15); N.fright=1.2; N.reveal=6; toast('Something screamed right next to you. You froze, and he can hear you now.',3000); }
+function scared(){ var N=net; if (!N || game.role==='killer' || N.alive!==1 || game.mode!=='play') return; jumpFace(N.kNear&&N.kNear.girl?'girl':'man'); scream(1.15); N.fright=1.2; N.reveal=6; toast('Something screamed right next to you. You froze, and he can hear you now.',3000); }
 function scareBots(){ var N=net; if (!N || !N.isHost) return; N.bots.forEach(function(b){ if (b.role==='s' && b.a===1){ b.frozen=1.2; b.scare=8; b.nzF=6; if (b.hid && Math.random()<0.4){ b.hid=0; b.hide=null; } } }); }
 function useSense(){ var N=net; if (!N || N.mode!=='s' || game.role!=='killer' || game.mode!=='play' || N.stun>0) return; if (vanPhase(N)){ toast('Wait until they are out of the car.',1600); return; }
   if (N.senseCd>0){ toast('Sense is ready in '+Math.ceil(N.senseCd)+' s.',1400); return; } N.sense=5; N.senseCd=40; tone(90,1.2,'sawtooth',0.12,45); heartbeat(0.4); toast('You can sense every one of them.',2200); }
@@ -4339,8 +4379,9 @@ function teamTick(pl){ var tm=$('team'); if (!tm.hidden) tm.hidden=true; return;
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=66;
+var GAME_VER=67;
 var UPDATES=[
+  {v:67,t:'The Girl',n:['A new killer: the Girl. White dress, grey skin, long black hair hanging over her face.','She walks slowly, but she twitches: her head snaps to new angles, her body shudders, her walk stutters and freezes, and then she lunges.','She has her own jump scare: her face, hair parting, mouth stretching open too far. Get close and look at her and she’ll do it again.','Choose who hunts you in the lobby: the Masked Man, the Girl, or both at once.']},
   {v:66,t:'Night Haven Hotel',n:['The motel is gone. In its place: the Night Haven Hotel, a one-storey hotel with all 18 rooms off one long carpeted hallway and a generator beside every door. Pick it in the lobby.','Walk in through the lobby (front desk, sofa, glass doors) from the hotel parking out front, or through the open exit at the far end of the hallway. The gas station is right next door.','Hotel rooms are real hotel rooms now: one floor, a king bed, nightstand, a dresser with a TV, a desk under the window, a closet, luggage and a bathroom with a tub.','Hotel chores: wash the glasses, vacuum, mop the bathroom, dust the dresser, take out the trash, make the bed, scrub the tub. Hide under the bed, in the closet or behind the shower curtain.','The tree standing in the parking lot by the gas station is gone.']},
   {v:65,t:'Finish the whole job',n:['To win, every generator has to be running and every house or room fully cleaned: 18 generators and 36 chores. Then get back to your car.','Once the whole job is done, a cut generator can’t undo it.','No more surviving until 6:00 AM. The night doesn’t end: finish the job and drive out, or the killer gets you.','Inside a house or room, walk up to the front door and press E (or tap Open) to open it and step out.']},
   {v:64,t:'New map: Night Owl Motel',n:['Pick the map in the lobby: Hollow Lane or the new Night Owl Motel.','The motel has two rows of 9 rooms facing the road, each with its own generator right beside the door, motel parking out front, an office, a vending nook, a fenced pool and a big neon VACANCY sign.','You still drive in and park in the lot by the gas station next door, and the police station is still out back of it.','Rooms work like the houses: wire up the generator, the guest lets you in, then solve the chore puzzles inside.']},
