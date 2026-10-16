@@ -3288,7 +3288,7 @@ var OUTHIDES=[];
   halo(0xfff0d0,1.0,-75.8,2.4,-27.5,world,.7);
   function free(x,z,r){ for (var k=0;k<14;k++){ var a=k*2.4, d=k*0.7, xx=x+Math.cos(a)*d, zz=z+Math.sin(a)*d; if (!blocked(xx,zz,r)) return [xx,zz]; } return null; }
   // dumpsters you can hide in
-  [[-96.5,-15],[38,-30],[-30,30.5],[100,30.5]].forEach(function(p){ var f=free(p[0],p[1],1.6); if (!f) return;
+  [[-96.5,-15],[38,-30],[-62,30.5],[100,30.5]].forEach(function(p){ var f=free(p[0],p[1],1.6); if (!f) return;
     var g=new THREE.Group(); g.position.set(f[0],0,f[1]); world.add(g); box(2.0,1.25,1.2,mat(0x2a4a3a,{roughness:.6,metalness:.2}),0,0.65,0,g); box(2.05,0.08,1.25,mat(0x1a2a22),0,1.31,0,g).rotation.x=0.06;
     addBox(f[0],f[1],1.0,0.6); OUTHIDES.push({id:'dump'+OUTHIDES.length,in:0,f:0,x:f[0],z:f[1]+1.0,r:1.2,t:'Hide in the dumpster',cam:[f[0],0.95,f[1]],yaw:Math.PI}); });
   // picnic tables in the park
@@ -4809,8 +4809,9 @@ function teamTick(pl){ var tm=$('team'); if (!tm.hidden) tm.hidden=true; return;
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=67;
+var GAME_VER=68;
 var UPDATES=[
+  {v:68,t:'A bigger hotel with crossing halls',n:['The Night Haven Hotel is wider and deeper now. Its hallways form a cross: a long east-west hall with rooms on both sides, crossed by a north-south hall, meeting at a hub with a chandelier and signs to each wing.','Four ways in and out: the lobby doors facing the parking, a back exit at the end of the north hall, and open exits at both ends of the east-west hall.','Generators sit in the hall beside each room’s door, never at the very end of a hall.']},
   {v:67,t:'The Girl',n:['A new killer: the Girl. White dress, grey skin, long black hair hanging over her face.','She walks slowly, but she twitches: her head snaps to new angles, her body shudders, her walk stutters and freezes, and then she lunges.','She has her own jump scare: her face, hair parting, mouth stretching open too far. Get close and look at her and she’ll do it again.','Choose who hunts you in the lobby: the Masked Man, the Girl, or both at once.']},
   {v:66,t:'Night Haven Hotel',n:['The motel is gone. In its place: the Night Haven Hotel, a one-storey hotel with all 18 rooms off one long carpeted hallway and a generator beside every door. Pick it in the lobby.','Walk in through the lobby (front desk, sofa, glass doors) from the hotel parking out front, or through the open exit at the far end of the hallway. The gas station is right next door.','Hotel rooms are real hotel rooms now: one floor, a king bed, nightstand, a dresser with a TV, a desk under the window, a closet, luggage and a bathroom with a tub.','Hotel chores: wash the glasses, vacuum, mop the bathroom, dust the dresser, take out the trash, make the bed, scrub the tub. Hide under the bed, in the closet or behind the shower curtain.','The tree standing in the parking lot by the gas station is gone.']},
   {v:65,t:'Finish the whole job',n:['To win, every generator has to be running and every house or room fully cleaned: 18 generators and 36 chores. Then get back to your car.','Once the whole job is done, a cut generator can’t undo it.','No more surviving until 6:00 AM. The night doesn’t end: finish the job and drive out, or the killer gets you.','Inside a house or room, walk up to the front door and press E (or tap Open) to open it and step out.']},
@@ -4873,7 +4874,7 @@ window.addEventListener('appinstalled',function(){ installEvt=null; $('mInstall'
 })();
 
 /* ---------- the map: Hollow Lane ---------- */
-var MAPS=[{id:'lane',n:'Hollow Lane',d:'The neighbourhood: 18 houses, the gas station and the police station.'},{id:'hotel',n:'Night Haven Hotel',d:'A one-storey hotel: 18 rooms off one long hallway, a generator beside every door, parking out front, the gas station next door.'}];
+var MAPS=[{id:'lane',n:'Hollow Lane',d:'The neighbourhood: 18 houses, the gas station and the police station.'},{id:'hotel',n:'Night Haven Hotel',d:'A one-storey hotel with crossing hallways: 18 rooms, a generator beside every door, parking out front, the gas station next door.'}];
 var applyMap, grassOff=false, curMap='lane', mapFogD=0.042, MAPT={}, OUTHIDES0=null;
 function mapName(id){ for (var i=0;i<MAPS.length;i++) if (MAPS[i].id===id) return MAPS[i].n; return MAPS[0].n; }
 (function(){
@@ -4948,19 +4949,19 @@ function mapName(id){ for (var i=0;i<MAPS.length;i++) if (MAPS[i].id===id) retur
 // One storey. Every room opens off a carpeted hallway that runs through the middle of the building,
 // each with its own generator beside its door. The lobby is at the west end, by the gas station; parking out front.
 var WMAP='lane', LANE_HOUSES=null, HOTEL=null;
-var HOTEL_BOX={x0:-50.2,x1:20.6,z0:12.4,z1:31.6}, HOTEL_LOT={x0:-50,x1:20,z0:5.6,z1:12.2};
-function inHotel(x,z){ return x>HOTEL_BOX.x0 && x<HOTEL_BOX.x1 && z>HOTEL_BOX.z0 && z<HOTEL_BOX.z1; }
+var HOTEL_BOX={x0:-50.5,x1:15.5,z0:11.0,z1:37.7}, HOTEL_LOT={x0:-50,x1:15,z0:5.4,z1:11.0}, HUB={x:-14,z:25.5};
+function inHotel(x,z){ if (!(x>HOTEL_BOX.x0 && x<HOTEL_BOX.x1 && z>HOTEL_BOX.z0 && z<HOTEL_BOX.z1)) return false; return Math.abs(z-25.5)<1.4 || Math.abs(x+14)<1.45 || (z<16.2 && x>-20 && x<-8); }
 function buildHotel(){
   var G=new THREE.Group(); G.visible=false; world.add(G); var cols=[], rooms=[];
   function col(x,z,hx,hz){ var c={minX:x-hx,maxX:x+hx,minZ:z-hz,maxZ:z+hz}; cols.push(c); return c; }
   var outM=new THREE.MeshStandardMaterial({map:rep(brickTex,6,2),color:lin(0xb89a86),roughness:.9}), hallM=mat(0xd8ccb0,{roughness:.9}), trimH=mat(0x3a2a20,{roughness:.6}),
       carpet=new THREE.MeshStandardMaterial({map:canvasTex(64,64,function(c){ c.fillStyle='#5a1a1e'; c.fillRect(0,0,64,64); c.fillStyle='#7a2a24'; for (var i=0;i<8;i++) for (var j=0;j<8;j++) if ((i+j)%2) c.fillRect(i*8+2,j*8+2,4,4); c.fillStyle='#c8a050'; c.fillRect(0,0,64,2); c.fillRect(0,62,64,2); }),roughness:1}),
       doorM=mat(0x4a2a1a,{roughness:.45}), roofM2=mat(0x2a2a2e,{roughness:.9}), asph=mat(0x1c1d20,{roughness:.95}), lineM=mat(0xd8d4c4,{roughness:.8}), marble=mat(0xe0dcd0,{roughness:.25}), gold=mat(0xc8a050,{roughness:.3,metalness:.7});
-  carpet.map.wrapS=carpet.map.wrapT=THREE.RepeatWrapping; carpet.map.repeat.set(20,1);
   var numTex=function(t){ return new THREE.MeshBasicMaterial({map:canvasTex(64,32,function(c){ c.fillStyle='#c8a050'; c.fillRect(0,0,64,32); c.fillStyle='#1a1008'; c.font='bold 22px monospace'; c.textAlign='center'; c.fillText(t,32,24); })}); };
-  // rooms: 9 on each side of the hallway (hallway runs along z = 20.7 .. 23.3)
-  [-1,1].forEach(function(side){ for (var i=0;i<9;i++){
-    var idx=rooms.length, hx=-40+i*7, z=side>0?27.3:16.7, dx=hx+side*1.75, g=new THREE.Group(); g.position.set(dx,0,z); g.rotation.y=side>0?Math.PI:0; G.add(g);   // local +Z faces the hallway
+  // rooms on both sides of the long east-west hallway, split by the north-south hallway: 5 + 5 to the west, 4 + 4 to the east
+  var XS=[-46.8,-39.8,-32.8,-25.8,-18.8,-9.2,-2.2,4.8,11.8];
+  [-1,1].forEach(function(side){ XS.forEach(function(hx,i){
+    var idx=rooms.length, z=side>0?30.8:20.2, dx=hx+side*1.75, g=new THREE.Group(); g.position.set(dx,0,z); g.rotation.y=side>0?Math.PI:0; G.add(g);
     box(7.0,3.4,8.0,hallM,1.75,1.7,0,g); box(7.02,0.14,8.02,trimH,1.75,0.07,0,g); box(7.06,0.3,8.06,outM,1.75,3.45,0,g);
     var litWin=[], litFx=[];
     box(1.5,2.5,0.1,trimH,0,1.27,4.0,g);
@@ -4968,43 +4969,50 @@ function buildHotel(){
     var knob=new THREE.Mesh(new THREE.SphereGeometry(0.05,8,6),gold); knob.position.set(0.995,-0.08,0.08); pivot.add(knob);
     var hall=box(1.15,2.3,0.02,glow(0xc98a48),0,1.2,4.07,g); hall.visible=false;
     var broken=box(1.15,0.1,2.3,doorM,0.55,0.12,5.0,g); broken.rotation.y=0.3; broken.visible=false;
-    var pl=new THREE.Mesh(new THREE.PlaneGeometry(0.4,0.2),numTex(String(side>0?101+i:120-i))); pl.position.set(0.95,1.55,4.06); g.add(pl);
+    var pl=new THREE.Mesh(new THREE.PlaneGeometry(0.4,0.2),numTex(String((side>0?201:101)+i))); pl.position.set(0.95,1.55,4.06); g.add(pl);
     var lb=box(0.5,0.12,0.1,glow(0xffd9a0),0,2.75,4.06,g); litFx.push(lb); litFx.push(halo(0xffc880,2.4,0,2.65,4.3,g,.5));
-    // its generator, in the hallway right beside the door
-    var gen=new THREE.Group(); gen.position.set(-2.3,0.04,4.48); g.add(gen);
+    var gen=new THREE.Group(); gen.position.set(2.75,0.04,4.48); g.add(gen);
     box(1.05,0.08,0.5,ironM,0,0.04,0,gen); box(0.95,0.48,0.42,mat(0x8a2a1a,{roughness:.5,metalness:.3}),0,0.32,0,gen); box(0.45,0.2,0.4,mat(0x1a1b1f,{roughness:.4,metalness:.5}),-0.2,0.66,0,gen);
     var glamp=new THREE.Mesh(new THREE.SphereGeometry(0.05,8,6),new THREE.MeshBasicMaterial({color:0x38ff6a})); glamp.position.set(0.3,0.42,0.22); gen.add(glamp);
-    var gwx=dx+side*2.3, gwz=z-side*4.48; col(gwx,gwz,0.52,0.25);
+    var gwx=dx-side*2.75, gwz=z-side*4.48; col(gwx,gwz,0.52,0.25);
     col(hx,z,3.5,4.0);
     rooms.push({gen:{g:gen,lamp:glamp,x:gwx,z:gwz,broken:false},power:true,litWin:litWin,litFx:litFx,x:dx,z:z,side:side,g:g,pivot:pivot,hall:hall,broken:broken,cd:0,open:0,n:idx,breached:false,dead:false,hotel:true});
-  } });
-  // the hallway: carpet, ceiling and lights, with an open exit at the east end
-  var cp=new THREE.Mesh(new THREE.PlaneGeometry(63,2.6),carpet); cp.rotation.x=-Math.PI/2; cp.position.set(-12,0.03,22); cp.userData.noSnap=1; G.add(cp);
-  box(70.8,0.25,19.2,roofM2,-14.8,3.55,22,G);
-  for (var L=-40;L<=16;L+=7){ box(1.2,0.05,0.5,glow(0xfff0d8),L+3.5,3.36,22,G); halo(0xffe8c0,3.2,L+3.5,3.1,22,G,.45); }
-  box(0.3,3.4,0.3,outM,19.65,1.7,20.55,G); box(0.3,3.4,0.3,outM,19.65,1.7,23.45,G); box(0.3,0.8,3.2,outM,19.65,3.0,22,G);
-  var ex=new THREE.Mesh(new THREE.PlaneGeometry(0.6,0.22),new THREE.MeshBasicMaterial({map:canvasTex(64,24,function(c){ c.fillStyle='#0a3a0a'; c.fillRect(0,0,64,24); c.fillStyle='#4aff6a'; c.font='bold 16px monospace'; c.fillText('EXIT',14,17); })})); ex.position.set(19.45,2.9,22); ex.rotation.y=-Math.PI/2; G.add(ex);
-  // the lobby at the west end: front doors to the parking, the desk, a sofa and a plant
+  }); });
+  // the hallways: east-west and north-south, crossing at a hub in the middle, carpet, ceilings and lights
+  function carpetStrip(x,z,w,d,rot){ var t=carpet.clone(); t.map=carpet.map.clone(); t.map.wrapS=t.map.wrapT=THREE.RepeatWrapping; t.map.repeat.set(Math.max(w,d)/3.2,1); t.map.needsUpdate=true; var c=new THREE.Mesh(new THREE.PlaneGeometry(w,d),t); c.rotation.x=-Math.PI/2; if (rot) c.rotation.z=Math.PI/2; c.position.set(x,0.03,z); c.userData.noSnap=1; G.add(c); }
+  carpetStrip(-17.5,25.5,65.8,2.6); carpetStrip(-14,24.3,26.4,2.6,true);
+  box(66.1,0.25,3.0,roofM2,-17.5,3.55,25.5,G); box(3.0,0.25,26.6,roofM2,-14,3.55,24.3,G);
+  [-47,-40,-33,-26,-19,-9,-2,5,12].forEach(function(L){ box(1.2,0.05,0.5,glow(0xfff0d8),L,3.36,25.5,G); halo(0xffe8c0,3.2,L,3.1,25.5,G,.45); });
+  [19.5,31,36].forEach(function(L){ box(0.5,0.05,1.2,glow(0xfff0d8),-14,3.36,L,G); halo(0xffe8c0,3.2,-14,3.1,L,G,.45); });
+  // the hub: a chandelier, a rug and signs pointing down each hall
+  var hubRug=new THREE.Mesh(new THREE.CircleGeometry(1.25,20),mat(0x2a3a5a,{roughness:1})); hubRug.rotation.x=-Math.PI/2; hubRug.position.set(-14,0.04,25.5); hubRug.userData.noSnap=1; G.add(hubRug);
+  cyl(0.5,0.15,0.35,10,gold,-14,3.15,25.5,G); halo(0xffe0a0,4.5,-14,2.9,25.5,G,.6);
+  var signT=canvasTex(256,64,function(c){ c.fillStyle='#1a1008'; c.fillRect(0,0,256,64); c.fillStyle='#c8a050'; c.font='bold 22px monospace'; c.textAlign='center'; c.fillText('101-105 · 201-205 ←',128,26); c.fillText('→ 106-109 · 206-209',128,54); });
+  [[-15.29,Math.PI/2],[-12.71,-Math.PI/2]].forEach(function(p){ var m=new THREE.Mesh(new THREE.PlaneGeometry(1.5,0.38),new THREE.MeshBasicMaterial({map:signT})); m.position.set(p[0],2.5,21.5); m.rotation.y=p[1]; G.add(m); });
+  // the north arm runs out past the rooms to a back exit; each arm ends in an open doorway
+  box(0.3,3.4,2.9,outM,-15.45,1.7,36.2,G); col(-15.45,36.2,0.15,1.45); box(0.3,3.4,2.9,outM,-12.55,1.7,36.2,G); col(-12.55,36.2,0.15,1.45); box(3.2,0.8,0.3,outM,-14,3.0,37.6,G);
+  [[-50.4,25.5,0.3,3.2],[15.4,25.5,0.3,3.2]].forEach(function(e){ box(e[2],0.8,e[3],outM,e[0],3.0,e[1],G); });
+  [[-50.35,0.5*Math.PI],[15.35,-0.5*Math.PI],[-14,Math.PI*1.0]].forEach(function(e,k){ var ex=new THREE.Mesh(new THREE.PlaneGeometry(0.6,0.22),new THREE.MeshBasicMaterial({map:canvasTex(64,24,function(c){ c.fillStyle='#0a3a0a'; c.fillRect(0,0,64,24); c.fillStyle='#4aff6a'; c.font='bold 16px monospace'; c.fillText('EXIT',14,17); })}));
+    if (k<2){ ex.position.set(e[0]+(k?-0.2:0.2),2.9,25.5); ex.rotation.y=e[1]; } else { ex.position.set(-14,2.9,37.4); ex.rotation.y=Math.PI; } G.add(ex); });
+  // the lobby, out front of the south arm: glass doors, the desk, a sofa and a plant
   var lob=new THREE.Group(); G.add(lob);
-  var lf=new THREE.Mesh(new THREE.PlaneGeometry(6.5,18.6),marble); lf.rotation.x=-Math.PI/2; lf.position.set(-46.75,0.03,22); lf.userData.noSnap=1; lob.add(lf);
-  box(0.3,3.4,18.9,outM,-50.0,1.7,22,lob); col(-50.0,22,0.15,9.45);
-  box(6.5,3.4,0.3,outM,-46.75,1.7,31.45,lob); col(-46.75,31.45,3.25,0.15);
-  box(2.0,3.4,0.3,outM,-48.85,1.7,12.55,lob); col(-48.85,12.55,1.0,0.15); box(1.6,3.4,0.3,outM,-44.3,1.7,12.55,lob); col(-44.3,12.55,0.8,0.15); box(2.9,0.9,0.3,outM,-46.4,2.95,12.55,lob);
-  box(0.3,3.4,8.0,outM,-43.65,1.7,16.6,lob); col(-43.65,16.6,0.15,4.0); box(0.3,3.4,8.0,outM,-43.65,1.7,27.4,lob); col(-43.65,27.4,0.15,4.0);
+  var lf=new THREE.Mesh(new THREE.PlaneGeometry(12,5.0),marble); lf.rotation.x=-Math.PI/2; lf.position.set(-14,0.03,13.7); lf.userData.noSnap=1; lob.add(lf);
+  box(0.3,3.4,5.0,outM,-20,1.7,13.7,lob); col(-20,13.7,0.15,2.5); box(0.3,3.4,5.0,outM,-8,1.7,13.7,lob); col(-8,13.7,0.15,2.5);
+  box(4.6,3.4,0.3,outM,-17.7,1.7,11.2,lob); col(-17.7,11.2,2.3,0.15); box(4.6,3.4,0.3,outM,-10.3,1.7,11.2,lob); col(-10.3,11.2,2.3,0.15); box(2.8,0.9,0.3,outM,-14,2.95,11.2,lob);
+  box(12.4,0.25,5.4,roofM2,-14,3.55,13.7,lob);
   var gl2=new THREE.MeshStandardMaterial({color:lin(0x9fc0d0),transparent:true,opacity:.25,roughness:.05,depthWrite:false});
-  [-1,1].forEach(function(s2){ var d=box(1.0,2.4,0.06,gl2,-46.4+s2*1.35,1.2,12.4,lob); box(0.06,2.4,0.08,trimH,-46.4+s2*0.85,1.2,12.4,lob); });
-  box(1.0,1.1,4.0,mat(0x4a2a1a,{roughness:.4}),-48.6,0.55,26.0,lob); box(1.1,0.06,4.1,marble,-48.6,1.13,26.0,lob); col(-48.6,26.0,0.5,2.0);
-  var bell=new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6,0,Math.PI*2,0,Math.PI/2),gold); bell.position.set(-48.2,1.16,25.2); lob.add(bell);
-  box(2.4,0.45,0.9,mat(0x2a4a3a,{roughness:1}),-45.3,0.23,16.0,lob); box(2.4,0.55,0.22,mat(0x2a4a3a,{roughness:1}),-45.3,0.6,15.6,lob); col(-45.3,15.9,1.2,0.5);
-  cyl(0.3,0.22,0.6,10,mat(0x6a4a32),-49.2,0.3,13.6,lob); var leaf=new THREE.Mesh(new THREE.IcosahedronGeometry(0.6,1),mat(0x2a5a2a,{roughness:1})); leaf.position.set(-49.2,1.1,13.6); lob.add(leaf); col(-49.2,13.6,0.35,0.35);
-  box(6.0,0.05,1.0,glow(0xfff0d8),-46.75,3.36,22,lob); halo(0xfff0d0,6,-46.75,3.0,20,lob,.45); halo(0xfff0d0,6,-46.75,3.0,27,lob,.4);
-  // the name on the front, facing the road
+  [-1,1].forEach(function(s2){ box(1.0,2.4,0.06,gl2,-14+s2*1.4,1.2,11.05,lob); box(0.06,2.4,0.08,trimH,-14+s2*0.9,1.2,11.05,lob); });
+  box(3.4,1.1,1.0,mat(0x4a2a1a,{roughness:.4}),-17.6,0.55,14.8,lob); box(3.5,0.06,1.1,marble,-17.6,1.13,14.8,lob); col(-17.6,14.8,1.7,0.5);
+  var bell=new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6,0,Math.PI*2,0,Math.PI/2),gold); bell.position.set(-16.6,1.16,14.4); lob.add(bell);
+  box(2.4,0.45,0.9,mat(0x2a4a3a,{roughness:1}),-10.0,0.23,13.0,lob); box(2.4,0.55,0.22,mat(0x2a4a3a,{roughness:1}),-10.0,0.6,13.4,lob); col(-10.0,13.1,1.2,0.5);
+  cyl(0.3,0.22,0.6,10,mat(0x6a4a32),-19.2,0.3,12.0,lob); var leaf=new THREE.Mesh(new THREE.IcosahedronGeometry(0.6,1),mat(0x2a5a2a,{roughness:1})); leaf.position.set(-19.2,1.1,12.0); lob.add(leaf); col(-19.2,12.0,0.35,0.35);
+  box(6.0,0.05,1.0,glow(0xfff0d8),-14,3.36,13.7,lob); halo(0xfff0d0,6,-14,3.0,13.7,lob,.5);
   var nT=canvasTex(512,80,function(c){ c.fillStyle='#120a14'; c.fillRect(0,0,512,80); c.fillStyle='#ffcf6a'; c.font='bold 46px Georgia,serif'; c.textAlign='center'; c.fillText('NIGHT HAVEN HOTEL',256,56); });
-  var nm=new THREE.Mesh(new THREE.PlaneGeometry(14,2.2),new THREE.MeshBasicMaterial({map:nT})); nm.position.set(-20,4.9,12.2); nm.rotation.y=Math.PI; G.add(nm); box(14.4,2.5,0.2,mat(0x120a14),-20,4.9,12.35,G); halo(0xffcf6a,10,-20,4.9,11.6,G,.35);
-  box(3.4,0.12,3.2,roofM2,-46.4,3.0,10.8,G); [-1,1].forEach(function(s3){ box(0.12,3.0,0.12,gold,-46.4+s3*1.6,1.5,9.3,G); col(-46.4+s3*1.6,9.3,0.08,0.08); });
-  // hotel parking in front
-  var a=new THREE.Mesh(new THREE.PlaneGeometry(70,6.4),asph); a.rotation.x=-Math.PI/2; a.position.set(-15,0.017,8.9); a.userData.noSnap=1; a.receiveShadow=true; G.add(a);
-  for (var x=-44;x<=19;x+=3.2) if (Math.abs(x+46.4)>2.4) box(0.1,0.01,4.8,lineM,x,0.026,9.2,G);
+  var nm=new THREE.Mesh(new THREE.PlaneGeometry(11,1.75),new THREE.MeshBasicMaterial({map:nT})); nm.position.set(-14,4.6,10.9); nm.rotation.y=Math.PI; G.add(nm); box(11.4,2.0,0.2,mat(0x120a14),-14,4.6,11.05,G); halo(0xffcf6a,9,-14,4.6,10.3,G,.35);
+  box(3.6,0.12,2.6,roofM2,-14,3.0,9.8,G); [-1,1].forEach(function(s3){ box(0.12,3.0,0.12,gold,-14+s3*1.7,1.5,8.6,G); col(-14+s3*1.7,8.6,0.08,0.08); });
+  // parking in front
+  var a=new THREE.Mesh(new THREE.PlaneGeometry(65,5.4),asph); a.rotation.x=-Math.PI/2; a.position.set(-17.5,0.017,8.1); a.userData.noSnap=1; a.receiveShadow=true; G.add(a);
+  for (var x=-48;x<=14;x+=3.2) if (Math.abs(x+14)>2.6) box(0.1,0.01,4.4,lineM,x,0.026,8.3,G);
   G.traverse(function(o){ if (o.isMesh && o.material.isMeshStandardMaterial && !o.material.transparent){ o.castShadow=true; o.receiveShadow=true; } });
   function over(x,z,pad){ return (x>HOTEL_BOX.x0-pad && x<HOTEL_BOX.x1+pad && z>HOTEL_LOT.z0-pad && z<HOTEL_BOX.z1+pad); }
   var hideT=TREES.filter(function(t){ return over(t.g.position.x,t.g.position.z,2.5); });
@@ -5073,15 +5081,17 @@ function worldMap(id){
   houses.length=0; (ho?HOTEL.rooms:LANE_HOUSES).forEach(function(h){ houses.push(h); });
   hotelRoom(ho); WMAP=id; moonLight.shadow.needsUpdate=true;
 }
-// getting bots in and out of the building: through the lobby doors or the open hallway exit
+// getting bots in, out and around: four doorways (lobby, north, west, east), and the hub where the halls cross
 function hotelNav(e,g){ if (WMAP!=='hotel' || e.ih>=0) return null;
-  var ein=inHotel(e.x,e.z), gin=inHotel(g.x,g.z), ENT=[{o:{x:-46.4,z:10.4},i:{x:-46.4,z:14.2}},{o:{x:22.4,z:22},i:{x:18.4,z:22}}];
-  function best(p){ var b=ENT[0], bd=1e9; ENT.forEach(function(E){ var d=Math.hypot(E.o.x-p.x,E.o.z-p.z)+Math.hypot(E.o.x-g.x,E.o.z-g.z); if (d<bd){ bd=d; b=E; } }); return b; }
-  function past(E,a,b){ return Math.hypot(a.x-e.x,a.z-e.z)<1.4 || Math.hypot(b.x-e.x,b.z-e.z)<Math.hypot(b.x-a.x,b.z-a.z); }
-  if (gin && !ein){ var E=best(e); return past(E,E.o,E.i)?E.i:E.o; }
-  if (!gin && ein){ var E2=best(e), inLob=e.x<-43.6; if (inLob && E2===ENT[1] && Math.abs(e.z-22)>1.0) return {x:-44.6,z:22}; if (!inLob && E2===ENT[0] && e.x>-43) return {x:-44.6,z:22};
-    return past(E2,E2.i,E2.o)?E2.o:E2.i; }
-  if (gin && ein){ var el=e.x<-43.6, gl=g.x<-43.6; if (el!==gl && Math.abs(e.z-22)>1.0) return {x:-44.6,z:22}; }
+  var ein=inHotel(e.x,e.z), gin=inHotel(g.x,g.z), ENT=[{o:{x:-14,z:9.4},i:{x:-14,z:13.6}},{o:{x:-14,z:38.9},i:{x:-14,z:36.2}},{o:{x:-52.2,z:25.5},i:{x:-48.6,z:25.5}},{o:{x:17.2,z:25.5},i:{x:13.6,z:25.5}}];
+  function arm(p){ if (Math.abs(p.z-25.5)<1.5 && Math.abs(p.x+14)>1.5) return p.x<-14?'w':'e'; if (Math.abs(p.x+14)<1.5 && p.z>26.9) return 'n'; if (Math.abs(p.x+14)<1.5 || p.z<16.2) return 's'; return 'hub'; }
+  function armOfEnt(k){ return ['s','n','w','e'][k]; }
+  function past(a,b){ return Math.hypot(a.x-e.x,a.z-e.z)<1.4 || Math.hypot(b.x-e.x,b.z-e.z)<Math.hypot(b.x-a.x,b.z-a.z); }
+  function viaHub(fromArm,toArm){ if (fromArm===toArm || fromArm==='hub' || toArm==='hub') return null; if (Math.hypot(HUB.x-e.x,HUB.z-e.z)<1.0) return null; if ((fromArm==='w'&&toArm==='e')||(fromArm==='e'&&toArm==='w')||(fromArm==='n'&&toArm==='s')||(fromArm==='s'&&toArm==='n')) return null; return {x:HUB.x,z:HUB.z}; }
+  function best(p){ var b=0, bd=1e9; ENT.forEach(function(E,k){ var d=Math.hypot(E.o.x-p.x,E.o.z-p.z)+Math.hypot(E.o.x-g.x,E.o.z-g.z); if (d<bd){ bd=d; b=k; } }); return b; }
+  if (gin && !ein){ var k=best(e), E=ENT[k]; return past(E.o,E.i)?E.i:E.o; }
+  if (!gin && ein){ var k2=best(e), E2=ENT[k2], h=viaHub(arm(e),armOfEnt(k2)); if (h) return h; return past(E2.i,E2.o)?E2.o:E2.i; }
+  if (gin && ein){ return viaHub(arm(e),arm(g)); }
   return null; }
 
 /* ---------- everyone drives their own car in and parks in the lot at the end of the lane ---------- */
