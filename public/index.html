@@ -478,7 +478,7 @@ body{font-size:20px}
       <div id="kbList"></div>
       <div class="list"><button class="mbtn" id="kbReset" type="button">Reset to defaults</button></div>
     </div>
-    <p class="lab" id="keysHelp">W A S D move &middot; Mouse look &middot; Shift run &middot; C crouch &middot; F flashlight &middot; E use &middot; Esc pause &middot; Online: click or R uses what is in your left hand, killers click or V to swing, Q sense, Z scare, X vanish</p>
+    <p class="lab" id="keysHelp">W A S D move &middot; Mouse look &middot; Shift run &middot; C crouch &middot; F phone light &middot; E use &middot; Esc pause &middot; Online: click or R uses what is in your left hand, killers click or V to swing, Q sense, Z scare, X vanish</p>
     <div class="list"><button class="mbtn" id="setDone" type="button">Done</button></div>
   </div></div>
 
@@ -560,7 +560,7 @@ var reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)'
 var isTouch = false;
 var KB_ACT=[{a:'fwd',n:'Move forward',d:'KeyW'},{a:'back',n:'Move back',d:'KeyS'},{a:'left',n:'Move left',d:'KeyA'},{a:'right',n:'Move right',d:'KeyD'},
   {a:'run',n:'Run',d:'ShiftLeft'},{a:'crouch',n:'Crouch',d:'KeyC'},{a:'use',n:'Interact / open / clean',d:'KeyE'},{a:'item',n:'Eat or drink a snack',d:'KeyR'},
-  {a:'light',n:'Flashlight',d:'KeyF'},{a:'phone',n:'Phone',d:'KeyT'},{a:'pause',n:'Pause',d:'KeyP'},{a:'spec',n:'Switch who you watch (dead)',d:'Space'}], kbWait=null;
+  {a:'light',n:'Phone light',d:'KeyF'},{a:'phone',n:'Phone',d:'KeyT'},{a:'pause',n:'Pause',d:'KeyP'},{a:'spec',n:'Switch who you watch (dead)',d:'Space'}], kbWait=null;
 function kbCode(a){ var K=(typeof SAVE!=='undefined' && SAVE.kb)||{}; for (var i=0;i<KB_ACT.length;i++) if (KB_ACT[i].a===a) return K[a]||KB_ACT[i].d; return null; }
 function kbName(c){ if (!c) return '—'; if (/^Key/.test(c)) return c.slice(3); if (/^Digit/.test(c)) return c.slice(5); if (/^Numpad/.test(c)) return 'Num '+c.slice(6);
   return ({ShiftLeft:'Left Shift',ShiftRight:'Right Shift',ControlLeft:'Left Ctrl',ControlRight:'Right Ctrl',AltLeft:'Left Alt',AltRight:'Right Alt',Space:'Space',Tab:'Tab',CapsLock:'Caps Lock',Enter:'Enter',Backquote:'`',Minus:'-',Equal:'=',BracketLeft:'[',BracketRight:']',Semicolon:';',Quote:"'",Comma:',',Period:'.',Slash:'/',Backslash:'\\'})[c]||c; }
@@ -578,7 +578,7 @@ function kbRender(){ var L=document.getElementById('kbList'); if (!L) return; L.
   KB_ACT.forEach(function(A){ var r=document.createElement('div'); r.className='kbRow'; var n=document.createElement('span'); n.textContent=A.n; var b=document.createElement('button'); b.type='button';
     b.textContent=kbWait===A.a?'Press a key…':kbName(kbCode(A.a)); if (kbWait===A.a) b.className='wait'; b.addEventListener('click',function(){ kbWait=A.a; kbRender(); }); r.appendChild(n); r.appendChild(b); L.appendChild(r); }); }
 function kbHelp(){ var el=document.getElementById('keysHelp'); if (!el || isTouch) return; var k=function(a){ return kbName(kbCode(a)); };
-  el.textContent=k('fwd')+' '+k('left')+' '+k('back')+' '+k('right')+' move · Mouse look · '+k('run')+' run · '+k('crouch')+' crouch · '+k('light')+' flashlight · '+k('use')+' interact · '+k('item')+' snack · '+k('phone')+' phone · Esc or '+k('pause')+' pause'; var pc=document.getElementById('phoneChipK'); if (pc) pc.textContent=k('phone'); }
+  el.textContent=k('fwd')+' '+k('left')+' '+k('back')+' '+k('right')+' move · Mouse look · '+k('run')+' run · '+k('crouch')+' crouch · '+k('light')+' phone light · '+k('use')+' interact · '+k('item')+' snack · '+k('phone')+' phone · Esc or '+k('pause')+' pause'; var pc=document.getElementById('phoneChipK'); if (pc) pc.textContent=k('phone'); }
 try { isTouch = matchMedia('(pointer: coarse)').matches; } catch(e){}
 
 /* ---------- renderer ---------- */
@@ -706,9 +706,9 @@ var sc = moonLight.shadow.camera; sc.left=-92; sc.right=92; sc.top=62; sc.bottom
 moonLight.shadow.bias=-0.0006; moonLight.shadow.normalBias=0.06; moonLight.shadow.autoUpdate=false;
 scene.add(moonLight); scene.add(moonLight.target);
 
-var torch = new THREE.SpotLight(lin(0xfff0d2), 2.6, 44, 0.46, 0.65, 1.25);
-torch.position.set(0.19,-0.15,-0.6);
-camera.add(torch); camera.add(torch.target); torch.target.position.set(0.02,-0.06,-10);
+var torch = new THREE.SpotLight(lin(0xf2f5ff), 2.3, 36, 0.6, 0.85, 1.35);
+torch.position.set(0.17,-0.08,-0.5);
+camera.add(torch); camera.add(torch.target); torch.target.position.set(0.0,-0.08,-10);
 torch.castShadow = true; torch.shadow.mapSize.set(1024,1024); torch.shadow.camera.near=0.4; torch.shadow.camera.far=44; torch.shadow.bias=-0.0015; torch.shadow.normalBias=0.02;
 
 var lampLights = [0,1].map(function(){ var l=new THREE.PointLight(lin(0xffc27a), 2.2, 20, 1.6); scene.add(l); return l; });
@@ -1241,15 +1241,12 @@ var leafPts=(function(){
   p.frustumCulled=false; scene.add(p); return {p:p,pos:pos,ph:ph,n:n};
 })();
 
-/* ---------- flashlight in hand ---------- */
+/* ---------- your right hand: it holds the phone, and the phone's light is your light ---------- */
 var vmGlove, vmSleeve;
 var vm=new THREE.Group(); camera.add(vm);
 var lensM=glow(0xfff4d8);
 (function(){
   var metal=mat(0x26282d,{roughness:.32,metalness:.7,emissive:lin(0x050506)}), glove=mat(0x2a2623,{roughness:.9,emissive:lin(0x040404)}), sleeve=mat(0x2b3442,{roughness:.95,emissive:lin(0x030405)}); vmGlove=glove; vmSleeve=sleeve;
-  var f=new THREE.Group(); f.rotation.x=Math.PI/2; vm.add(f);            // cylinder axis along the view direction, -Y is forward
-  cyl(0.02,0.02,0.2,16,metal,0,0.02,0,f); cyl(0.034,0.021,0.055,16,metal,0,-0.105,0,f); cyl(0.036,0.036,0.03,16,metal,0,-0.145,0,f); cyl(0.021,0.021,0.012,16,metal,0,0.125,0,f);
-  var lens=new THREE.Mesh(new THREE.CircleGeometry(0.031,18),lensM); lens.rotation.x=Math.PI/2; lens.position.y=-0.161; f.add(lens);
   var palm=new THREE.Mesh(new THREE.SphereGeometry(0.042,14,10),glove); palm.scale.set(1.05,0.95,1.35); palm.position.set(0.004,-0.012,0.03); vm.add(palm);
   [-.036,-.012,.012,.036].forEach(function(z){ var k=new THREE.Mesh(new THREE.SphereGeometry(0.015,8,6),glove); k.scale.set(1.5,1,1); k.position.set(-0.012,0.026,0.03+z); vm.add(k); });
   var th=new THREE.Mesh(new THREE.SphereGeometry(0.014,8,6),glove); th.scale.set(1,1,2.6); th.position.set(0.024,0.022,-0.012); vm.add(th);
@@ -4439,17 +4436,21 @@ function placeName(x,z,ih){ if (ih>=0) return 'in '+houseName(ih); if (inStore(x
   var best=-1, bd=14; houses.forEach(function(h,i){ var d=Math.hypot(h.x-x,h.z-z); if (d<bd){ bd=d; best=i; } }); return best>=0?'outside '+houseName(best):'out on the street'; }
 // the phone you can see in your hand, with a little lock screen on it
 (function(){
-  var g=new THREE.Group(); g.position.set(0.004,0.072,-0.018); g.rotation.set(-0.42,0,0.02); vmL.add(g);
+  var g=new THREE.Group(); g.position.set(-0.014,0.07,-0.014); g.rotation.set(-0.36,-0.12,0.06); vm.add(g);
+  box(0.012,0.012,0.003,lensM,0.022,0.058,-0.0075,g); var ring=new THREE.Mesh(new THREE.RingGeometry(0.008,0.011,12),mat(0x8a8d94,{roughness:.3,metalness:.8})); ring.position.set(0.022,0.058,-0.0076); ring.rotation.y=Math.PI; g.add(ring);
+  box(0.016,0.016,0.004,mat(0x08090c,{roughness:.2}),0.006,0.058,-0.0072,g);
   box(0.07,0.142,0.009,mat(0x15161b,{roughness:.35,metalness:.4}),0,0,0,g); box(0.072,0.144,0.006,mat(0x3a3d46,{roughness:.3,metalness:.6}),0,0,-0.003,g);
   var cv=document.createElement('canvas'); cv.width=96; cv.height=192; var tex=new THREE.CanvasTexture(cv); tex.encoding=THREE.sRGBEncoding;
   var scr=new THREE.Mesh(new THREE.PlaneGeometry(0.062,0.128),new THREE.MeshBasicMaterial({map:tex})); scr.position.z=0.0048; g.add(scr);
   PHONE.g=g; PHONE.cv=cv; PHONE.tex=tex; g.visible=false;
 })();
+phDrawHand();
 function phDrawHand(){ var c=PHONE.cv.getContext('2d'), N=net, W=96, H=192; var gr=c.createLinearGradient(0,0,0,H); gr.addColorStop(0,'#1b2a44'); gr.addColorStop(1,'#120c1a'); c.fillStyle=gr; c.fillRect(0,0,W,H);
   c.fillStyle='#eef1f6'; c.textAlign='center'; c.font='bold 20px Arial'; c.fillText(clockStr(N).replace(/ [AP]M/,''),W/2,40); c.font='10px Arial'; c.fillStyle='#9fb0c8'; c.fillText('OCT 31',W/2,54);
   var hot=PHONE.kd<20, pulse=0.5+0.5*Math.sin(PHONE.ph*Math.PI*2); c.fillStyle=hot?'rgba(255,'+Math.round(60+pulse*60)+',60,1)':'#ff6a6a'; c.font='bold 26px Arial'; c.fillText('♥',W/2-20,100);
   c.fillStyle=hot?'#ff4a4a':'#eef1f6'; c.font='bold 22px Arial'; c.fillText(String(Math.round(PHONE.bpm)),W/2+14,100); c.font='9px Arial'; c.fillStyle='#9fb0c8'; c.fillText('BPM',W/2+14,112);
   c.fillStyle='#5be09a'; c.font='bold 18px Arial'; c.fillText('$'+((N&&N.cash)||0),W/2,148);
+  if (P.light){ c.fillStyle='#fff6c8'; c.beginPath(); c.moveTo(14,176); c.lineTo(22,176); c.lineTo(20,186); c.lineTo(16,186); c.fill(); c.fillRect(15,168,6,7); }
   if (PHONE.unread){ c.fillStyle='#e0322a'; c.beginPath(); c.arc(W-16,16,10,0,7); c.fill(); c.fillStyle='#fff'; c.font='bold 12px Arial'; c.fillText(String(Math.min(9,PHONE.unread)),W-16,20); }
   PHONE.tex.needsUpdate=true; }
 // opening and closing
@@ -4547,7 +4548,7 @@ function netHurt(){ gore(); stabSound(); shake(); var hf=fwd(); bloodBurst(camer
 /* the frame */
 /* ---------- spectating, and fate cards for the dead ---------- */
 var FATE=[{id:'spd',n:'Swift',d:'Faster for 20 s',g:1,i:'»'},{id:'shield',n:'Guardian',d:'Blocks the next hit',g:1,i:'◈'},{id:'stam',n:'Second Wind',d:'Endless stamina 20 s',g:1,i:'∞'},{id:'ghost',n:'Shroud',d:'Unseen for 15 s',g:1,i:'◌'},{id:'heal',n:'Mend',d:'+1 health',g:1,i:'+'},{id:'cash',n:'Lucky Find',d:'+$5',g:1,i:'$'},
-  {id:'slow',n:'Lead Feet',d:'Slowed for 6 s',g:0,i:'↓'},{id:'noisy',n:'Loud Mouth',d:'The killer hears them 10 s',g:0,i:'!'},{id:'dark',n:'Dead Battery',d:'Flashlight dies',g:0,i:'×'},{id:'broke',n:'Pickpocket',d:'Lose $5',g:0,i:'¢'}];
+  {id:'slow',n:'Lead Feet',d:'Slowed for 6 s',g:0,i:'↓'},{id:'noisy',n:'Loud Mouth',d:'The killer hears them 10 s',g:0,i:'!'},{id:'dark',n:'Dead Battery',d:'Phone light dies',g:0,i:'×'},{id:'broke',n:'Pickpocket',d:'Lose $5',g:0,i:'¢'}];
 function fateOf(id){ for (var i=0;i<FATE.length;i++) if (FATE[i].id===id) return FATE[i]; return null; }
 function specTick(dt,surv,pl){ var N=net, bar=$('specBar'), fp=$('fatePanel'), dead=N.alive!==1 && game.mode==='play' && N.mode==='s';
   if (bar.hidden===dead) bar.hidden=!dead; if (!dead){ if (!fp.hidden) fp.hidden=true; N.specId=null; return; }
@@ -5275,8 +5276,9 @@ function teamTick(pl){ var tm=$('team'); if (!tm.hidden) tm.hidden=true; return;
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=77;
+var GAME_VER=78;
 var UPDATES=[
+  {v:78,t:'Phone light',n:['The flashlight is gone. Your phone is in your right hand now, and its light on the back is your light: F (or tap Light) turns it on and off.','The phone light is a little wider and whiter than the old flashlight, and does not reach quite as far.','Bring the phone up with T (or tap Phone): your right hand lifts it to your face.']},
   {v:77,t:'Studio card fix',n:['The Treyyy Studios card now always shows. The cards wait until the game has finished loading, so a slow phone can no longer skip past the first one while it is still busy.']},
   {v:76,t:'Unskippable intro',n:['The Treyyy Studios card and the notice can’t be skipped: every key, click and tap is ignored until both have played for their full 5 seconds.','If the game opens in a background tab, the cards wait until you are looking.']},
   {v:75,t:'Notice reworded',n:['The opening notice now reads: “All characters and environments are not based on any real-life events. Anything in this game that is close to a real tragedy is surely a mistake.”']},
@@ -6065,8 +6067,9 @@ function update(dt){
   camera.position.set(P.x+rx*sdx,P.eye+bob*(P.crouch?0.5:1)+brt+P.gy,P.z+rz*sdx); camera.rotation.set(P.pitch+FX.gpS+shk,P.yaw+FX.gyS+shk*0.7,FX.roll);
   if (vmKnife.visible){ var swg=FX.sw||0; vmKnife.position.set(sdx*0.5-swg*0.12,-bob*0.7+brt-(wantRun?0.02:0)+swg*0.1,-swg*0.18); vmKnife.rotation.set((wantRun?0.1+Math.sin(P.bob)*0.05:0)-swg*1.3,swg*0.5,-FX.roll*2+swg*0.6); }
   sway.x*=Math.max(0,1-dt*7); sway.y*=Math.max(0,1-dt*7);
-  vm.position.set(vmBase.x+sway.x+(reduced?0:Math.cos(P.bob*.5)*.012*m)+ik*Math.sin(game.time*37)*0.0022, vmBase.y+sway.y-bob*(wantRun?.9:.5)+brt*0.8-(wantRun?.03:0)+ik*Math.sin(game.time*43)*0.0018, vmBase.z);
-  vm.rotation.set(sway.y*2+(wantRun?.25+Math.sin(P.bob)*0.04:0)+.04, -sway.x*2+.1, -FX.roll*1.5);
+  PHONE.lift=(PHONE.lift||0)+(((PHONE.open&&phoneOK())?1:0)-(PHONE.lift||0))*Math.min(1,dt*9); var pl=PHONE.lift;
+  vm.position.set(vmBase.x+sway.x+(reduced?0:Math.cos(P.bob*.5)*.012*m)+ik*Math.sin(game.time*37)*0.0022-pl*0.11, vmBase.y+sway.y-bob*(wantRun?.9:.5)+brt*0.8-(wantRun?.03:0)+ik*Math.sin(game.time*43)*0.0018+pl*0.07, vmBase.z+pl*0.12);
+  vm.rotation.set(sway.y*2+(wantRun?.25+Math.sin(P.bob)*0.04:0)+.04+pl*0.42, -sway.x*2+.1+pl*0.3, -FX.roll*1.5);
   var st=$('stamina'); st.firstElementChild.style.width=(P.stamina*100)+'%'; st.classList.toggle('low',P.spent);
   if (game.kA>0){ game.kA-=dt; var kt=0.85-game.kA, kup=Math.min(1,kt/0.12)*Math.min(1,Math.max(0,game.kA)/0.15), rap=0;
     [0.14,0.33,0.52].forEach(function(c){ rap=Math.max(rap,Math.exp(-Math.pow((kt-c)/0.05,2))); });
@@ -6078,11 +6081,10 @@ function update(dt){
       vmL.visible=true; vmL.position.set(-0.12,-0.4+gk*0.14,-0.38-gk*0.2); vmL.rotation.set(-0.5*gk,0.2,0.5*gk); }
     else if (FX.work>0.02){ var wt=game.time;
       vmL.visible=true; vmL.position.set(-0.13+Math.sin(wt*6.5)*0.03,-0.48+FX.work*0.26+Math.sin(wt*13)*0.012,-0.42+Math.cos(wt*6.5)*0.03); vmL.rotation.set(0.3+Math.sin(wt*13)*0.14,0.25,0.35+Math.sin(wt*6.5)*0.2); }
-    else if (PHONE.open && phoneOK() && net.alive===1){ var pb=reduced?0:Math.sin(P.bob)*0.006; vmL.visible=true; vmL.position.set(-0.1,-0.16+pb,-0.3); vmL.rotation.set(0.62,0.28,0.04); }
     else if (heldShow()){ vmL.visible=true; vmL.position.set(-0.2,-0.3+(reduced?0:Math.sin(P.bob)*0.01),-0.45); vmL.rotation.set(0.15,0.35,0.1); }
     else if ((vm.visible || vmKnife.visible) && game.mode==='play'){ var kl=game.role==='killer'; vmL.visible=true; vmL.position.set(kl?-0.26:-0.24,(kl?-0.3:-0.29)+(reduced?0:Math.sin(P.bob+1.2)*0.012)-bob*0.4,kl?-0.44:-0.43); vmL.rotation.set(0.12,0.32,kl?0.3:0.18); }
     else if (vmL.visible) vmL.visible=false;
-    if (PHONE.g) PHONE.g.visible=vmL.visible && phoneOK() && net.alive===1 && !vanPhase(net) && !net.hide && !(game.grab>0) && FX.work<=0.02 && !(net.held);
+    if (PHONE.g) PHONE.g.visible=vm.visible;
   }
   if (vmRole!==game.role){ vmRole=game.role; var kk=game.role==='killer'; vmGlove.color.copy(lin(kk?0x141518:0xb88c6c)); vmSleeve.color.copy(lin(kk?0x1c2533:0x2b3442)); }
   heldShow();
