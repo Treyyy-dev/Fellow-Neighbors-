@@ -108,6 +108,47 @@ body.touch #team{bottom:auto;top:96px}
 #micBar.loud i{background:#e0322a;box-shadow:0 0 8px #e0322a}#micBar.loud b{color:#ff6a5a}
 #micBar em{position:absolute;left:45%;top:-3px;bottom:-3px;width:2px;background:rgba(255,255,255,.7)}
 #micBar.off{opacity:.55}
+#pad #btnPhone{position:absolute;right:84px;bottom:160px;font-size:11px}
+.phBadge{display:inline-block;min-width:16px;height:16px;line-height:16px;margin-left:5px;padding:0 4px;border-radius:8px;background:#e0322a;color:#fff;font-size:11px;font-weight:700;text-align:center;letter-spacing:0}
+#pad #btnPhone .phBadge{position:absolute;top:-2px;right:-2px;margin:0}
+#phoneChip{position:absolute;left:16px;bottom:64px;z-index:12;font:inherit;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--osd,#eee);text-shadow:var(--chroma);background:rgba(10,14,22,.55);border:1px solid rgba(231,226,210,.35);padding:4px 9px;cursor:pointer}
+#phNote{position:absolute;left:50%;top:58px;transform:translateX(-50%);z-index:30;max-width:min(86vw,360px);background:rgba(18,20,28,.92);color:#f2f2f2;border-radius:14px;padding:8px 14px;font:13px/1.35 Arial,sans-serif;box-shadow:0 6px 18px rgba(0,0,0,.5);pointer-events:none}
+#phNote b{color:#7fd0ff}
+#phone{position:absolute;left:26px;bottom:96px;z-index:25;width:236px;height:min(430px,calc(100% - 140px));background:#0b0c10;border:3px solid #2a2c34;border-radius:26px;box-shadow:0 10px 30px rgba(0,0,0,.6),inset 0 0 0 2px #050608;display:flex;flex-direction:column;overflow:hidden;font:13px/1.35 Arial,Helvetica,sans-serif;color:#eef1f6;text-shadow:none;letter-spacing:0;text-transform:none}
+#phone button{font:inherit;color:inherit;cursor:pointer}
+.phTop{display:flex;justify-content:space-between;align-items:center;padding:7px 14px 4px;font-size:11px;color:#cfd6e0}
+.phNotch{width:54px;height:12px;background:#000;border-radius:0 0 8px 8px;margin-top:-9px}
+.phScr{flex:1;display:flex;flex-direction:column;min-height:0;padding:4px 12px 6px;background:linear-gradient(170deg,#1b2a44,#0d1220 60%,#1a0f1e)}
+#phHome{align-items:center}
+.phDate{margin:14px 0 0;font-size:12px;letter-spacing:.2em;color:#9fb0c8}.phBig{margin:0 0 18px;font-size:44px;font-weight:300}
+.phApps{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.phApps button{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:0;padding:0;font-size:11px}
+.phApps .phBadge{position:absolute;top:-4px;right:-4px;margin:0}
+.ic{display:flex;align-items:center;justify-content:center;width:50px;height:50px;border-radius:13px;font-style:normal;font-size:24px;font-weight:700;box-shadow:0 3px 8px rgba(0,0,0,.4)}
+.icMsg{background:linear-gradient(#5be06a,#22a83a)}.icPulse{background:linear-gradient(#ff6a6a,#c4182a)}.icCash{background:linear-gradient(#3ad08a,#0e7a4e)}
+.phHead{display:flex;align-items:center;gap:6px;padding:2px 0 6px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:6px}
+.phBack{background:none;border:0;font-size:24px!important;line-height:1;padding:0 6px 0 0}
+#phList{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:5px;min-height:0;padding-right:2px}
+.phM{max-width:84%;padding:5px 9px;border-radius:12px;background:#2a2f3c;align-self:flex-start;word-wrap:break-word}
+.phM.me{align-self:flex-end;background:#2f7af0}.phM.bot{background:#33384a}.phM.ghost{background:#3a3550;font-style:italic}
+.phM small{display:block;font-size:10px;color:#9fb0c8}.phM.me small{color:#d6e6ff}
+.phEmpty{color:#7f8aa0;font-size:12px;text-align:center;margin-top:20px}
+#phQuick{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
+#phQuick button{background:#1e2533;border:1px solid #3a4560;border-radius:10px;padding:3px 7px;font-size:11px}
+.phSend{display:flex;gap:5px}
+#phIn{flex:1;min-width:0;background:#1a1f2b;border:1px solid #3a4560;border-radius:14px;color:#fff;padding:6px 10px;font:13px Arial,sans-serif;outline:none}
+#phGo{background:#2f7af0;border:0;border-radius:14px;padding:0 10px}
+#game #phEcg{position:static!important;inset:auto!important;display:block;width:100%!important;height:120px!important;flex:none;background:#06090c;border-radius:10px;margin:4px 0}
+.phBpm{margin:6px 0 0;text-align:center;font-size:14px;color:#ff8a8a}.phBpm b{font-size:40px;color:#ff4a4a}
+#phPulseInfo{text-align:center;margin:4px 0;font-weight:700}
+.phSmall{font-size:11px;color:#8f9ab0;margin:4px 0;text-align:center}
+.phBal{margin:0 0 10px;text-align:center;font-size:40px;color:#5be09a}
+.phRow{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px}
+#phTx{flex:1;overflow-y:auto;margin-top:8px;min-height:0}
+#phTx div{display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:3px 0;color:#c8d0dc}#phTx b.p{color:#5be09a}#phTx b.n{color:#ff7a7a}
+.phBar{height:22px;display:flex;align-items:center;justify-content:center;background:#0d1220}
+#phHomeBtn{width:84px;height:5px;border-radius:3px;background:#cfd6e0;border:0;padding:0}
+@media (pointer:coarse){#phone{left:50%;transform:translateX(-50%);top:46px;bottom:auto;height:min(400px,calc(100% - 64px));width:230px}#phoneChip{display:none}}
 #micBar.ghost i{background:#9ab0d8}#micBar.ghost em{display:none}#micBar.ghost b{color:#b8c8e8}
 #vcList{position:absolute;left:16px;bottom:40px;z-index:12;color:#7fe08a;text-shadow:var(--chroma);font-size:14px;letter-spacing:.08em;text-transform:uppercase;pointer-events:none;line-height:1.5}
 #vcList div::before{content:'\25B6\FE0E  ';font-size:10px}
@@ -262,6 +303,40 @@ body{font-size:20px}
   <div class="hud" id="hpBar" hidden aria-label="Health"><b></b><b></b><b></b></div>
   <div id="micBar" hidden role="button" tabindex="0" aria-label="Microphone"><b id="micLab">MIC</b><span><i id="micFill"></i><em></em></span></div>
   <div id="vcList" hidden aria-live="polite"></div>
+  <button id="phoneChip" type="button" hidden><span id="phoneChipK">T</span> · Phone<b class="phBadge" hidden></b></button>
+  <div id="phNote" hidden></div>
+  <div id="phone" hidden>
+    <div class="phTop"><span id="phClock">10:42 PM</span><span class="phNotch"></span><span id="phBat">87%</span></div>
+    <div id="phHome" class="phScr">
+      <p class="phDate">OCT 31</p><p class="phBig" id="phHomeT">10:42</p>
+      <div class="phApps">
+        <button type="button" data-app="msg"><i class="ic icMsg">&#9993;</i><span>Messages</span><b class="phBadge" hidden></b></button>
+        <button type="button" data-app="pulse"><i class="ic icPulse">&#9829;</i><span>Pulse</span></button>
+        <button type="button" data-app="cash"><i class="ic icCash">$</i><span>Cash</span></button>
+      </div>
+    </div>
+    <div id="phMsg" class="phScr" hidden>
+      <div class="phHead"><button type="button" class="phBack">&#8249;</button><b id="phMsgT">Messages</b></div>
+      <div id="phList"></div>
+      <div id="phQuick"></div>
+      <div class="phSend"><input id="phIn" maxlength="80" autocomplete="off" placeholder="Text your team"><button type="button" id="phGo">Send</button></div>
+    </div>
+    <div id="phPulse" class="phScr" hidden>
+      <div class="phHead"><button type="button" class="phBack">&#8249;</button><b>Pulse</b></div>
+      <canvas id="phEcg" width="220" height="120"></canvas>
+      <p class="phBpm"><b id="phBpm">72</b> BPM</p>
+      <p id="phPulseInfo">Calm. Nothing close.</p>
+      <p class="phSmall">Your heart knows before you do. The closer the killer, the faster it beats.</p>
+    </div>
+    <div id="phCash" class="phScr" hidden>
+      <div class="phHead"><button type="button" class="phBack">&#8249;</button><b>Cash</b></div>
+      <p class="phSmall">Balance</p><p class="phBal" id="phBal">$0</p>
+      <div class="phRow"><span>Earned from chores</span><b id="phEarn">$0</b></div>
+      <div class="phRow"><span>Spent at Hollow Mart</span><b id="phSpent">$0</b></div>
+      <div id="phTx"></div>
+    </div>
+    <div class="phBar"><button type="button" id="phHomeBtn" aria-label="Home"></button></div>
+  </div>
   <button type="button" id="senseBtn" hidden>Sense</button>
   <button type="button" id="scareBtn" class="kab" hidden>Scare</button>
   <button type="button" id="vanishBtn" class="kab" hidden>Vanish</button>
@@ -280,6 +355,7 @@ body{font-size:20px}
     <button id="btnSwing" type="button" hidden>Swing</button>
     <button id="btnUse" type="button" hidden>Use</button>
     <button id="btnKnock" type="button" hidden>Knock</button>
+    <button id="btnPhone" type="button" hidden>Phone<b class="phBadge" hidden></b></button>
     <button id="btnLight" type="button">Light</button>
     <button id="btnRun" type="button">Run</button>
     <button id="btnCrouch" type="button">Crouch</button>

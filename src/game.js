@@ -13,7 +13,7 @@ var reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)'
 var isTouch = false;
 var KB_ACT=[{a:'fwd',n:'Move forward',d:'KeyW'},{a:'back',n:'Move back',d:'KeyS'},{a:'left',n:'Move left',d:'KeyA'},{a:'right',n:'Move right',d:'KeyD'},
   {a:'run',n:'Run',d:'ShiftLeft'},{a:'crouch',n:'Crouch',d:'KeyC'},{a:'use',n:'Interact / open / clean',d:'KeyE'},{a:'item',n:'Eat or drink a snack',d:'KeyR'},
-  {a:'light',n:'Flashlight',d:'KeyF'},{a:'pause',n:'Pause',d:'KeyP'},{a:'spec',n:'Switch who you watch (dead)',d:'Space'}], kbWait=null;
+  {a:'light',n:'Flashlight',d:'KeyF'},{a:'phone',n:'Phone',d:'KeyT'},{a:'pause',n:'Pause',d:'KeyP'},{a:'spec',n:'Switch who you watch (dead)',d:'Space'}], kbWait=null;
 function kbCode(a){ var K=(typeof SAVE!=='undefined' && SAVE.kb)||{}; for (var i=0;i<KB_ACT.length;i++) if (KB_ACT[i].a===a) return K[a]||KB_ACT[i].d; return null; }
 function kbName(c){ if (!c) return '—'; if (/^Key/.test(c)) return c.slice(3); if (/^Digit/.test(c)) return c.slice(5); if (/^Numpad/.test(c)) return 'Num '+c.slice(6);
   return ({ShiftLeft:'Left Shift',ShiftRight:'Right Shift',ControlLeft:'Left Ctrl',ControlRight:'Right Ctrl',AltLeft:'Left Alt',AltRight:'Right Alt',Space:'Space',Tab:'Tab',CapsLock:'Caps Lock',Enter:'Enter',Backquote:'`',Minus:'-',Equal:'=',BracketLeft:'[',BracketRight:']',Semicolon:';',Quote:"'",Comma:',',Period:'.',Slash:'/',Backslash:'\\'})[c]||c; }
@@ -31,7 +31,7 @@ function kbRender(){ var L=document.getElementById('kbList'); if (!L) return; L.
   KB_ACT.forEach(function(A){ var r=document.createElement('div'); r.className='kbRow'; var n=document.createElement('span'); n.textContent=A.n; var b=document.createElement('button'); b.type='button';
     b.textContent=kbWait===A.a?'Press a key…':kbName(kbCode(A.a)); if (kbWait===A.a) b.className='wait'; b.addEventListener('click',function(){ kbWait=A.a; kbRender(); }); r.appendChild(n); r.appendChild(b); L.appendChild(r); }); }
 function kbHelp(){ var el=document.getElementById('keysHelp'); if (!el || isTouch) return; var k=function(a){ return kbName(kbCode(a)); };
-  el.textContent=k('fwd')+' '+k('left')+' '+k('back')+' '+k('right')+' move · Mouse look · '+k('run')+' run · '+k('crouch')+' crouch · '+k('light')+' flashlight · '+k('use')+' interact · '+k('item')+' snack · Esc or '+k('pause')+' pause'; }
+  el.textContent=k('fwd')+' '+k('left')+' '+k('back')+' '+k('right')+' move · Mouse look · '+k('run')+' run · '+k('crouch')+' crouch · '+k('light')+' flashlight · '+k('use')+' interact · '+k('item')+' snack · '+k('phone')+' phone · Esc or '+k('pause')+' pause'; var pc=document.getElementById('phoneChipK'); if (pc) pc.textContent=k('phone'); }
 try { isTouch = matchMedia('(pointer: coarse)').matches; } catch(e){}
 
 /* ---------- renderer ---------- */
@@ -1542,8 +1542,11 @@ function touchUi(){
 }
 if (isTouch) touchUi();
 window.addEventListener('keydown',function(e){
+  if (e.target && e.target.tagName==='INPUT') return;
   keys[e.code]=true;
   if (e.code==='KeyF' && game.mode==='play' && !game.paused && (!shelter || shelter.view==='walk')) toggleLight();
+  if (typeof PHONE!=='undefined' && PHONE.open && e.code==='Escape'){ phoneSet(false); return; }
+  if (e.code==='KeyT' && game.mode==='play' && !game.paused && typeof togglePhone==='function') togglePhone();
   if ((e.code==='Escape' || e.code==='KeyP') && game.mode==='play'){ if (game.paused) resume(); else pause(); }
   if (e.code==='KeyE') act();
   if (e.code==='KeyC') toggleCrouch();
@@ -1571,7 +1574,7 @@ cv.addEventListener('pointerdown',function(e){
       var st=$('stick'); st.hidden=false; st.style.left=(e.clientX-r.left)+'px'; st.style.top=(e.clientY-r.top)+'px'; st.firstElementChild.style.transform='';
     } else if (lookId===null){ lookId=e.pointerId; last.x=e.clientX; last.y=e.clientY; }
     try { cv.setPointerCapture(e.pointerId); } catch(err){}
-  } else { mouseDown=true; last.x=e.clientX; last.y=e.clientY; if (document.pointerLockElement!==cv) lock(); else if (e.button===0 && game.net && game.role==='killer') swing(); else if (e.button===0 && game.net) useHeld(); }
+  } else { mouseDown=true; last.x=e.clientX; last.y=e.clientY; if (typeof PHONE!=='undefined' && PHONE.open){ phoneSet(false); e.preventDefault(); return; } if (document.pointerLockElement!==cv) lock(); else if (e.button===0 && game.net && game.role==='killer') swing(); else if (e.button===0 && game.net) useHeld(); }
   e.preventDefault();
 });
 cv.addEventListener('pointermove',function(e){
@@ -3655,7 +3658,7 @@ function netToLobby(){
   for (var id in avatars) dropAvatar(id);
   FX.hemi=scene.environment?0.36:0.42; scene.fog.color.copy(lin(FOG)); resident.g.visible=false; resident.dead=false; beacon.visible=false; if (net.ih>=0){ moonLight.intensity=0.55; setLeaves(true); } stairsOpen(false); closeChat(); net=null; game.net=null; applyMap('lane'); vanReset();
   game.role='victim'; reset(); stalkerOff(14); game.mode='menu'; setHud(false); backdrop();
-  netSend({gi:null,go:null,a:null,st:null,f:null,hp:null,o:null,k:null,ek:null,e:null,pv:null,p:null,el:null,r:null});
+  phoneReset(); netSend({tx:null,btx:null}); netSend({gi:null,go:null,a:null,st:null,f:null,hp:null,o:null,k:null,ek:null,e:null,pv:null,p:null,el:null,r:null});
   lobby={mode:mode,code:code,gid:gid,want:NP.w||NETMODES[mode].roles[0],note:'',timer:0,mt:(NP.md&&NP.md.t)||0,adT:0,fill:!(NP.bt&&NP.bt.f===0),bt:(NP.bt&&NP.bt.t)||0,map:(NP.mp&&NP.mp.m)||'lane',mpt:(NP.mp&&NP.mp.t)||0,kt:(NP.kt&&NP.kt.k)||'man',ktt:(NP.kt&&NP.kt.t)||0}; lobbyUI(); show('lobby'); lobby.timer=setInterval(lobbyTick,300); lobbyTick();
 }
 
@@ -3808,6 +3811,103 @@ function vcTick(dt,pl){ var N=net; if (!vcCan()){ if (Object.keys(VOICE.pcs).len
   var box=$('vcList'), show=game.mode==='play' && talk.length>0; if (box.hidden===show) box.hidden=!show;
   if (show){ var t=talk.join('\n'); if (box.dataset.t!==t){ box.dataset.t=t; box.innerHTML=''; talk.forEach(function(n){ var d=document.createElement('div'); d.textContent=n; box.appendChild(d); }); } }
 }
+/* ---------- the phone in your left hand: Messages, Pulse (a heartbeat sensor) and Cash ---------- */
+// Texts follow the same rule as voice: the living text the living, the dead text the dead.
+var PHONE={open:false,app:'home',unread:0,seq:0,sent:[],msgs:[],seen:{},lastSend:0,g:null,cv:null,tex:null,drawT:0,ecg:[],ph:0,bpm:70,kd:999,beatT:0,noteT:0,dirty:true};
+var PH_QUICK=['Killer here!','Help!','On my way','Where are you?','Generator done','Going to the Mart','Hide!','Run!'];
+function phoneOK(){ var N=net; return !!(N && N.mode==='s' && game.role!=='killer' && game.mode==='play'); }
+function phDead(){ return !!(net && net.alive===0); }
+function clockStr(N){ var hr=Math.min(29.98,22+(N?N.el:0)/NIGHT*8), h12=((Math.floor(hr)+11)%12)+1, mn=Math.floor((hr%1)*60); return h12+':'+('0'+mn).slice(-2)+(hr>=24||hr<12?' AM':' PM'); }
+function houseName(hi){ var h=houses[hi]; if (!h) return 'a house'; return h.label || (WMAP==='hotel'?'Room '+(hi+1):'House '+(hi+1)); }
+// where someone is, as you'd say it: "in House 4", "outside House 9", "in Hollow Mart"
+function placeName(x,z,ih){ if (ih>=0) return 'in '+houseName(ih); if (inStore(x,z)) return 'in Hollow Mart'; if (x<-73) return 'in the Mart parking lot';
+  var best=-1, bd=14; houses.forEach(function(h,i){ var d=Math.hypot(h.x-x,h.z-z); if (d<bd){ bd=d; best=i; } }); return best>=0?'outside '+houseName(best):'out on the street'; }
+// the phone you can see in your hand, with a little lock screen on it
+(function(){
+  var g=new THREE.Group(); g.position.set(0.004,0.072,-0.018); g.rotation.set(-0.42,0,0.02); vmL.add(g);
+  box(0.07,0.142,0.009,mat(0x15161b,{roughness:.35,metalness:.4}),0,0,0,g); box(0.072,0.144,0.006,mat(0x3a3d46,{roughness:.3,metalness:.6}),0,0,-0.003,g);
+  var cv=document.createElement('canvas'); cv.width=96; cv.height=192; var tex=new THREE.CanvasTexture(cv); tex.encoding=THREE.sRGBEncoding;
+  var scr=new THREE.Mesh(new THREE.PlaneGeometry(0.062,0.128),new THREE.MeshBasicMaterial({map:tex})); scr.position.z=0.0048; g.add(scr);
+  PHONE.g=g; PHONE.cv=cv; PHONE.tex=tex; g.visible=false;
+})();
+function phDrawHand(){ var c=PHONE.cv.getContext('2d'), N=net, W=96, H=192; var gr=c.createLinearGradient(0,0,0,H); gr.addColorStop(0,'#1b2a44'); gr.addColorStop(1,'#120c1a'); c.fillStyle=gr; c.fillRect(0,0,W,H);
+  c.fillStyle='#eef1f6'; c.textAlign='center'; c.font='bold 20px Arial'; c.fillText(clockStr(N).replace(/ [AP]M/,''),W/2,40); c.font='10px Arial'; c.fillStyle='#9fb0c8'; c.fillText('OCT 31',W/2,54);
+  var hot=PHONE.kd<20, pulse=0.5+0.5*Math.sin(PHONE.ph*Math.PI*2); c.fillStyle=hot?'rgba(255,'+Math.round(60+pulse*60)+',60,1)':'#ff6a6a'; c.font='bold 26px Arial'; c.fillText('♥',W/2-20,100);
+  c.fillStyle=hot?'#ff4a4a':'#eef1f6'; c.font='bold 22px Arial'; c.fillText(String(Math.round(PHONE.bpm)),W/2+14,100); c.font='9px Arial'; c.fillStyle='#9fb0c8'; c.fillText('BPM',W/2+14,112);
+  c.fillStyle='#5be09a'; c.font='bold 18px Arial'; c.fillText('$'+((N&&N.cash)||0),W/2,148);
+  if (PHONE.unread){ c.fillStyle='#e0322a'; c.beginPath(); c.arc(W-16,16,10,0,7); c.fill(); c.fillStyle='#fff'; c.font='bold 12px Arial'; c.fillText(String(Math.min(9,PHONE.unread)),W-16,20); }
+  PHONE.tex.needsUpdate=true; }
+// opening and closing
+function phoneSet(on){ if (on && !phoneOK()) return; PHONE.open=!!on; $('phone').hidden=!on;
+  if (on){ wasLocked=false; if (document.exitPointerLock) try { document.exitPointerLock(); } catch(e){} tone(1400,0.03,'sine',0.03); phApp(PHONE.app==='msg'?'msg':PHONE.app); }
+  else { try { $('phIn').blur(); } catch(e){} if (!isTouch && game.mode==='play' && !game.paused && !document.pointerLockElement) lock(); } }
+function togglePhone(){ phoneSet(!PHONE.open); }
+function phApp(a){ PHONE.app=a; ['phHome','phMsg','phPulse','phCash'].forEach(function(id){ $(id).hidden=id!==({home:'phHome',msg:'phMsg',pulse:'phPulse',cash:'phCash'}[a]); });
+  if (a==='msg'){ PHONE.unread=0; PHONE.dirty=true; phRenderMsgs(); var L=$('phList'); L.scrollTop=L.scrollHeight; } if (a==='cash') phRenderCash(); phBadges(); }
+function phBadges(){ var n=PHONE.unread; Array.prototype.forEach.call(document.querySelectorAll('.phBadge'),function(b){ b.hidden=!n; b.textContent=n>9?'9+':String(n); }); }
+// messages
+function phAdd(m){ PHONE.msgs.push(m); if (PHONE.msgs.length>60) PHONE.msgs.shift(); PHONE.dirty=true;
+  if (!m.me){ if (!(PHONE.open && PHONE.app==='msg')){ PHONE.unread++; phBadges(); } phNote(m); }
+  if (PHONE.open && PHONE.app==='msg'){ phRenderMsgs(); var L=$('phList'); L.scrollTop=L.scrollHeight; } }
+function phNote(m){ var el=$('phNote'); el.textContent=''; var b=document.createElement('b'); b.textContent=m.who+': '; el.appendChild(b); el.appendChild(document.createTextNode(m.txt)); el.hidden=false; PHONE.noteT=3.2;
+  tone(1180,0.06,'square',0.035); tone(1180,0.06,'square',0.035,null,0.12); }
+function phRenderMsgs(){ if (!PHONE.dirty) return; PHONE.dirty=false; var L=$('phList'); L.textContent=''; var dead=phDead(); $('phMsgT').textContent=dead?'Ghost chat':'Messages';
+  var vis=PHONE.msgs; if (!vis.length){ var p=document.createElement('p'); p.className='phEmpty'; p.textContent=dead?'Only the dead can read this. Text the others who died.':'No messages yet. Text your team.'; L.appendChild(p); return; }
+  vis.forEach(function(m){ var d=document.createElement('div'); d.className='phM'+(m.me?' me':'')+(m.bot?' bot':'')+(m.dead?' ghost':''); var s=document.createElement('small'); s.textContent=(m.me?'You':m.who)+' · '+m.t; d.appendChild(s); d.appendChild(document.createTextNode(m.txt)); L.appendChild(d); }); }
+function phClean(t){ return String(t||'').replace(/[\u0000-\u001f\u007f<>]/g,'').replace(/\s+/g,' ').trim().slice(0,80); }
+function phoneSend(t){ var N=net; t=phClean(t); if (!t || !N || N.mode!=='s') return; var now=performance.now(); if (now-PHONE.lastSend<900){ toast('Slow down.',900); return; } PHONE.lastSend=now;
+  var dead=phDead()?1:0; PHONE.seq++; PHONE.sent.push([PHONE.seq,t,dead,N.gid]); if (PHONE.sent.length>4) PHONE.sent.shift(); netSend({tx:PHONE.sent});
+  phAdd({who:'You',txt:t,me:true,dead:!!dead,t:clockStr(N)}); tone(900,0.05,'sine',0.04); if (N.isHost) botsHearText(t,dead); }
+// survivor bots on the host's game text too: when they fix a generator, when they see him, and when someone asks where they are
+function botText(b,t,dead){ var N=net; if (!N || !N.isHost) return; N.btxS=(N.btxS||0)+1; N.btx=(N.btx||[]); N.btx.push([N.btxS,N.bots.indexOf(b),phClean(t),dead?1:0,N.gid]); if (N.btx.length>6) N.btx.shift();
+  if (!!dead===phDead()) phAdd({who:b.name,txt:phClean(t),bot:true,dead:!!dead,t:clockStr(N)}); }
+function botsHearText(t,dead){ var N=net; if (!N || !N.isHost || dead) return; var low=t.toLowerCase(), ask=/where|\?|help|anyone|status/.test(low); if (!ask) return;
+  N.bots.forEach(function(b,i){ if (b.role!=='s' || b.a!==1 || Math.random()<0.25) return; setTimeout(function(){ if (!net || net!==N || b.a!==1) return;
+    var at=placeName(b.x,b.z,b.ih==null?-1:b.ih); botText(b,/help/.test(low)?['Coming! I’m '+at+'.','On my way. I’m '+at+'.','Hang on, I’m '+at+'.'][(Math.random()*3)|0]:['I’m '+at+'.','I’m '+at+'. Fixing what I can.','Still alive, '+at+'.'][(Math.random()*3)|0],false); },1500+i*900+Math.random()*1500); }); }
+// reading everyone else's texts from what they share
+function phoneRead(pl,hostId){ var N=net, mine=phDead();
+  pl.forEach(function(q){ if (q.me || q.bot) return; var tx=q.pr.tx;
+    if (Array.isArray(tx)) tx.forEach(function(e){ if (!Array.isArray(e) || e.length<4 || e[3]!==N.gid) return; var sq=num(e[0],0); if (sq<=(PHONE.seen[q.id]||0)) return; PHONE.seen[q.id]=sq;
+      var d=num(e[2],0)===1, t=phClean(e[1]); if (!t) return; if (N.isHost) botsHearText(t,d); if (d!==mine) return; phAdd({who:nick(q.pr),txt:t,dead:d,t:clockStr(N)}); });
+    if (q.id===hostId && !N.isHost && Array.isArray(q.pr.btx)) q.pr.btx.forEach(function(e){ if (!Array.isArray(e) || e.length<5 || e[4]!==N.gid) return; var sq=num(e[0],0); if (sq<=(PHONE.seen['#bots']||0)) return; PHONE.seen['#bots']=sq;
+      var b=N.bots[num(e[1],-1)|0], d=num(e[3],0)===1, t=phClean(e[2]); if (!b || !t || d!==mine) return; phAdd({who:b.name,txt:t,bot:true,dead:d,t:clockStr(N)}); }); }); }
+// money in and out, for the Cash app
+function cashLog(d,what){ var N=net; if (!N) return; N.cashLog=N.cashLog||[]; N.cashLog.unshift({d:d,n:what,t:clockStr(N)}); if (N.cashLog.length>40) N.cashLog.pop(); if (d>0) N.earned=(N.earned||0)+d; else N.spent=(N.spent||0)-d; if (PHONE.open && PHONE.app==='cash') phRenderCash(); }
+function phRenderCash(){ var N=net||{}; $('phBal').textContent='$'+(N.cash||0); $('phEarn').textContent='$'+(N.earned||0); $('phSpent').textContent='$'+(N.spent||0);
+  var T=$('phTx'); T.textContent=''; var L=N.cashLog||[]; if (!L.length){ var p=document.createElement('p'); p.className='phEmpty'; p.textContent='Finish a chore to get paid $5.'; T.appendChild(p); return; }
+  L.forEach(function(e){ var r=document.createElement('div'), s=document.createElement('span'), b=document.createElement('b'); s.textContent=e.t+' · '+e.n; b.className=e.d>0?'p':'n'; b.textContent=(e.d>0?'+$':'-$')+Math.abs(e.d); r.appendChild(s); r.appendChild(b); T.appendChild(r); }); }
+// the heartbeat sensor: how close the nearest killer is, as a pulse
+function phPulseTick(dt,pl){ var N=net, me=null, kd=999; pl.forEach(function(q){ if (q.me) me=q; });
+  if (me && N.alive===1 && N.allParked && !vanPhase(N)) pl.forEach(function(q){ if (q.role!=='k' && q.role!=='killer') return; if (q.a!==1 && !q.bot) return; kd=Math.min(kd,bdist(me,q)); });
+  PHONE.kd+=(kd-PHONE.kd)*Math.min(1,dt*2); var k=Math.max(0,Math.min(1,(55-PHONE.kd)/50)), want=N.alive!==1?0:68+k*k*112+(P.sprinting?14:0);
+  PHONE.bpm+=(want-PHONE.bpm)*Math.min(1,dt*1.5); var bp=Math.max(1,PHONE.bpm)/60; PHONE.ph+=dt*bp; var beat=false; if (PHONE.ph>=1){ PHONE.ph-=1; beat=N.alive===1; }
+  if (!(PHONE.open && PHONE.app==='pulse')) return;
+  var c=$('phEcg').getContext('2d'), W=220, H=120, e=PHONE.ecg, x=PHONE.ph, y=0;
+  if (N.alive===1) y=x<0.06?-x*80:(x<0.1?(-4.8+(x-0.06)*700):(x<0.14?(23.2-(x-0.1)*900):(x<0.2?(-12.8+(x-0.14)*213):(x>0.35&&x<0.5?Math.sin((x-0.35)/0.15*Math.PI)*-6:0))));
+  e.push(y); while (e.length>W/2) e.shift();
+  c.fillStyle='#06090c'; c.fillRect(0,0,W,H); c.strokeStyle='rgba(60,255,120,.12)'; c.lineWidth=1; for (var gx=0;gx<W;gx+=20){ c.beginPath(); c.moveTo(gx,0); c.lineTo(gx,H); c.stroke(); } for (var gy=0;gy<H;gy+=20){ c.beginPath(); c.moveTo(0,gy); c.lineTo(W,gy); c.stroke(); }
+  c.strokeStyle=k>0.6?'#ff4a4a':(k>0.25?'#ffc04a':'#4aff7a'); c.lineWidth=2; c.beginPath(); e.forEach(function(v,i){ var px=i*2, py=H/2+v*1.4; if (i) c.lineTo(px,py); else c.moveTo(px,py); }); c.stroke();
+  if (beat){ tone(58,0.12,'sine',0.05+k*0.08,40); }
+  $('phBpm').textContent=String(Math.round(PHONE.bpm)); var info=N.alive!==1?'No pulse.':(!N.allParked||vanPhase(N)?'Calm. You are in the car.':(k>0.8?'RUN. He is right there.':(k>0.5?'He is close.':(k>0.15?'Something is out there.':'Calm. Nothing close.'))));
+  var pi=$('phPulseInfo'); if (pi.textContent!==info){ pi.textContent=info; pi.style.color=k>0.5?'#ff5a5a':(k>0.15?'#ffc04a':'#7fe08a'); } }
+function phoneTick(dt,pl){ var N=net, ok=phoneOK(); if (!ok && PHONE.open) phoneSet(false);
+  var chip=$('phoneChip'), bp=$('btnPhone'), show=ok && !isTouch; if (chip.hidden===show) chip.hidden=!show; var bs=ok && isTouch; if (bp.hidden===bs) bp.hidden=!bs;
+  if (!N || N.mode!=='s') return; phoneRead(pl,N.hostId); phPulseTick(dt,pl);
+  if (PHONE.noteT>0){ PHONE.noteT-=dt; if (PHONE.noteT<=0) $('phNote').hidden=true; }
+  PHONE.drawT-=dt; if (PHONE.drawT<=0 && PHONE.g.visible){ PHONE.drawT=0.25; phDrawHand(); }
+  if (PHONE.open){ $('phClock').textContent=clockStr(N); $('phHomeT').textContent=clockStr(N).replace(/ [AP]M/,''); if (PHONE.app==='msg') phRenderMsgs(); if (PHONE.app==='cash' && (PHONE.cashT=(PHONE.cashT||0)-dt)<=0){ PHONE.cashT=0.5; phRenderCash(); } } }
+function phoneReset(){ PHONE.open=false; PHONE.app='home'; PHONE.unread=0; PHONE.msgs=[]; PHONE.seen={}; PHONE.sent=[]; PHONE.dirty=true; PHONE.kd=999; PHONE.bpm=70; PHONE.ecg=[]; $('phone').hidden=true; $('phNote').hidden=true; phBadges(); }
+(function(){
+  Array.prototype.forEach.call(document.querySelectorAll('#phHome [data-app]'),function(b){ b.addEventListener('click',function(){ phApp(b.dataset.app); tone(1300,0.03,'sine',0.03); }); });
+  Array.prototype.forEach.call(document.querySelectorAll('#phone .phBack'),function(b){ b.addEventListener('click',function(){ phApp('home'); }); });
+  $('phHomeBtn').addEventListener('click',function(){ phApp('home'); });
+  PH_QUICK.forEach(function(q){ var b=document.createElement('button'); b.type='button'; b.textContent=q; b.addEventListener('click',function(){ phoneSend(q); }); $('phQuick').appendChild(b); });
+  function go(){ var v=$('phIn').value; $('phIn').value=''; phoneSend(v); }
+  $('phGo').addEventListener('click',go); $('phIn').addEventListener('keydown',function(e){ if (e.key==='Enter'){ e.preventDefault(); go(); } else if (e.key==='Escape'){ e.preventDefault(); phoneSet(false); } e.stopPropagation(); });
+  $('phoneChip').addEventListener('click',function(e){ e.stopPropagation(); togglePhone(); });
+  $('btnPhone').addEventListener('click',function(e){ e.stopPropagation(); togglePhone(); });
+  ['mousedown','touchstart','pointerdown','wheel'].forEach(function(t){ $('phone').addEventListener(t,function(e){ e.stopPropagation(); },{passive:true}); });
+})();
 function netResume(){ if (!net) return; if (vanPhase(net)){ var C0=myCar(); if (C0){ var s0=carLocal(C0,CAR_SEAT[0],CAR_SEAT[1]); P.x=s0.x; P.z=s0.z; P.y=P.gy=0.27; P.yaw=C0.yaw-Math.PI/2; P.pitch=-0.05; } } if (net.mode==='s' && !MIC.on && !MIC.denied) micStart(); game.mode='play'; game.paused=false; setHud(true); vm.visible=game.role!=='killer' && net.alive===1 && !vanPhase(net); vmKnife.visible=game.role==='killer'; setLight(P.light); net.objT=0; net.lastObj=''; if (!isTouch && !document.pointerLockElement) lock(); }
 function netOver(title,text,win){ if (CHASE && AC) CHASE.g.gain.setTargetAtTime(0,AC.currentTime,0.3), CHASE.hi.gain.setTargetAtTime(0,AC.currentTime,0.3), CHASE.lvl=0;
   if (!net || net.over) return; net.over=true; var gain=win?20:10; SAVE.tokens+=gain; tokLog(gain,(win?'Won':'Played')+' a Kill Feast · '+title); save();
@@ -3863,8 +3963,8 @@ function playFate(i){ var N=net; if (!N || !N.hand || N.picked>=0 || !N.specId |
   if (/^bots/.test(N.specId) && N.isHost) fateBot(N.specId,id,'You');
   setTimeout(function(){ if (net && net.picked===i){ net.hand=null; net.picked=-1; net.fateCd=25; renderFate(); } },2200); }
 function fateApply(id,from){ var N=net, f=fateOf(id); if (!f || N.alive!==1) return; N.buff=N.buff||{};
-  if (id==='spd') N.buff.spd=20; else if (id==='shield') N.buff.shield=30; else if (id==='stam') N.buff.stam=20; else if (id==='ghost') N.buff.ghost=15; else if (id==='heal') N.hp=Math.min(3,N.hp+1); else if (id==='cash') N.cash=(N.cash||0)+5;
-  else if (id==='slow') N.slow=6; else if (id==='noisy') N.reveal=10; else if (id==='dark') setLight(false); else if (id==='broke') N.cash=Math.max(0,(N.cash||0)-5);
+  if (id==='spd') N.buff.spd=20; else if (id==='shield') N.buff.shield=30; else if (id==='stam') N.buff.stam=20; else if (id==='ghost') N.buff.ghost=15; else if (id==='heal') N.hp=Math.min(3,N.hp+1); else if (id==='cash'){ N.cash=(N.cash||0)+5; cashLog(5,'Fate card from '+from); }
+  else if (id==='slow') N.slow=6; else if (id==='noisy') N.reveal=10; else if (id==='dark') setLight(false); else if (id==='broke'){ var lost=Math.min(5,N.cash||0); N.cash=(N.cash||0)-lost; if (lost) cashLog(-lost,'Fate card from '+from); }
   toast((f.g?'A ghost is helping you: ':'A ghost cursed you: ')+f.n+' · '+f.d+' ('+from+')',3200); if (f.g) tone(990,0.2,'sine',0.06); else { noise(0.3,0.15,600); tone(90,0.4,'sawtooth',0.06,50); } }
 function fateBot(bid,id,from){ var b=null; net.bots.forEach(function(x){ if (x.id===bid) b=x; }); if (!b || b.a!==1) return;
   if (id==='heal' || id==='shield') b.hp=Math.min(3,b.hp+1); else if (id==='slow') b.frozen=Math.max(b.frozen||0,2); else if (id==='noisy') b.nzF=10; }
@@ -3966,13 +4066,13 @@ function netTick(dt){
   N.spd = (function(v){ return v>0 && buffOn('spd') ? v*1.3 : v; })((N.alive!==1 || N.stun>0 || N.fright>0 || vanPhase(N) || N.wiring || doorSeq) ? 0 : (game.role==='killer' && N.blood && N.slow<=0) ? 1.12 : (N.slow>0 ? 0.45 : (N.boost>0 ? 1.15 : (N.mode==='s' && N.hp<3 && game.role!=='killer' ? (N.hp<2?0.86:0.94) : 1))));
   // spectating
   if (!host){ for (i=0;i<pl.length;i++) if (pl[i].id===hostId){ var yo=pl[i].pr.yo; if (Array.isArray(yo) && yo[0]===netMe && num(yo[1],0)>(N.yoSeen||0)){ N.yoSeen=num(yo[1],0); if (Math.abs(N.el-num(yo[2],0))<8) yankMe(yo); } } }
-  specTick(dt,surv,pl); vcTick(dt,pl);
+  specTick(dt,surv,pl); vcTick(dt,pl); phoneTick(dt,pl,hostId);
   // tell the others
   N.adT=(N.adT||0)-dt; if (N.adT<=0 && !NR.solo){ N.adT=2; dirSend({rm:{c:N.code,m:N.mode,n:pl.length,h:nick(pl[0].pr),g:1}}); }
   N.sendT-=dt; if (N.sendT<=0){ N.sendT=0.08;
     var patch={p:[Math.round(P.x*100)/100,Math.round(P.z*100)/100,Math.round(P.yaw*100)/100,N.an],a:N.alive,h:N.hp,cr:P.crouch?1:0,el:Math.round(N.el),st:N.st,f:N.f,hp:[N.hold[0],Math.round(N.hold[1]*10)/10]};
     if (N.mode==='s'){ if (game.role==='killer') patch.k=N.k; patch.o={g:N.o.g,b:N.o.b,c:Math.round(N.o.c*10)/10,gn:N.o.gn};
-      patch.bd=N.bd; patch.nd=N.nd; patch.ih=N.ih; patch.fy=Math.round((P.y||0)*100)/100; patch.hid=N.hide?1:0; if (host && N.yo) patch.yo=N.yo;
+      patch.bd=N.bd; patch.nd=N.nd; patch.ih=N.ih; patch.fy=Math.round((P.y||0)*100)/100; patch.hid=N.hide?1:0; if (host && N.yo) patch.yo=N.yo; if (host && N.btx) patch.btx=N.btx;
       patch.nz=game.role==='killer'?0:(N.nz||0); fleetPatch(patch,host); patch.gh=buffOn('ghost')?1:0; if (N.fate) patch.fate=N.fate; if (game.role==='killer'){ patch.sc=N.sc||0; patch.iv=N.iv>0?1:0; } if (host){ patch.bsc=N.bsc||0; patch.gcut=Object.keys(N.cut||{}).map(function(k){ return [+k,N.cut[k]]; }); } patch.bl=N.blood?1:0; patch.cs=N.cs; patch.cl=N.cl; patch.pw=N.pw; patch.tp=N.traps; patch.tt=N.tt; patch.kh=N.kh; if (N.kd) patch.kd=N.kd; if (game.role==='killer'){ patch.sn=N.stun>0?Math.ceil(N.stun):0; patch.hc=N.hc; }
       if (host && N.bots.length){ patch.bz=N.bots.map(function(b){ return [Math.round(b.x*100)/100,Math.round(b.z*100)/100,Math.round(b.ry*100)/100,b.an,b.a,b.hp,b.stun>0?Math.ceil(b.stun):0,b.hc||0,b.nz||0,b.ih==null?-1:b.ih,Math.round((b.y||0)*100)/100,b.hid?1:0,b.cr?1:0,b.iv>0?1:0]; }); patch.ek=N.ek; } }
     if (eliasOn && host){ patch.e=[Math.round(E.x*100)/100,Math.round(E.z*100)/100,Math.round(E.ry*100)/100,E.vis,E.mv]; patch.ek=N.ek; }
@@ -4006,7 +4106,7 @@ function botsHost(dt,pl,W){
   if (!net.vanBots){ net.vanBots=true; net.bots.forEach(function(b){ if (b.role==='s' && !b.outCar) fleetBot(b); }); }
   var N=net, o=N.o, killers=pl.filter(function(q){ return q.role==='k'; }), targets=pl.filter(function(q){ return q.role==='s' && q.alive; });
   var hunters=killers.filter(function(q){ return !(q.bot?q.bot.stun>0:num(q.pr.sn,0)>0); });
-  function hurt(b,dx,dz){ if (b.a!==1 || b.inv>0) return; b.inv=2.5; b.hp--; b.hid=0; b.hide=null; b.scare=6; bloodBurst(b.x,(b.y||0)+1.2,b.z,dx,dz,45); if (b.hp<=0){ b.a=0; b.an=0; bloodPool(b.x,b.ih>=0?(b.y||0):groundY(b.x,b.z),b.z,0.9); toast(b.name+' is dead.',2600); } }
+  function hurt(b,dx,dz){ if (b.a!==1 || b.inv>0) return; b.inv=2.5; b.hp--; b.hid=0; b.hide=null; b.scare=6; bloodBurst(b.x,(b.y||0)+1.2,b.z,dx,dz,45); if (b.hp<=0){ b.a=0; b.an=0; bloodPool(b.x,b.ih>=0?(b.y||0):groundY(b.x,b.z),b.z,0.9); toast(b.name+' is dead.',2600); botText(b,['…he got me.','I’m dead. Sorry.','Can anyone hear me?'][(Math.random()*3)|0],true); } }
   function hitPlayer(T,dx,dz){ if (T.bot) hurt(T.bot,dx,dz); else { N.ek[T.id]=(N.ek[T.id]||0)+1; if (!T.me) bloodBurst(T.x,(T.y||0)+1.2,T.z,dx,dz,40); } }
   function taken(s,ih,me){ var p=spotPos(s,ih); return pl.some(function(q){ return q.hid && q.alive && q.id!==me && (q.ih==null?-1:q.ih)===p.ih && Math.hypot(q.x-p.x,q.z-p.z)<1.4; }); }
   function patrolPts(){ if (W.done) return [CARSIDE,CARSIDE,{x:-66,z:3},{x:-60,z:8}];   // the job is done: wait by the cars
@@ -4109,7 +4209,7 @@ function botsHost(dt,pl,W){
         else { b.flee=null; var Kp=bwp(K), ax=b.x-Kp.x, az=b.z-Kp.z, al=Math.hypot(ax,az)||1, pick=null, pd=1e9;
           houses.forEach(function(h,hi){ var dp=doorPt(h), ddx=dp.x-b.x, ddz=dp.z-b.z, dd=Math.hypot(ddx,ddz); if (dd>18 || !(h.power || h.netBroke) || N.el<(b.doorCd||0) || hunters.some(function(q){ return (q.ih==null?-1:q.ih)===hi; })) return; var kdd=Math.hypot(dp.x-Kp.x,dp.z-Kp.z); if (kdd<dd+1.5) return; if ((ddx*ax+ddz*az)/(dd*al||1)<-0.3 && dd>3) return; if (dd<pd){ pd=dd; pick={x:dp.x,z:dp.z,ih:hi,y:0}; } });
           OUTHIDES.forEach(function(s){ var dd=Math.hypot(s.x-b.x,s.z-b.z); if (dd>9 || Math.abs((s.y||0)-(b.y||0))>1 || taken(s,-1,b.id)) return; if (Math.hypot(s.x-Kp.x,s.z-Kp.z)<dd+3) return; if (dd*1.3<pd){ pd=dd*1.3; pick={x:s.x,z:s.z,ih:-1,y:0,out:true,s:s}; } });
-          if (pick && (kd>5 || pd<4)){ b.flee={T:pick,t:N.el+8,s:pick.s}; move(pick,fsp); }
+          if (pick && (kd>5 || pd<4)){ b.flee={T:pick,t:N.el+8,s:pick.s}; move(pick,fsp); if (!(b.txCd>N.el)){ b.txCd=N.el+30; botText(b,['HE’S HERE. I’m '+placeName(b.x,b.z,b.ih==null?-1:b.ih)+'!','Killer '+placeName(b.x,b.z,b.ih==null?-1:b.ih)+'. Stay away!','He’s chasing me '+placeName(b.x,b.z,b.ih==null?-1:b.ih)+'!'][(Math.random()*3)|0]); } }
           else { vx=ax/al; vz=az/al; killers.forEach(function(q){ if (q===K) return; var qp=bwp(q), ex=b.x-qp.x, ez=b.z-qp.z, e=Math.hypot(ex,ez)||1; if (e<12){ vx+=ex/e*0.8; vz+=ez/e*0.8; } });
             if (b.x>64) vx-=1.5; if (b.x<-150) vx+=1.5; if (b.z>34) vz-=1.5; if (b.z<-34) vz+=1.5; sp=fsp; } } } }
     else {
@@ -4135,7 +4235,7 @@ function botsHost(dt,pl,W){
           if (W.B===0) opts.push({k:'bat',pt:batPos(),r:1.6,f:function(){ o.b=Math.max(o.b,1); }}); if (W.B===1) opts.push({k:'bat2',pt:CARSIDE,r:3.2,f:function(){ o.b=2; }});
           if (W.G===2 && W.B===2 && !W.carOK) opts.push({k:'car',pt:CARSIDE,r:3.2,f:function(){ o.c=Math.min(CARNEED,o.c+dt); }});
           var openCh=W.ncl<CLEAN_NEED && houses.some(function(hh,hi){ return (W.powered[hi]||hh.netBroke) && choresOf(hi).some(function(t){ return !W.cleaned[choreId(hi,t)]; }); });
-          if (W.npw<PW_NEED || !openCh) houses.forEach(function(hh,hi){ if (W.powered[hi]) return; opts.push({k:'wire'+hi,pt:genPt(hi),r:2.0,f:function(){ if (b.wK!==hi){ b.wK=hi; b.wT=0; } b.wT+=dt; if (b.wT>=8){ pwFix(N,hi); b.wK=null; } }}); });
+          if (W.npw<PW_NEED || !openCh) houses.forEach(function(hh,hi){ if (W.powered[hi]) return; opts.push({k:'wire'+hi,pt:genPt(hi),r:2.0,f:function(){ if (b.wK!==hi){ b.wK=hi; b.wT=0; } b.wT+=dt; if (b.wT>=8){ pwFix(N,hi); b.wK=null; if (Math.random()<0.6) botText(b,['Generator at '+houseName(hi)+' is running.','Got the power back on at '+houseName(hi)+'.','Lights are on at '+houseName(hi)+'.'][(Math.random()*3)|0]); } }}); });
           if (W.ncl<CLEAN_NEED) houses.forEach(function(hh,hi){ if (!(W.powered[hi] || hh.netBroke)) return; choresOf(hi).forEach(function(t){ var cid=choreId(hi,t); if (W.cleaned[cid]) return; var CT=CHORE_T[t];
             opts.push({k:'ch'+cid,pt:{x:IX+CT.x,z:CT.z,ih:hi,y:CT.f*FLOOR2},wp:doorPt(hh),r:1.25,f:function(){ if (b.chK!==cid){ b.chK=cid; b.chT=0; } b.chT+=dt; if (b.chT>=30){ if (N.cl.indexOf(cid)<0) N.cl.push(cid); b.chK=null; } }}); }); });
  }
@@ -4306,7 +4406,7 @@ function preyTick(dt,others){
   $('lobLeave').addEventListener('click',function(){ netLeave(); show('online'); });
   $('neLobby').addEventListener('click',netToLobby);
   $('neLeave').addEventListener('click',leaveToMenu);
-  window.addEventListener('keydown',function(e){ if (!net || game.mode!=='play') return; if (net.alive!==1 && (e.code==='Space' || e.code==='ArrowRight')) net.spec++; if (net.alive!==1 && e.code==='ArrowLeft') net.spec--;
+  window.addEventListener('keydown',function(e){ if (!net || game.mode!=='play' || (e.target && e.target.tagName==='INPUT')) return; if (net.alive!==1 && (e.code==='Space' || e.code==='ArrowRight')) net.spec++; if (net.alive!==1 && e.code==='ArrowLeft') net.spec--;
     if (e.code==='KeyQ') useSense();
     if (e.code==='KeyZ') useScare();
     if (e.code==='KeyX') useVanish();
@@ -4345,7 +4445,7 @@ function storeAct(n){ var N=net;
   if (n.k==='pay'){ var c=snackOf(N.carry); if (!c) return;
     if ((N.cash||0)<c.p){ say(CLERK,'That’s $'+c.p+'. You’ve only got $'+(N.cash||0)+'. Go clean something.',3000); thud(0.2); return; }
     if ((N.bag||[]).length>=3){ say(CLERK,'Your pockets are full. Eat something first.',2600); return; }
-    N.cash-=c.p; N.bag=N.bag||[]; N.bag.push(c.id); N.carry=null; tone(1320,0.08,'square',0.06); tone(1760,0.12,'square',0.05,null,0.09); noise(0.1,0.1,3000,0.05);
+    N.cash-=c.p; cashLog(-c.p,c.n+' at Hollow Mart'); N.bag=N.bag||[]; N.bag.push(c.id); N.carry=null; tone(1320,0.08,'square',0.06); tone(1760,0.12,'square',0.05,null,0.09); noise(0.1,0.1,3000,0.05);
     say(CLERK,c.say[(Math.random()*c.say.length)|0],2600); setTimeout(function(){ toast('Bought: '+c.n+'. '+(isTouch?'Tap Use':'Press R')+' to '+(c.kind==='drink'?'drink':'eat')+' it. $'+(net?net.cash:0)+' left.',2800); },700); return; } }
 // boosts stack: the same kind twice adds the time together, up to two minutes. Gum and coffee stretch whatever is running.
 function useSnack(){ var N=net; N.buff=N.buff||{}; var act=Object.keys(N.buff).filter(function(k){ return N.buff[k]>0; }), pick=-1;
@@ -4560,8 +4660,9 @@ function teamTick(pl){ var tm=$('team'); if (!tm.hidden) tm.hidden=true; return;
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=71;
+var GAME_VER=72;
 var UPDATES=[
+  {v:72,t:'Your phone',n:['You now carry a phone in your left hand. Press T (or tap Phone) to bring it up. Its lock screen shows the time, your heart rate and your cash.','Messages: text everyone in the match, with quick replies like “Killer here!” and “Where are you?”. Bots text too: when they fix a generator, when the killer finds them, and when you ask where they are. Like voice, the living text the living and the dead text the dead.','Pulse: a heartbeat sensor. The closer the killer gets, the faster your heart beats, and the screen tells you when to run.','Cash: your balance, what you earned from chores, what you spent at Hollow Mart, and every payment.']},
   {v:71,t:'Straight into your car',n:['The intro now ends inside your car: the last shot moves from behind it into the driver’s seat, and you start the match already behind the wheel.','Your car pulls away as soon as the intro ends.','Other players and bots are no longer shown standing where their car is while they are still inside it.']},
   {v:70,t:'Voice chat, Hollow Mart, better stairs',n:['Voice chat: talk to your team with your mic. Voices get quieter the further away someone is, and you can switch to the whole team at full volume, or off, in Settings.','Dead players can’t be heard by the living. Once you die you only hear, and are only heard by, the others who died.','The police and the police station are gone, and so is calling the police.','The gas station is now Hollow Mart, a bigger supermarket next door on both maps. 16 snacks and drinks from different brands: cheap ones by the register that don’t last long, better ones in the back that last up to a minute, combos that give two boosts, and gum and coffee that make the boosts you have last longer. Boosts of the same kind now stack.','The shelves are full of real packets, bottles and cans, each with its name on it.','Stairs rebuilt so the killer and the bots can get upstairs, around the stairwell and into every room. A carpet runner and a second handrail too.','Every house now has one chore upstairs: make the bed, scrub the tub, clean the bathroom mirror or tidy the kid’s room.','Too loud while hiding? The killer hears you, walks up to your hiding spot and drags you out.']},
   {v:69,t:'Ghosts and smarter AI',n:['When you die you spectate: the camera follows a teammate from behind. Switch with the arrows on screen, the arrow keys or Space.','Fate cards: while you spectate, every 25 seconds you get 5 face-down cards. 3 help and 2 hurt, but you can’t tell which. Pick one and it hits the person you’re watching: speed, a shield, endless stamina, unseen, +1 health or +$5, or slowed, noisy, a dead flashlight or losing $5.','Dead players’ mics no longer do anything, so the killer can’t hear you once you’re dead.','The killer is smarter: it cuts you off instead of chasing your back, goes to check when a generator comes on or a chore gets finished nearby, patrols the houses with lights on, and waits by the cars once the job is done.','Survivor bots avoid jobs the killer is standing near.']},
@@ -5175,7 +5276,7 @@ var choreUI=(function(){
   $('choreClose').addEventListener('click',function(){ close(false); });
   function tick(dt){ if (!st) return; var S=st.s; if (st.k==='bed' && S.wait>0){ S.wait-=dt; if (S.wait<=0){ S.up=[]; draw(); } } if (st.k==='trash' && S.bad>0){ S.bad=Math.max(0,S.bad-dt*2); draw(); }
     var N=net; if (!N || game.mode!=='play' || N.alive!==1 || N.ih!==st.hi || Math.hypot(P.x-IX-CHORE_T[st.t].x,P.z-CHORE_T[st.t].z)>1.8 || (N.cleaned||{})[st.cid] || !houses[st.hi].power) close(false); }
-  function finish(){ var N=net, s0=st; close(true); if (!N || !s0) return; if (N.cl.indexOf(s0.cid)<0) N.cl.push(s0.cid); netSend({cl:N.cl}); N.cash=(N.cash||0)+5; tone(1320,0.08,'square',0.05,null,0.3);
+  function finish(){ var N=net, s0=st; close(true); if (!N || !s0) return; if (N.cl.indexOf(s0.cid)<0) N.cl.push(s0.cid); netSend({cl:N.cl}); N.cash=(N.cash||0)+5; cashLog(5,CHORE_T[s0.t].n+' · '+houseName(s0.hi)); tone(1320,0.08,'square',0.05,null,0.3);
     toast('Done: '+CHORE_T[s0.t].n.toLowerCase()+'. +$5 (you have $'+N.cash+'). '+Math.min(CLEAN_NEED,(N.ncl||0)+1)+' of '+CLEAN_NEED+' chores finished.',3000); }
   function close(ok){ if (!st) return; if (!ok && !st.fin) toast('You stopped. That chore starts over.',1800); st=null; down=false; $('chorePanel').hidden=true; if (net && net.wiring==='chore') net.wiring=null; if (!isTouch && game.mode==='play' && !document.pointerLockElement) lock(); }
   function open(hi,t){ var k=KIND[t], S=(k==='dish'||k==='mop'||k==='tub'||k==='mirror')?scrubInit(k):(k==='sweep'?sweepInit():(k==='shelf'||k==='toys'?shelfInit(k==='toys'):(k==='trash'?trashInit():bedInit())));
@@ -5318,9 +5419,11 @@ function update(dt){
       vmL.visible=true; vmL.position.set(-0.12,-0.4+gk*0.14,-0.38-gk*0.2); vmL.rotation.set(-0.5*gk,0.2,0.5*gk); }
     else if (FX.work>0.02){ var wt=game.time;
       vmL.visible=true; vmL.position.set(-0.13+Math.sin(wt*6.5)*0.03,-0.48+FX.work*0.26+Math.sin(wt*13)*0.012,-0.42+Math.cos(wt*6.5)*0.03); vmL.rotation.set(0.3+Math.sin(wt*13)*0.14,0.25,0.35+Math.sin(wt*6.5)*0.2); }
+    else if (PHONE.open && phoneOK() && net.alive===1){ var pb=reduced?0:Math.sin(P.bob)*0.006; vmL.visible=true; vmL.position.set(-0.1,-0.16+pb,-0.3); vmL.rotation.set(0.62,0.28,0.04); }
     else if (heldShow()){ vmL.visible=true; vmL.position.set(-0.2,-0.3+(reduced?0:Math.sin(P.bob)*0.01),-0.45); vmL.rotation.set(0.15,0.35,0.1); }
     else if ((vm.visible || vmKnife.visible) && game.mode==='play'){ var kl=game.role==='killer'; vmL.visible=true; vmL.position.set(kl?-0.26:-0.24,(kl?-0.3:-0.29)+(reduced?0:Math.sin(P.bob+1.2)*0.012)-bob*0.4,kl?-0.44:-0.43); vmL.rotation.set(0.12,0.32,kl?0.3:0.18); }
     else if (vmL.visible) vmL.visible=false;
+    if (PHONE.g) PHONE.g.visible=vmL.visible && phoneOK() && net.alive===1 && !vanPhase(net) && !net.hide && !(game.grab>0) && FX.work<=0.02 && !(net.held);
   }
   if (vmRole!==game.role){ vmRole=game.role; var kk=game.role==='killer'; vmGlove.color.copy(lin(kk?0x141518:0xb88c6c)); vmSleeve.color.copy(lin(kk?0x1c2533:0x2b3442)); }
   heldShow();
