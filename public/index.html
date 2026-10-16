@@ -756,7 +756,7 @@ var carG=null, carCol=null;
 function secMark(){ return {w:world.children.length,s:scene.children.length,c:colliders.length,l:lamps.length,o:typeof OUTHIDES!=='undefined'?OUTHIDES.length:0}; }
 function secErase(m){ world.children.slice(m.w).forEach(function(o){ world.remove(o); }); scene.children.slice(m.s).forEach(function(o){ scene.remove(o); }); colliders.splice(m.c); lamps.splice(m.l); if (typeof OUTHIDES!=='undefined') OUTHIDES.splice(m.o); }
 /* ---------- gas station at the west end ---------- */
-var STN={x:-94,z:0,cx:-97.15,cz:-4,tx:-95.2,tz:-4};
+var STN={x:-93.6,z:0,cx:-96.6,cz:-7.2,tx:-94.6,tz:-7.2};
 (function(){
   var lotM=new THREE.MeshStandardMaterial({map:rep(asphaltTex,7,11),bumpMap:rep(asphaltBump,7,11),bumpScale:0.02,roughness:.75,color:lin(0x9a9aa0)});
   var lot=new THREE.Mesh(new THREE.PlaneGeometry(27,40),lotM); lot.rotation.x=-Math.PI/2; lot.position.set(-86.5,0.025,0); world.add(lot);
@@ -765,20 +765,31 @@ var STN={x:-94,z:0,cx:-97.15,cz:-4,tx:-95.2,tz:-4};
   var glassM=new THREE.MeshStandardMaterial({color:lin(0x9fc0d0),transparent:true,opacity:.18,roughness:.05,metalness:.3,depthWrite:false});
   var panelM=glow(0xfff6e0), darkM=mat(0x17181c,{roughness:.5});
   function sbox(w,h,d,m,x,y,z,col){ var b=box(w,h,d,m,x,y,z); if (col) addBox(x,z,w/2,d/2); return b; }
-  // store
-  sbox(8,0.06,16,new THREE.MeshStandardMaterial({map:rep(concreteTex,6,12),roughness:.4}),-94,0.03,0);
-  sbox(0.25,3.6,16,wallM,-97.9,1.8,0,true); sbox(8,3.6,0.25,wallM,-94,1.8,-7.9,true); sbox(8,3.6,0.25,wallM,-94,1.8,7.9,true);
-  [-4.5,4.5].forEach(function(z){ sbox(0.25,0.9,7,wallM,-90,0.45,z,true); sbox(0.08,2.2,7,glassM,-90,2.0,z); sbox(0.12,2.2,0.12,darkM,-90,2.0,z-3.44*Math.sign(z)); });
-  sbox(0.25,0.5,16,wallM,-90,3.35,0); sbox(8.8,0.25,16.8,darkM,-94,3.72,0); sbox(0.3,0.75,16.8,redM,-89.75,3.98,0);
-  var signT=canvasTex(512,64,function(g){ g.fillStyle='#a3211c'; g.fillRect(0,0,512,64); g.fillStyle='#fff4e0'; g.font='bold 27px Georgia,serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('LANE END GAS  ·  OPEN ALL NIGHT',256,34); });
-  var sign=new THREE.Mesh(new THREE.PlaneGeometry(11,0.62),new THREE.MeshBasicMaterial({map:signT})); sign.rotation.y=Math.PI/2; sign.position.set(-89.58,3.98,0); world.add(sign);
-  [-4,4].forEach(function(z){ sbox(1.2,0.05,3,panelM,-94,3.57,z); });
-  sbox(1,1.0,4,mat(0x6a4a32,{roughness:.6}),-96.2,0.5,-4,true); sbox(1.1,0.06,4.1,darkM,-96.2,1.03,-4); sbox(0.4,0.3,0.45,darkM,-96.2,1.2,-3.2); sbox(0.02,0.2,0.3,glow(0x7fd8a0),-95.99,1.22,-3.2);
   var prod=[0xb59a52,0x3d4f7a,0x7a2f26,0x2f5d50,0xc9c4b4,0x9a4a1a];
-  [-94.6,-92.4].forEach(function(x,k){ sbox(0.5,1.5,5,whiteM,x,0.75,3.6,true);
-    for (var r=0;r<3;r++) for (var c=0;c<6;c++){ sbox(0.56,0.26,0.6,mat(prod[(r*2+c+k)%6],{roughness:.7}),x,0.42+r*0.45,1.5+c*0.82); } });
-  sbox(0.6,2.2,5,darkM,-97.45,1.1,4.2,true); sbox(0.03,1.8,4.6,glow(0x9fd8ff),-97.13,1.15,4.2);
-  halo(0xfff0d0,5,-94,3.3,-4,scene,.5); halo(0xfff0d0,5,-94,3.3,4,scene,.5);
+  // store: bigger now, 11 deep and 22 wide, with two glass doors side by side in the middle of the front
+  sbox(11.3,0.06,22,new THREE.MeshStandardMaterial({map:rep(concreteTex,8,16),roughness:.4}),-93.65,0.03,0);
+  sbox(0.25,3.8,22,wallM,-99.3,1.9,0,true); sbox(11.3,3.8,0.25,wallM,-93.65,1.9,-11,true); sbox(11.3,3.8,0.25,wallM,-93.65,1.9,11,true);
+  [-1,1].forEach(function(s2){ var zc=s2*6.15; sbox(0.25,0.9,9.7,wallM,-88,0.45,zc,true); sbox(0.08,2.3,9.7,glassM,-88,2.05,zc); sbox(0.14,2.4,0.14,darkM,-88,2.0,s2*1.32); sbox(0.14,2.4,0.14,darkM,-88,2.0,s2*10.9); });
+  sbox(0.25,0.6,22,wallM,-88,3.5,0); sbox(11.9,0.25,22.8,darkM,-93.65,3.92,0); sbox(0.3,0.75,22.8,redM,-87.75,4.18,0);
+  var signT=canvasTex(512,64,function(g){ g.fillStyle='#a3211c'; g.fillRect(0,0,512,64); g.fillStyle='#fff4e0'; g.font='bold 27px Georgia,serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('LANE END GAS  ·  SNACKS  ·  DRINKS',256,34); });
+  var sign=new THREE.Mesh(new THREE.PlaneGeometry(13,0.62),new THREE.MeshBasicMaterial({map:signT})); sign.rotation.y=Math.PI/2; sign.position.set(-87.58,4.18,0); world.add(sign);
+  [[-96,-6],[-96,0],[-96,6],[-91.5,-6],[-91.5,0],[-91.5,6]].forEach(function(p){ sbox(1.4,0.05,2.6,panelM,p[0],3.76,p[1]); });
+  // the counter and the register, with the cashier behind it
+  sbox(1.0,1.05,4.4,mat(0x6a4a32,{roughness:.6}),-95.6,0.52,-7.2,true); sbox(1.1,0.06,4.5,darkM,-95.6,1.08,-7.2); sbox(0.45,0.32,0.5,darkM,-95.6,1.26,-6.4); sbox(0.02,0.18,0.3,glow(0x7fd8a0),-95.37,1.3,-6.4);
+  sbox(0.5,0.08,0.4,mat(0x2a2a2e),-95.6,1.13,-7.6); sbox(0.25,2.2,4.2,mat(0x4a3a2a,{roughness:.8}),-99.05,1.4,-7.2);
+  for (var cg=0;cg<4;cg++) for (var cr=0;cr<5;cr++) sbox(0.18,0.22,0.6,mat(prod[(cg+cr)%6],{roughness:.6}),-98.85,0.9+cg*0.42,-9+cr*0.8);
+  // right by the register: a small drinks cooler on one side, a snack rack on the other
+  sbox(2.0,1.5,0.6,darkM,-93.55,0.75,-10.3,true); sbox(1.9,1.3,0.02,glow(0x9fd8ff),-93.55,0.8,-9.99);
+  [-94.2,-92.9].forEach(function(x,k){ for (var r=0;r<3;r++) for (var c=0;c<3;c++) sbox(0.12,0.28,0.12,glow(k?0x3a2a6a:0x2a8aff),x-0.25+c*0.25,0.35+r*0.4,-10.05); });
+  sbox(2.0,1.3,0.6,whiteM,-93.55,0.65,-4.1,true);
+  [-94.2,-92.9].forEach(function(x,k){ for (var r=0;r<3;r++) for (var c=0;c<3;c++) sbox(0.22,0.14,0.08,mat(k?0x7a2a1a:0xd8a020,{roughness:.6}),x-0.25+c*0.25,0.45+r*0.35,-4.43); });
+  // two aisles of snacks
+  [2.6,6.4].forEach(function(z,k){ sbox(5.4,1.6,0.8,whiteM,-93.6,0.8,z,true);
+    for (var r=0;r<3;r++) for (var c=0;c<9;c++){ [-1,1].forEach(function(sd){ sbox(0.5,0.26,0.12,mat(prod[(r*2+c+k)%6],{roughness:.7}),-95.9+c*0.58,0.45+r*0.45,z+sd*0.43); }); } });
+  // the drinks cooler along the back wall
+  sbox(0.8,2.3,8,darkM,-98.8,1.15,5,true); sbox(0.03,1.9,7.6,glow(0x9fd8ff),-98.38,1.2,5);
+  for (var dr=0;dr<4;dr++) for (var dc=0;dc<12;dc++) sbox(0.12,0.3,0.12,glow([0x2a8aff,0xe03030,0x40c060,0x3a2a5a][(dr+dc)%4]),-98.45,0.55+dr*0.48,1.6+dc*0.6);
+  halo(0xfff0d0,5,-94,3.4,-6,scene,.5); halo(0xfff0d0,5,-94,3.4,4,scene,.5);
   // canopy and pumps
   sbox(9,0.4,12,whiteM,-81,4.7,0); sbox(9.1,0.5,0.15,redM,-81,4.7,6.05); sbox(9.1,0.5,0.15,redM,-81,4.7,-6.05); sbox(0.15,0.5,12.2,redM,-76.45,4.7,0); sbox(0.15,0.5,12.2,redM,-85.55,4.7,0);
   [-4.2,4.2].forEach(function(z){ sbox(0.4,4.5,0.4,whiteM,-81,2.25,z,true); });
@@ -792,15 +803,17 @@ var STN={x:-94,z:0,cx:-97.15,cz:-4,tx:-95.2,tz:-4};
   var st2=canvasTex(256,160,function(g){ g.fillStyle='#fff4e0'; g.fillRect(0,0,256,160); g.fillStyle='#a3211c'; g.fillRect(0,0,256,62); g.fillStyle='#fff4e0'; g.font='bold 50px Georgia,serif'; g.textAlign='center'; g.fillText('GAS',128,50); g.fillStyle='#17181c'; g.font='bold 54px Georgia,serif'; g.fillText('1.19',128,130); });
   [1,-1].forEach(function(s){ var p=new THREE.Mesh(new THREE.PlaneGeometry(2.6,1.6),new THREE.MeshBasicMaterial({map:st2})); p.position.set(-76+s*0.13,5.6,-16); p.rotation.y=s*Math.PI/2; world.add(p); });
   sbox(0.24,1.7,2.7,darkM,-76,5.6,-16);
-  // automatic sliding doors
-  var doorGlass=new THREE.MeshStandardMaterial({color:lin(0xa8cfe0),transparent:true,opacity:.3,roughness:.05,metalness:.3,depthWrite:false});
+  // two glass doors side by side, each hinged on its outer edge, swinging out together
+  var doorGlass=new THREE.MeshStandardMaterial({color:lin(0xa8cfe0),transparent:true,opacity:.3,roughness:.05,metalness:.3,depthWrite:false}), barM=mat(0xc8ccd0,{roughness:.25,metalness:.8});
   STN.doors=[-1,1].map(function(sd){
-    var g=new THREE.Group(); g.position.set(-90,0,sd*0.5); world.add(g);
-    box(0.05,2.9,0.94,doorGlass,0,1.55,0,g); box(0.08,3.0,0.06,darkM,0,1.55,-0.47,g); box(0.08,3.0,0.06,darkM,0,1.55,0.47,g); box(0.08,0.08,1.0,darkM,0,3.06,0,g); box(0.08,0.1,1.0,darkM,0,0.1,0,g);
+    var g=new THREE.Group(); g.position.set(-88,0,sd*1.25); world.add(g);
+    box(0.05,2.3,1.16,doorGlass,0,1.25,-sd*0.6,g); box(0.08,2.4,0.07,darkM,0,1.25,-sd*0.04,g); box(0.08,2.4,0.07,darkM,0,1.25,-sd*1.16,g); box(0.08,0.08,1.2,darkM,0,2.42,-sd*0.6,g); box(0.08,0.12,1.2,darkM,0,0.1,-sd*0.6,g);
+    box(0.06,0.05,0.8,barM,0.08,1.05,-sd*0.6,g); box(0.06,0.05,0.8,barM,-0.08,1.05,-sd*0.6,g);
+    var pt=new THREE.Mesh(new THREE.PlaneGeometry(0.42,0.16),new THREE.MeshBasicMaterial({map:canvasTex(64,24,function(c){ c.fillStyle='#a3211c'; c.fillRect(0,0,64,24); c.fillStyle='#fff'; c.font='bold 15px monospace'; c.fillText(sd<0?'PUSH':'PULL',10,17); })})); pt.position.set(0.04,1.5,-sd*0.6); pt.rotation.y=Math.PI/2; g.add(pt);
     return {g:g,sd:sd};
   });
-  sbox(0.3,0.12,2.2,darkM,-90,3.16,0); sbox(0.12,0.05,0.2,glow(0x7fd8a0),-89.82,3.16,0);
-  STN.col=addBox(-90,0,0.14,1.0); STN.open=0; STN.want=0;
+  sbox(0.3,0.12,2.6,darkM,-88,2.56,0); sbox(0.12,0.05,0.2,glow(0x7fd8a0),-87.82,2.6,0);
+  STN.col=addBox(-88,0,0.14,1.25); STN.open=0; STN.want=0;
   lamps.push({x:-94,z:0,sx:-94,sz:0}); lamps.push({x:-81,z:0,sx:-81,sz:0});
 })();
 
@@ -2251,14 +2264,14 @@ document.addEventListener('pointerlockchange',function(){
 
 /* ---------- the station's automatic doors ---------- */
 function stationDoor(dt){
-  var near=!shelter && Math.hypot(P.x+90,P.z)<3.4, S=stalker;
-  if (!near && S.g.visible && !S.mode && Math.hypot(S.g.position.x+90,S.g.position.z)<3.2) near=true;
-  if (!near && game.role==='killer' && Math.hypot(surv.x+90,surv.z)<3.2) near=true;
+  var near=!shelter && Math.hypot(P.x+88,P.z)<3.4, S=stalker;
+  if (!near && S.g.visible && !S.mode && Math.hypot(S.g.position.x+88,S.g.position.z)<3.2) near=true;
+  if (!near && net && net.pl) net.pl.forEach(function(q){ if (!q.me && (q.ih==null||q.ih<0) && Math.hypot(q.x+88,q.z)<3.2) near=true; });
   var want=near?1:0;
-  if (want!==STN.want){ STN.want=want; if (Math.hypot(P.x+90,P.z)<26){ noise(0.35,0.1,1400); if (want){ tone(880,0.18,'sine',0.07); tone(660,0.3,'sine',0.07,null,0.16); } } }
+  if (want!==STN.want){ STN.want=want; if (Math.hypot(P.x+88,P.z)<26){ if (want){ noise(0.25,0.08,900); tone(1250,0.12,'sine',0.05); tone(940,0.2,'sine',0.05,null,0.12); } else { thud(0.25); } } }
   if (STN.open===want) return;
-  STN.open=Math.max(0,Math.min(1,STN.open+(want?1:-1)*dt*2.6));
-  STN.doors.forEach(function(d){ d.g.position.z=d.sd*(0.5+STN.open*0.96); });
+  STN.open=Math.max(0,Math.min(1,STN.open+(want?1:-1)*dt*(want?2.4:1.6)));
+  var k2=STN.open*STN.open*(3-2*STN.open); STN.doors.forEach(function(d){ d.g.rotation.y=-d.sd*k2*1.45; });
   var k=colliders.indexOf(STN.col);
   if (STN.open>0.55){ if (k>=0) colliders.splice(k,1); } else if (k<0) colliders.push(STN.col);
 }
@@ -3575,13 +3588,14 @@ function netInteract(dt,pl){
       HIDES.forEach(function(s){ if (N.near || Math.abs((P.y||0)-s.f*FLOOR2)>0.4) return; if (Math.hypot(P.x-IX-s.x,P.z-s.z)<s.r) N.near={k:'search',s:s,t:'Search: '+s.t.replace(/^Hide (in|under) /,'')}; }); }
   } else {
     if (!killer && (P.y||0)<0.8){ var ci=-1; chests.forEach(function(c,i){ if (!c.open && Math.hypot(c.x-P.x,c.z-P.z)<1.6) ci=i; }); if (ci>=0) N.near={k:'chest',i:ci,t:'Open the chest'}; }
+    if (!N.near && !killer) N.near=storeNear();
     if (!N.near && !killer) houses.forEach(function(hh,hi){ if (N.near || hh.power) return; if (Math.hypot(P.x-hh.gen.x,P.z-hh.gen.z)<2.2) N.near={k:'wire',hi:hi,t:'Connect the generator wires'}; });
     if (!N.near){ var dh=nearDoor(); if (dh) N.near={k:'door',h:dh,t:killer?(dh.netBroke?'Open the door':'Break the door down'):((dh.power||dh.netBroke)?'Open the door':'Locked · fix their generator out back')}; }
     if (!N.near) OUTHIDES.forEach(function(s){ if (N.near || Math.abs((s.y||0)-(P.y||0))>0.8) return; if (Math.hypot(P.x-s.x,P.z-s.z)<s.r) N.near=killer?{k:'search',s:s,t:'Search the dumpster'}:{k:'hide',s:s,t:s.t}; });
   }
   if (N.chat && (!N.near || N.near.k!=='chat')) closeChat();
-  var lab={chore:'Clean',wire:'Fix',up:'Up',down:'Down',killnb:'Kill',chest:'Open',door:killer&&N.near&&N.near.h&&!N.near.h.netBroke?'Break':'Open',chat:'Chat',hide:'Hide',search:'Search',unhide:'Out'};
-  if (N.near && !N.working) setPrompt(N.near.t,lab[N.near.k]); else if (curPrompt && !N.working && /^(Open the|Break the|Chat with|Hide|Search|Come out|Kill |Go up|Go down|Connect the|Locked|Clean up|Too dark)/.test(curPrompt)) setPrompt(null);
+  var lab={take:'Take',pay:'Pay',chore:'Clean',wire:'Fix',up:'Up',down:'Down',killnb:'Kill',chest:'Open',door:killer&&N.near&&N.near.h&&!N.near.h.netBroke?'Break':'Open',chat:'Chat',hide:'Hide',search:'Search',unhide:'Out'};
+  if (N.near && !N.working) setPrompt(N.near.t,lab[N.near.k]); else if (curPrompt && !N.working && /^(Open the|Break the|Chat with|Hide|Search|Come out|Kill |Go up|Go down|Connect the|Locked|Clean up|Too dark|Take a|Ring up)/.test(curPrompt)) setPrompt(null);
 }
 // ---- police (run by one player's game, shown to everyone)
 function polTick(dt,pl,killers){
@@ -3958,7 +3972,7 @@ function netBegin(go){
   lobby=null;
   net={mode:mode,code:code,role:role,gid:go.id,roles:go.roles,t0:performance.now(),el:0,st:0,f:0,hits:0,hp:3,alive:1,acc:{},spd:1,
        E:{x:0,z:0,ry:0,vis:0,cool:mode==='s'?22:30,lost:0,stuck:0,mv:0},ek:{},k:{},o:{g:0,b:0,c:0,gn:{}},hold:[0,0],sendT:0,cd:0,slow:0,boost:0,inv:0,objT:0,lastObj:'',
-       prey:null,esc:0,over:false,stT:0,lx:0,lz:0,an:0,done:false,spec:0,kills:0,world:{},bots:[],held:null,bd:[],nd:[],brk:null,kn:0,cs:[],cl:[],pw:[],cut:{},cutView:{},wiring:null,chKey:null,chT:0,traps:[],tt:[],kh:{},stun:0,nearChest:-1,khSeen:0,hc:0,knock:null,kd:null,nearDoor:null};
+       prey:null,esc:0,over:false,stT:0,lx:0,lz:0,an:0,done:false,spec:0,kills:0,world:{},bots:[],held:null,bd:[],nd:[],brk:null,kn:0,cs:[],cl:[],pw:[],cut:{},cutView:{},cash:0,bag:[],buff:{},carry:null,clerkOn:false,wiring:null,chKey:null,chT:0,traps:[],tt:[],kh:{},stun:0,nearChest:-1,khSeen:0,hc:0,knock:null,kd:null,nearDoor:null};
   houses.forEach(function(h){ h.netCd=0; });
   clearItems(); applyMap('lane'); buildChests(); applyMap(MAPS.some(function(x){ return x.id===go.map; })?go.map:'lane'); net.map=curMap;
   net.vanOut=false; net.vanBots=false; net.lastCy=null; vanReset();
@@ -4082,8 +4096,8 @@ function netTick(dt){
   swingTick(dt); N.scareCd=(N.scareCd||0)-dt; N.vanCd=(N.vanCd||0)-dt; N.iv=(N.iv||0)-dt; N.killRev=(N.killRev||0)-dt; N.fright=(N.fright||0)-dt; N.reveal=(N.reveal||0)-dt; wrap.classList.toggle('vanished',game.role==='killer' && N.iv>0); N.cd-=dt; N.slow-=dt; N.boost-=dt; N.inv-=dt; N.stun-=dt; N.sense=(N.sense||0)-dt; N.senseCd=(N.senseCd||0)-dt;
   var surv=pl.filter(function(q){ return !(q.role==='k'||q.role==='killer'); }), killers=pl.filter(function(q){ return q.role==='k'||q.role==='killer'; });
   if (N.mode==='s' && !N.blood && N.el>NIGHT*0.5){ N.blood=true; sting(0.4,true); thud(1.2); shake();
-    toast(game.role==='killer'?'Blood Moon. You are faster now, and Elias is hunting with you.':'Blood Moon. The killers are faster, and Elias has come out to hunt.',5000); }
-  var eliasOn = N.mode==='b' || (N.mode==='s' && (!killers.length || (N.blood && killers.length<2)));
+    toast(game.role==='killer'?'Blood Moon. You are faster now, and Elias is hunting with you.':'Blood Moon. The killer is faster now.',5000); }
+  var eliasOn = N.mode==='b';
   // Elias, run by one player and shown to everyone
   var E=N.E, S=stalker;
   if (eliasOn){
@@ -4100,12 +4114,13 @@ function netTick(dt){
   }
   // being hit
   var H=hitsK+hitsE;
+  if (H>N.hits && buffOn('shield') && N.alive===1 && N.inv<=0){ N.hits=H; N.buff.shield=0; N.inv=2.5; noise(0.3,0.4,1800); tone(220,0.4,'square',0.1,90); shake(); toast('Your shield took the hit. It’s gone now.',2600); }
   if (H>N.hits){ N.hits=H; if (N.alive===1 && N.inv<=0 && game.role!=='killer'){ N.inv=2.5; netHurt(); if (N.mode==='s') jumpFace(); N.killRev=1.4; wireUI.close(false); choreUI.close(false); if (N.hide){ netUnhide(); toast('He found you!',2000); } closeChat();
       if (N.mode==='s'){ N.hp--; if (N.hp<=0){ N.alive=0; vm.visible=false; setLight(false); toast('You are dead. You can watch the others.',4000); } else { N.boost=4; toast(N.hp===1?'You are badly hurt. One more hit and you are dead.':'You are hurt. Two more hits and you are dead.',3500); } }
       else { N.f=maxF=Math.max(maxF,N.f)+1; N.failMine=true; } } }
   if (N.mode==='s') netSurvival(dt,pl,surv,killers,me); else netCoop(dt,pl,maxSt,maxF,me,host);
   if (!net || net.over) return;
-  N.spd = (N.alive!==1 || N.stun>0 || N.fright>0 || vanPhase(N) || N.wiring || doorSeq) ? 0 : (game.role==='killer' && N.blood && N.slow<=0) ? 1.12 : (N.slow>0 ? 0.45 : (N.boost>0 ? 1.15 : (N.mode==='s' && N.hp<3 && game.role!=='killer' ? (N.hp<2?0.86:0.94) : 1)));
+  N.spd = (function(v){ return v>0 && buffOn('spd') ? v*1.3 : v; })((N.alive!==1 || N.stun>0 || N.fright>0 || vanPhase(N) || N.wiring || doorSeq) ? 0 : (game.role==='killer' && N.blood && N.slow<=0) ? 1.12 : (N.slow>0 ? 0.45 : (N.boost>0 ? 1.15 : (N.mode==='s' && N.hp<3 && game.role!=='killer' ? (N.hp<2?0.86:0.94) : 1))));
   // spectating
   if (N.alive!==1){ var cands=surv.filter(function(q){ return !q.me && q.alive && q.av; }); if (!cands.length) cands=pl.filter(function(q){ return !q.me && q.av; });
     if (cands.length){ var w=cands[N.spec%cands.length], a=w.av, bx=Math.sin(a.ry), bz=Math.cos(a.ry); camera.position.set(a.x-bx*3.2,2.4,a.z-bz*3.2); camera.lookAt(a.x,1.4,a.z); }
@@ -4116,7 +4131,7 @@ function netTick(dt){
     var patch={p:[Math.round(P.x*100)/100,Math.round(P.z*100)/100,Math.round(P.yaw*100)/100,N.an],a:N.alive,h:N.hp,cr:P.crouch?1:0,el:Math.round(N.el),st:N.st,f:N.f,hp:[N.hold[0],Math.round(N.hold[1]*10)/10]};
     if (N.mode==='s'){ if (game.role==='killer') patch.k=N.k; patch.o={g:N.o.g,b:N.o.b,c:Math.round(N.o.c*10)/10,gn:N.o.gn};
       patch.bd=N.bd; patch.nd=N.nd; patch.ih=N.ih; patch.fy=Math.round((P.y||0)*100)/100; patch.hid=N.hide?1:0; if (N.pc) patch.pc=N.pc; if (host){ patch.pol=N.polView||[0]; patch.jl=N.jl||[]; }
-      patch.nz=game.role==='killer'?0:(N.nz||0); fleetPatch(patch,host); if (game.role==='killer'){ patch.sc=N.sc||0; patch.iv=N.iv>0?1:0; } if (host){ patch.bsc=N.bsc||0; patch.gcut=Object.keys(N.cut||{}).map(function(k){ return [+k,N.cut[k]]; }); } patch.bl=N.blood?1:0; patch.cs=N.cs; patch.cl=N.cl; patch.pw=N.pw; patch.tp=N.traps; patch.tt=N.tt; patch.kh=N.kh; if (N.kd) patch.kd=N.kd; if (game.role==='killer'){ patch.sn=N.stun>0?Math.ceil(N.stun):0; patch.hc=N.hc; }
+      patch.nz=game.role==='killer'?0:(N.nz||0); fleetPatch(patch,host); patch.gh=buffOn('ghost')?1:0; if (game.role==='killer'){ patch.sc=N.sc||0; patch.iv=N.iv>0?1:0; } if (host){ patch.bsc=N.bsc||0; patch.gcut=Object.keys(N.cut||{}).map(function(k){ return [+k,N.cut[k]]; }); } patch.bl=N.blood?1:0; patch.cs=N.cs; patch.cl=N.cl; patch.pw=N.pw; patch.tp=N.traps; patch.tt=N.tt; patch.kh=N.kh; if (N.kd) patch.kd=N.kd; if (game.role==='killer'){ patch.sn=N.stun>0?Math.ceil(N.stun):0; patch.hc=N.hc; }
       if (host && N.bots.length){ patch.bz=N.bots.map(function(b){ return [Math.round(b.x*100)/100,Math.round(b.z*100)/100,Math.round(b.ry*100)/100,b.an,b.a,b.hp,b.stun>0?Math.ceil(b.stun):0,b.hc||0,b.nz||0,b.ih==null?-1:b.ih,Math.round((b.y||0)*100)/100,b.hid?1:0,b.cr?1:0,b.iv>0?1:0]; }); patch.ek=N.ek; } }
     if (eliasOn && host){ patch.e=[Math.round(E.x*100)/100,Math.round(E.z*100)/100,Math.round(E.ry*100)/100,E.vis,E.mv]; patch.ek=N.ek; }
     if (N.prey) patch.pv=[Math.round(N.prey.x*100)/100,Math.round(N.prey.z*100)/100,Math.round(N.prey.ry*100)/100,N.prey.an,N.prey.who,N.prey.dead?1:0,N.st];
@@ -4166,6 +4181,7 @@ function botsHost(dt,pl,W){
       // what this killer can see or hear right now
       var T=null, d=1e9, best=1e9;
       targets.forEach(function(q){ if ((q.bot && q.bot.a!==1) || q.hid) return;
+        if (q.me ? buffOn('ghost') : num(q.pr.gh,0)) return;
         var qih=q.ih==null?-1:q.ih, same=qih===b.ih, dd=bdist(b,q), loud=q.bot?q.bot.nz:num(q.pr.nz,0), cr=q.bot?q.bot.cr:num(q.pr.cr,0);
         var see=same && Math.abs((q.y||0)-(b.y||0))<2 && (b.ih>=0 ? dd<14 : dd<(cr?8:28)), hear=loud && dd<(cr?20:42);
         if (!(see || hear || b.sense>0 || (b.tgt===q.id && dd<14))) return;
@@ -4176,7 +4192,6 @@ function botsHost(dt,pl,W){
         return; }
       if (T){ b.tgt=T.id; b.mem={x:T.x,z:T.z,ih:T.ih==null?-1:T.ih,y:T.y||0,t:N.el}; b.search=null;
         if (b.scCd<=0 && d>7 && d<32){ b.scCd=40; N.bsc=(N.bsc||0)+1; scared(); scareBots(); }
-        if (b.ivCd<=0 && d>12 && d<40){ b.ivCd=40; b.iv=8; }
         navStep(b,{x:T.x,z:T.z,ih:T.ih==null?-1:T.ih,y:T.y||0},sp,dt,true); b.an=b.kicking?0:(sp>4?2:1); d=Math.hypot(T.x-b.x,T.z-b.z);
         if (!b.kicking && d<1.5 && b.cd<=0 && b.ih===(T.ih==null?-1:T.ih) && Math.abs((b.y||0)-(T.y||0))<1.2){ b.sw=0.38; b.swT=T.id; b.an=0; b.iv=0; }
         return; }
@@ -4305,7 +4320,7 @@ function netSurvival(dt,pl,surv,killers,me){
   G=2; B=2; C=CARNEED;
   var fixed=houses.filter(function(hh,hi){ return powered[hi]; }), carOK=true; done=ncl>=CLEAN_NEED && npw>=PW_NEED;
   if (N.isHost && N.bots.length) botsHost(dt,pl,{G:G,B:B,C:C,gens:gens,carOK:carOK,done:done,cleaned:cleaned,ncl:ncl,powered:powered,npw:npw});
-  itemsTick(dt,pl,killers); teamTick(pl);
+  itemsTick(dt,pl,killers); teamTick(pl); if (game.role!=='killer') storeTick(dt);
   if (N.isHost) polTick(dt,pl,killers); polDraw(dt); jailTick(dt,pl); netHome(dt); netInteract(dt,pl);
   if (N.mode==='s' && !N.vanOut && !vanPhase(N)){ N.vanOut=true; if (game.role!=='killer' && N.alive===1) toast('Out of the car. Get the generators running and clean those houses.',3200); }
   var pv=N.polView||[0]; if (pv[0]===1){ var pl2='Police on the way · '+mmss(num(pv[1],0)-N.el); if (game.role==='killer') netSafe(pl2); else if (!N.working) netSafe(pl2); } else if (pv[0]===3 && game.role==='killer' && !N.jailed) netSafe('The police are after you');
@@ -4348,7 +4363,7 @@ function netSurvival(dt,pl,surv,killers,me){
     if (N.ih>=0 && !N.hide){ var chs=choresOf(N.ih); for (var ci2=0;ci2<chs.length;ci2++){ var ct=chs[ci2], CT=CHORE_T[ct], cid=choreId(N.ih,ct); if (cleaned[cid]) continue;
         if (Math.abs((P.y||0)-CT.f*FLOOR2)<0.5 && Math.hypot(P.x-IX-CT.x,P.z-CT.z)<1.25){ if (houses[N.ih].power) N.choreHere={hi:N.ih,t:ct,cid:cid}; else N.darkChore=true; break; } } }
     if (N.wiring){ work=true; lab=N.wiring==='chore'?'Cleaning':'Fixing the generator'; }
-    N.nz=(work || P.sprinting || (N.hp===1 && !P.crouch) || N.reveal>0 || N.micLoud)?1:0;
+    N.nz=buffOn('ghost')?0:((work || P.sprinting || (N.hp===1 && !P.crouch) || N.reveal>0 || N.micLoud)?1:0);
     if (N.hp===1){ N.drip=(N.drip||0)-dt; if (N.drip<=0){ N.drip=2.2; bloodPool(P.x,P.gy,P.z,0.35); } }
     N.working=work; if (work){ N.tk=(N.tk||0)+dt; if (N.tk>0.8){ N.tk=0; tone(300+Math.random()*80,0.05,'square',0.07); } }
     var txt;
@@ -4362,7 +4377,7 @@ function netSurvival(dt,pl,surv,killers,me){
     if (N.ih>=0 && !houses[N.ih].power && !done){ txt='The power is out in here. Fix the generator out back before you can clean.'; tgt=genPt(N.ih); }
     if (vanPhase(N) && myCar()){ txt='Drive to the parking lot at the far end of the lane. Pull into your glowing spot.'; tgt={x:myCar().stall.x,z:STALL_Z}; }
     var pvw=N.polView||[0]; if (pvw[0]===1) txt+=' Police in '+mmss(num(pvw[1],0)-N.el)+'.'; if (N.ih>=0) txt='You are inside. '+txt;
-    netObj('Kill Feast · '+clockT,txt+' Chores '+Math.min(ncl,CLEAN_NEED)+'/'+CLEAN_NEED+' · generators '+Math.min(npw,PW_NEED)+'/'+PW_NEED+' · '+alive+' alive.',tgt);
+    netObj('Kill Feast · '+clockT,txt+' Chores '+Math.min(ncl,CLEAN_NEED)+'/'+CLEAN_NEED+' · generators '+Math.min(npw,PW_NEED)+'/'+PW_NEED+' · $'+(N.cash||0)+' · '+alive+' alive.',tgt);
     var mc=myCar(); netSafe(vanPhase(N)&&mc?(mc.st===0?'Get ready':mc.st===1?(mc.auto?'Autopilot':'Driving · '+(isTouch?'push the stick':'W go · S brake · A/D steer')):mc.st===2?'Parking':'Getting out'):lab);
   } else { netObj('Kill Feast · '+clockT,(N.alive===2?'You escaped. ':'You are dead. ')+alive+' still alive.',null); netSafe(null); }
   if (N.el>6){
@@ -4447,6 +4462,40 @@ function preyTick(dt,others){
   $('btnUse').addEventListener('pointerdown',function(e){ e.preventDefault(); useHeld(); });
 })();
 
+/* ---------- in-match cash and the gas station: snacks and drinks for 30-second boosts ---------- */
+var SNACKS=[
+  {id:'spd',n:'Bolt Energy',kind:'drink',p:5,e:'Speed',x:-94.2,z:-9.2,say:['Bolt Energy. That stuff will have you running laps.','Five bucks. Don’t drink it all at once.']},
+  {id:'ghost',n:'Midnight Cola',kind:'drink',p:10,e:'Undetected',x:-92.9,z:-9.2,say:['Midnight Cola. Folks say you go real quiet after one.','Ten bucks. He won’t see you coming. Or going.']},
+  {id:'stam',n:'Marathon Bar',kind:'snack',p:5,e:'Extra stamina',x:-94.2,z:-5.2,say:['Marathon Bar. Good for the legs.','Five. Keep running, kid.']},
+  {id:'shield',n:'Iron Jerky',kind:'snack',p:10,e:'Shield',x:-92.9,z:-5.2,say:['Iron Jerky. Tough as you’ll need to be.','Ten bucks. Chew slow.']}];
+var BUFF_T=30, BUFFN={spd:'Speed',stam:'Stamina',shield:'Shield',ghost:'Undetected'}, CLERK=Math.max(0,NEIGHBOURS.map(function(s){ return s.n; }).indexOf('Felix'));
+function snackOf(id){ for (var i=0;i<SNACKS.length;i++) if (SNACKS[i].id===id) return SNACKS[i]; return null; }
+function inStore(x,z){ return x>-99.2 && x<-88.1 && Math.abs(z)<10.9; }
+function buffOn(k){ return !!(net && net.buff && net.buff[k]>0); }
+function storeTick(dt){ var N=net; if (!N || N.mode!=='s') return; N.buff=N.buff||{};
+  for (var k in N.buff) if (N.buff[k]>0){ N.buff[k]-=dt; if (N.buff[k]<=0){ N.buff[k]=0; toast(BUFFN[k]+' wore off.',1600); } }
+  // the cashier behind the counter
+  var R=resident, near=N.ih<0 && !N.fin && Math.hypot(P.x-STN.x,P.z-STN.z)<34;
+  if (near){ if (!N.clerkOn || !R.g.visible || R.who!==NEIGHBOURS[CLERK]){ showResident(CLERK); R.g.position.set(STN.cx,0.06,STN.cz); R.g.rotation.set(0,Math.PI/2,0); N.clerkOn=true; }
+    else if (Math.hypot(P.x-STN.cx,P.z-STN.cz)<9) turnTo(R.g,Math.atan2(P.x-STN.cx,P.z-STN.cz),dt); }
+  else if (N.clerkOn){ N.clerkOn=false; if (N.ih<0 && R.who===NEIGHBOURS[CLERK]) R.g.visible=false; }
+  // walking out with something you haven't paid for
+  if (N.carry && !inStore(P.x,P.z)){ var sn=snackOf(N.carry); N.carry=null; say(CLERK,['Hey! You have to pay for that!','That’s not free, pal. Put it back.'][(Math.random()*2)|0],2600); if (sn) toast('You put the '+sn.n+' back.',1800); } }
+function storeNear(){ var N=net; if (!inStore(P.x,P.z)) return null;
+  if (N.carry && Math.hypot(P.x-STN.tx,P.z-STN.tz)<1.7){ var c=snackOf(N.carry); return {k:'pay',t:'Ring up the '+c.n+' · $'+c.p}; }
+  var best=null, bd=0.95; SNACKS.forEach(function(sn){ var d=Math.hypot(P.x-sn.x,P.z-sn.z); if (d<bd){ bd=d; best=sn; } });
+  if (best && N.carry!==best.id) return {k:'take',s:best,t:'Take a '+best.n+' · $'+best.p+' · '+best.e+' for 30s'};
+  return null; }
+function storeAct(n){ var N=net;
+  if (n.k==='take'){ N.carry=n.s.id; tone(900,0.05,'square',0.05); noise(0.08,0.08,2000); toast('Take the '+n.s.n+' to the register at the counter.',2400); return; }
+  if (n.k==='pay'){ var c=snackOf(N.carry); if (!c) return;
+    if ((N.cash||0)<c.p){ say(CLERK,'That’s $'+c.p+'. You’ve only got $'+(N.cash||0)+'. Go clean something.',3000); thud(0.2); return; }
+    if ((N.bag||[]).length>=3){ say(CLERK,'Your pockets are full. Eat something first.',2600); return; }
+    N.cash-=c.p; N.bag=N.bag||[]; N.bag.push(c.id); N.carry=null; tone(1320,0.08,'square',0.06); tone(1760,0.12,'square',0.05,null,0.09); noise(0.1,0.1,3000,0.05);
+    say(CLERK,c.say[(Math.random()*c.say.length)|0],2600); setTimeout(function(){ toast('Bought: '+c.n+'. '+(isTouch?'Tap Use':'Press R')+' to '+(c.kind==='drink'?'drink':'eat')+' it. $'+(net?net.cash:0)+' left.',2800); },700); return; } }
+function useSnack(){ var N=net, id=N.bag.shift(), c=snackOf(id); if (!c) return; N.buff=N.buff||{}; N.buff[id]=BUFF_T;
+  if (c.kind==='drink'){ noise(0.35,0.12,4000); tone(500,0.2,'sine',0.06,300,0.3); } else { for (var i=0;i<4;i++) noise(0.06,0.14,1600,i*0.14); }
+  toast(c.n+': '+({spd:'you’re faster',stam:'you can run without tiring',shield:'the next hit won’t hurt you',ghost:'the killer can’t see or hear you'}[id])+' for 30 seconds.',2800); game.grab=0.4; }
 /* ---------- Kill Feast: chests, heals, bear traps, knives ---------- */
 var CHEST_SPOTS=[[-44,9.6],[-22,-9.6],[0,9.6],[22,-9.6],[44,9.6],[-33,-9.6],[33,9.6],[-84,-14],[66,9.6],[88,-9.6],[110,9.6],[132,-9.6],[62,-11]];
 CHEST_SPOTS.push([97,-18.2],[111.5,-30.5],[89.5,20.5],[123,31],[133,-10],[80,10.5]);
@@ -4478,7 +4527,11 @@ function itemsUI(){
   var N=net, el=$('items'), show=N && N.mode==='s' && game.role!=='killer' && N.alive===1 && game.mode==='play', sb=$('senseBtn'), ks=N && N.mode==='s' && game.role==='killer' && game.mode==='play';
   if (sb.hidden!==!ks) sb.hidden=!ks; var sw=$('btnSwing'); if (sw.hidden!==!ks) sw.hidden=!ks; if (ks){ var lab=(isTouch?'':'Q · ')+(N.senseCd>0?'Sense '+Math.ceil(N.senseCd)+'s':'Sense'); if (sb.textContent!==lab) sb.textContent=lab; sb.disabled=N.senseCd>0; }
   [['scareBtn','Z · ','Scare',N&&N.scareCd],['vanishBtn','X · ','Vanish',N&&N.vanCd]].forEach(function(a){ var bt=$(a[0]); if (bt.hidden!==!ks) bt.hidden=!ks; if (!ks) return; var l2=(isTouch?'':a[1])+(a[3]>0?a[2]+' '+Math.ceil(a[3])+'s':(N.iv>0 && a[0]==='vanishBtn'?'Unseen '+Math.ceil(N.iv)+'s':a[2])); if (bt.textContent!==l2) bt.textContent=l2; bt.disabled=a[3]>0; });
-  show=show && !!N.held; if (el.hidden!==!show) el.hidden=!show; var ub=$('btnUse'); if (ub.hidden!==!show) ub.hidden=!show; if (!show) return;
+  var bag=(N&&N.bag)||[], bf=(N&&N.buff)||{}, act=Object.keys(bf).filter(function(k){ return bf[k]>0; });
+  show=show && (bag.length>0 || act.length>0 || !!N.carry); if (el.hidden!==!show) el.hidden=!show; var ub=$('btnUse'), us=show && bag.length>0; if (ub.hidden!==!us) ub.hidden=!us; if (!show) return;
+  var parts=[]; if (N.carry) parts.push('Carrying a '+snackOf(N.carry).n+' to the register');
+  if (bag.length) parts.push((isTouch?'Use: ':'R · ')+bag.map(function(id){ return snackOf(id).n; }).join(', '));
+  act.forEach(function(k){ parts.push(BUFFN[k]+' '+Math.ceil(bf[k])+'s'); }); var t=parts.join(' · '); if (el.textContent!==t) el.textContent=t; return;
   var lab='Holding: '+HELDN[N.held]+(N.held==='knife'?' ('+N.kn+(N.kn===1?' stab':' stabs')+')':'')+(isTouch?' · tap Use':' · click or R to use'); if (el.textContent!==lab) el.textContent=lab;
 }
 function bloodyKnife(){ var k=vmKnife.children[0], b=k&&k.userData.blade; if (!b) return; vmKnife.userData.c=vmKnife.userData.c||b.material.color.clone(); b.material.color.lerp(lin(0x5a0606),0.35); }
@@ -4507,6 +4560,7 @@ var vmHeld=(function(){ var g={heal:new THREE.Group(),trap:new THREE.Group(),kni
 function heldShow(){ var h=net && net.mode==='s' && net.alive===1 ? net.held : null; Object.keys(vmHeld).forEach(function(n){ vmHeld[n].visible=h===n; }); return h; }
 function giveHeld(it){ return false; var N=net; if (N.held) return false; N.held=it; if (it==='knife') N.kn=2; game.grab=0.5; itemsUI(); return true; }
 function useHeld(){
+  if (net && net.bag && net.bag.length && net.alive===1 && game.mode==='play' && !net.hide){ useSnack(); return; }
   var N=net; if (!N || N.mode!=='s' || game.role==='killer' || N.alive!==1 || game.mode!=='play' || N.hide || !N.held) return;
   var k=N.held;
   if (k==='heal'){ if (N.hp>=3){ toast('You are not hurt.',1600); return; } N.held=null; N.hp=Math.min(3,N.hp+1); tone(520,0.2,'sine',0.15,780); toast('Patched up. +1 health.',2000); game.grab=0.5; }
@@ -4580,6 +4634,7 @@ function netAct(){
   var N=net; if (!N) return; var pl=N.pl||[]; if (N.alive!==1){ N.spec++; return; }
   if (N.mode!=='s' || N.fin) return; var n=N.near; if (!n) return;
   if (n.k==='unhide') return netUnhide();
+  if (n.k==='take' || n.k==='pay') return storeAct(n);
   if (n.k==='wire'){ if (!wireUI.isOpen()) wireUI.open(n.hi); return; }
   if (n.k==='chore'){ if (!choreUI.isOpen()) choreUI.open(n.c.hi,n.c.t); return; }
   if (n.k==='door'){ if (game.role==='killer' && !n.h.netBroke) return startDoorBreak(n.h); if (game.role!=='killer' && !n.h.power && !n.h.netBroke){ thud(0.4); say(n.h.n,['The power’s out and I can’t see a thing! Fix the generator out back and I’ll let you in.','Who’s there? Get my generator running first, it’s round the back.','I’m not opening up in the dark. Fix the wires on the generator.'][(Math.random()*3)|0],3200); return; } return netEnterHouse(n.h); }
@@ -4643,8 +4698,9 @@ function teamTick(pl){ var tm=$('team'); if (!tm.hidden) tm.hidden=true; return;
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=59;
+var GAME_VER=60;
 var UPDATES=[
+  {v:60,t:'Cash and the corner store',n:['Every chore you finish pays $5. Your cash shows next to the chores and generators.','The gas station store is bigger, with two glass doors side by side that swing open as you walk up.','Felix works the register. Grab a snack or drink right by the counter, ring it up, and keep it in your pocket (up to 3). Press R (or tap Use) to have it.','Bolt Energy $5: faster for 30 s. Marathon Bar $5: run without tiring for 30 s. Iron Jerky $10: a shield that takes the next hit. Midnight Cola $10: the killer can’t see or hear you for 30 s.','Walk out without paying and Felix makes you put it back.','The killer no longer vanishes and pops up somewhere else, and Elias no longer appears at the Blood Moon.']},
   {v:59,t:'Music instead of red, a Tokens tab',n:['No more red at the edges of the screen when the killer is near. Instead a low, dissonant score creeps in and gets louder and faster the closer it gets, with a shriek when it is right on you.','Chests are gone, and so are the knives, first aid kits and bear traps. Neighbours don’t hand out items any more either.','The shop has a Tokens tab: your balance and a history of every token you earned and spent. Token packs you can buy are coming soon.']},
   {v:58,t:'Mics, cut generators, a bigger street',n:['Your microphone is in the game. The bar in the bottom-left shows how loud you are; past the white line the killer hears you and comes for you. Tap the bar to turn the mic on or mute it.','The killer sneaks round the back and cuts generators, often at a house with someone inside. The lights die, and you can’t clean until someone wires it back up.','The map is just the neighbourhood now, with the gas station and the police station. The park, churchyard, hospital and supermarket are gone, and the street goes on with 6 more houses: 18 in all.','10 new characters: Jax, Tess, Moe, Kiko, Zeke, Lou, Rudy, Bea, Ike and Zora. There is no default skin any more: everyone starts as Jax, and the shop always shows the characters you own.','The teammate cards on the left of the screen are gone, and the lobby no longer lists the AI killer.','The intro no longer clips through a house when it shows the parking lot, and bots start in their own cars instead of standing in the lot first.']},
   {v:57,t:'Killer unseen on the drive',n:['The killer is only invisible while everyone is driving in. Once you are out of your car you can see it again, like before.']},
@@ -5089,8 +5145,8 @@ var choreUI=(function(){
   $('choreClose').addEventListener('click',function(){ close(false); });
   function tick(dt){ if (!st) return; var S=st.s; if (st.k==='bed' && S.wait>0){ S.wait-=dt; if (S.wait<=0){ S.up=[]; draw(); } } if (st.k==='trash' && S.bad>0){ S.bad=Math.max(0,S.bad-dt*2); draw(); }
     var N=net; if (!N || game.mode!=='play' || N.alive!==1 || N.ih!==st.hi || Math.hypot(P.x-IX-CHORE_T[st.t].x,P.z-CHORE_T[st.t].z)>1.8 || (N.cleaned||{})[st.cid] || !houses[st.hi].power) close(false); }
-  function finish(){ var N=net, s0=st; close(true); if (!N || !s0) return; if (N.cl.indexOf(s0.cid)<0) N.cl.push(s0.cid); netSend({cl:N.cl});
-    toast('Done: '+CHORE_T[s0.t].n.toLowerCase()+'. '+Math.min(CLEAN_NEED,(N.ncl||0)+1)+' of '+CLEAN_NEED+' chores finished.',2800); }
+  function finish(){ var N=net, s0=st; close(true); if (!N || !s0) return; if (N.cl.indexOf(s0.cid)<0) N.cl.push(s0.cid); netSend({cl:N.cl}); N.cash=(N.cash||0)+5; tone(1320,0.08,'square',0.05,null,0.3);
+    toast('Done: '+CHORE_T[s0.t].n.toLowerCase()+'. +$5 (you have $'+N.cash+'). '+Math.min(CLEAN_NEED,(N.ncl||0)+1)+' of '+CLEAN_NEED+' chores finished.',3000); }
   function close(ok){ if (!st) return; if (!ok && !st.fin) toast('You stopped. That chore starts over.',1800); st=null; down=false; $('chorePanel').hidden=true; if (net && net.wiring==='chore') net.wiring=null; if (!isTouch && game.mode==='play' && !document.pointerLockElement) lock(); }
   function open(hi,t){ var k=KIND[t], S=(k==='dish'||k==='mop'||k==='tub')?scrubInit(k):(k==='sweep'?sweepInit():(k==='shelf'?shelfInit():(k==='trash'?trashInit():bedInit())));
     st={hi:hi,t:t,cid:choreId(hi,t),k:k,s:S,fin:false}; if (net) net.wiring='chore'; $('chorePanel').hidden=false; $('choreTitle').textContent=CHORE_T[t].n;
@@ -5195,7 +5251,7 @@ function update(dt){
   if (!vic) P.crouch=false;
   var wantRun=(keys.ShiftLeft||keys.ShiftRight||runHeld) && m>0.2 && !P.spent && !P.crouch;
   P.sprinting=wantRun;
-  if (wantRun){ P.stamina-=dt/5; P.rest=0; if (P.stamina<=0){ P.stamina=0; P.spent=true; } }
+  if (wantRun){ if (!buffOn('stam')) P.stamina-=dt/5; P.rest=0; if (P.stamina<=0){ P.stamina=0; P.spent=true; } }
   else { P.rest+=dt; if (P.rest>0.8) P.stamina=Math.min(1,P.stamina+dt/7); if (P.stamina>0.3) P.spent=false; }
   var speed=(vic?(wantRun?7.2:(P.crouch?2.1:4.2)):(wantRun?6.5:4.5))*(game.net?net.spd:1), f=fwd(), rx=Math.cos(P.yaw), rz=-Math.sin(P.yaw);
   P.x+=(rx*mx-f.x*mz)*speed*dt; P.z+=(rz*mx-f.z*mz)*speed*dt;
