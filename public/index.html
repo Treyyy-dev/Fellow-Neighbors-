@@ -392,7 +392,7 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.25;
 // Puppet Combo / PS1 look: while you play, every vertex snaps to a coarse screen grid, so models wobble and jitter
 var PS1SNAP={value:new THREE.Vector2(0,0)};
-function ps1Patch(sh,m){ if (m && (m.isMeshDepthMaterial || m.isMeshDistanceMaterial)) return; if (sh.vertexShader.indexOf('#include <project_vertex>')<0) return; sh.uniforms.ps1Snap=PS1SNAP;
+function ps1Patch(sh,m){ if (m && (m.isMeshDepthMaterial || m.isMeshDistanceMaterial || m.userData.noSnap)) return; if (sh.vertexShader.indexOf('#include <project_vertex>')<0) return; sh.uniforms.ps1Snap=PS1SNAP;
   sh.vertexShader='uniform vec2 ps1Snap;\n'+sh.vertexShader.replace('#include <project_vertex>','#include <project_vertex>\nif (ps1Snap.y>0.0 && gl_Position.w>0.0){ vec2 sp=gl_Position.xy/gl_Position.w; sp=floor(sp*ps1Snap+0.5)/ps1Snap; gl_Position.xy=sp*gl_Position.w; }'); }
 THREE.Material.prototype.onBeforeCompile=function(sh){ ps1Patch(sh,this); };
 renderer.shadowMap.enabled = true;
@@ -4420,8 +4420,9 @@ function teamTick(pl){
 }
 
 /* ---------- update notes and new-update alerts ---------- */
-var GAME_VER=49;
+var GAME_VER=50;
 var UPDATES=[
+  {v:50,t:'Map glitch fixed',n:['The ground no longer pokes through the road, sidewalks and floors, and distant things no longer flicker.','Big surfaces like the ground, roads, floors and buildings stay still now. Characters and props still have the PS1 wobble.','Far-away textures shimmer less.']},
   {v:49,t:'Pixel people, two hands',n:['Characters and houses are pixelated now: skins, faces, siding, bricks, roofs, floors and the ground all use chunky low-res textures, like an old PS1 horror game.','You can see both your arms in first person. Survivors hold the flashlight in one hand and keep the other one ready. The killer has the knife in one gloved hand and the other one free.','The Puppet Combo look and the VHS tape look are always on, so those settings are gone.']},
   {v:48,t:'Puppet Combo mode',n:['Gameplay now looks like an old PS1 horror tape: a chunky low-res picture, dithered colour, wobbly jittering polygons and crunchy textures.','Characters are faceted and low-poly looking, and the fog is thicker and darker.','The menus keep the smooth VHS look. Settings → Retro 3D lets you switch the PS1 style off.']},
   {v:47,t:'The whole tape',n:['Every screen is VHS now: VCR-style lettering, blue-screen menus with a ▶ cursor, scanlines and a tracking band over everything.','The game opens on a blue screen like a tape waiting to play. Press PLAY ▶ to start.','Switching screens makes the picture jump like a tape. The corner shows STOP ■ on the blue screen and when a run ends.']},
@@ -4469,15 +4470,20 @@ window.addEventListener('appinstalled',function(){ installEvt=null; $('mInstall'
 var pxCache=new Map();
 function pxTex(t,max){ if (!t || t.__px) return true; var im=t.image; if (!im || !im.width) return false; t.__px=1;
   if (max){ var c=pxCache.get(im); if (!c){ var k=Math.min(1,max/Math.max(im.width,im.height)); if (k<1){ c=document.createElement('canvas'); c.width=Math.max(2,Math.round(im.width*k)); c.height=Math.max(2,Math.round(im.height*k)); try { c.getContext('2d').drawImage(im,0,0,c.width,c.height); } catch(e){ c=null; } } pxCache.set(im,c||im); if (c) pxCache.set(c,c); } if (c && c!==im) t.image=c; }
-  t.magFilter=THREE.NearestFilter; if (max){ t.minFilter=THREE.NearestFilter; t.generateMipmaps=false; } t.needsUpdate=true; return true; }
+  t.magFilter=THREE.NearestFilter; if (max){ t.minFilter=THREE.NearestMipmapNearestFilter; t.generateMipmaps=true; } t.needsUpdate=true; return true; }
+function noSnapKey(){ return 'nosnap'; }
 function ps1Look(){ scene.traverse(function(o){ if (!o.isMesh && !o.isPoints) return; var ms=Array.isArray(o.material)?o.material:[o.material];
+  // big flat pieces (ground, roads, floors, whole buildings) must not jitter: a snapped giant polygon tilts and pokes through the road
+  if (o.isMesh && !o.isSkinnedMesh && o.geometry){ var gb=o.geometry.boundingSphere; if (!gb){ o.geometry.computeBoundingSphere(); gb=o.geometry.boundingSphere; }
+    var sc=Math.max(o.scale.x,o.scale.y,o.scale.z); if (gb && gb.radius*sc>4.5) ms.forEach(function(m){ if (m && !m.userData.noSnap){ m.userData.noSnap=1; m.customProgramCacheKey=noSnapKey; m.needsUpdate=true; } }); }
   for (var i=0;i<ms.length;i++){ var m=ms[i]; if (!m || m.userData.ps1) continue; var tx=m.map, ok=true;
     if (tx){ if (o.isSkinnedMesh) ok=pxTex(tx,72); else if (tx.wrapS===THREE.RepeatWrapping && !m.transparent) ok=pxTex(tx,32); else ok=pxTex(tx,0); }
     if (!ok) continue; m.userData.ps1=1;
     if (o.isSkinnedMesh && (m.isMeshStandardMaterial || m.isMeshPhongMaterial || m.isMeshLambertMaterial)){ m.flatShading=true; m.normalMap=null; m.vertexTangents=false; m.needsUpdate=true; } } }); }
 setInterval(ps1Look,1500);
 var VHS=(function(){
-  function mk(f){ var r=new THREE.WebGLRenderTarget(4,4,{minFilter:f,magFilter:f,format:THREE.RGBAFormat,stencilBuffer:false}); r.texture.encoding=THREE.sRGBEncoding; r.texture.generateMipmaps=false; return r; }
+  function mk(f){ var r=new THREE.WebGLRenderTarget(4,4,{minFilter:f,magFilter:f,format:THREE.RGBAFormat,depthBuffer:true,stencilBuffer:false}); r.texture.encoding=THREE.sRGBEncoding; r.texture.generateMipmaps=false;
+    if (renderer.capabilities.isWebGL2 || renderer.extensions.has('WEBGL_depth_texture')){ r.depthTexture=new THREE.DepthTexture(4,4); r.depthTexture.type=THREE.UnsignedIntType; } return r; }   // 24-bit depth: the default 16-bit one made the road and ground flicker
   var rtSoft=mk(THREE.LinearFilter), rtPix=mk(THREE.NearestFilter), rt=rtSoft;
   var mat=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,toneMapped:false,
     uniforms:{tD:{value:rt.texture},px:{value:new THREE.Vector2(1,1)},t:{value:0},sl:{value:200},tr:{value:1},ps:{value:0}},
